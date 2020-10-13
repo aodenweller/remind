@@ -966,6 +966,7 @@ $if %cm_techcosts% == "REG"   loop(ttot$(ttot.val gt 2070),
 $if %cm_techcosts% == "REG"   pm_inco0_t(ttot,regi,teNoLearn(te)) = fm_dataglob("inco0",te);
 $if %cm_techcosts% == "REG"   );
 
+pm_inco0_t(t,regi,"tnrs") = c_nuccosts*pm_inco0_t(t,regi,"tnrs");
 
 *** rename f_datafecostsglob
 * p_esCapCost(regi,in)$f_datafecostsglob("lifetime",in)
