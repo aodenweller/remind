@@ -24,7 +24,7 @@ submit <- function(cfg, restart = FALSE, stopOnFolderCreateError = TRUE) {
     cfg$results_folder <- gsub(":title:", cfg$title, cfg$results_folder, fixed = TRUE)
     # Create output folder
     if (!file.exists(cfg$results_folder)) {
-      message("   Creating results folder", cfg$results_folder)
+      message("   Creating results folder ", cfg$results_folder)
       dir.create(cfg$results_folder, recursive = TRUE, showWarnings = FALSE)
     } else if (!cfg$force_replace) {
       couldnotdelete <- paste0("Results folder ",cfg$results_folder," already exists")
@@ -62,26 +62,16 @@ submit <- function(cfg, restart = FALSE, stopOnFolderCreateError = TRUE) {
 
         if (getOption("autoRenvUpdates", FALSE)) {
           source("scripts/utils/updateRenv.R")
-        } else {
-          packagesUrl <- "https://pik-piam.r-universe.dev/src/contrib/PACKAGES"
-          pikPackages <- sub("^Package: ", "", grep("^Package: ", readLines(packagesUrl), value = TRUE))
-          installed <- utils::installed.packages()
-          outdatedPackages <- utils::old.packages(instPkgs = installed[installed[, "Package"] %in% pikPackages, ])
-          if (!is.null(outdatedPackages)) {
-            message("The following PIK packages can be updated:\n",
-                    paste("-", outdatedPackages[, "Package"], ":",
-                          outdatedPackages[, "Installed"], "->", outdatedPackages[, "ReposVer"],
-                          collapse = "\n"),
-                    "\nConsider updating with `Rscript scripts/utils/updateRenv.R`.")
-          }
+        } else if (   'TRUE' != Sys.getenv('ignoreRenvUpdates')
+                   && !is.null(piamenv::showUpdates())) {
+          message("Consider updating with `Rscript scripts/utils/updateRenv.R`.")
         }
       }
 
       renvLogPath <- file.path(cfg$results_folder, "log_renv.txt")
       message("   Initializing renv, see ", renvLogPath)
       createResultsfolderRenv <- function(resultsfolder, lockfile) {
-        # use same snapshot.type so renv::status()$synchronized always uses the same logic
-        renv::init(resultsfolder, settings = list(snapshot.type = renv::settings$snapshot.type()))
+        renv::init(resultsfolder)
 
         # restore same renv as previous run in cascade, or main renv if first run
         file.copy(lockfile, resultsfolder, overwrite = TRUE)
@@ -94,15 +84,15 @@ submit <- function(cfg, restart = FALSE, stopOnFolderCreateError = TRUE) {
                stdout = renvLogPath, stderr = "2>&1")
     }
 
-    # Save the cfg (with the updated name of the result folder) into the results folder. 
-    # Do not save the new name of the results folder to the .RData file in REMINDs main folder, because it 
+    # Save the cfg (with the updated name of the result folder) into the results folder.
+    # Do not save the new name of the results folder to the .RData file in REMINDs main folder, because it
     # might be needed to restart subsequent runs manually and should not contain the time stamp in this case.
     filename <- file.path(cfg$results_folder, "config.Rdata")
     cat("   Writing cfg to file", filename, "\n")
     # remember main folder
     cfg$remind_folder <- normalizePath(".")
     save(cfg, file = filename)
-    
+
     # Copy files required to configure and start a run
     filelist <- c("prepare_and_run.R" = "scripts/start/prepare_and_run.R",
                   ".Rprofile" = ".Rprofile")
@@ -114,8 +104,8 @@ submit <- function(cfg, restart = FALSE, stopOnFolderCreateError = TRUE) {
   on.exit(setwd(cfg$remind_folder))
   # Change to run folder
   setwd(cfg$results_folder)
-  
-  # send prepare_and_run.R to cluster 
+
+  # send prepare_and_run.R to cluster
   cat("   Executing prepare_and_run.R for",cfg$results_folder,"\n")
   if (grepl("^direct", cfg$slurmConfig)) {
     log <- format(Sys.time(), paste0(cfg$title,"-%Y-%H-%M-%S-%OS3.log"))
@@ -124,6 +114,6 @@ submit <- function(cfg, restart = FALSE, stopOnFolderCreateError = TRUE) {
     system(paste0("sbatch --job-name=",cfg$title," --output=log.txt --mail-type=END --comment=REMIND --wrap=\"Rscript prepare_and_run.R \" ",cfg$slurmConfig))
     Sys.sleep(1)
   }
-    
+
   return(cfg$results_folder)
 }
