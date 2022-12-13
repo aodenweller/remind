@@ -10,16 +10,20 @@
 *'
 *' @description  The 32_power module determines the operation production decisions for the electricity supply.
 *'
+*'               The `DTcoup` realization is an iterative soft coupling to the more detailed DIETER model.
 *'
 *'               The `IntC` realization (Integrated Costs) assumes a single electricity market balance.
 *'
+*'               The `PyPSA` realization is an iterative soft coupling to the more detailed PyPSA model.
+*'
 *'               The `RLDC` realization (Residual Load Duration Curve) distinguishes different operation electricity supply decisions under four distinct load bands, plus additional peak capacity requirements.
 *'
-*' @authors Robert Pietzcker, Falko Ueckerdt, Renato Rodrigues
+*' @authors Robert Pietzcker, Falko Ueckerdt, Renato Rodrigues, Chen Chris Gong, Adrian Odenweller
 
 *###################### R SECTION START (MODULETYPES) ##########################
 $Ifi "%power%" == "DTcoup" $include "./modules/32_power/DTcoup/realization.gms"
 $Ifi "%power%" == "IntC" $include "./modules/32_power/IntC/realization.gms"
+$Ifi "%power%" == "PyPSA" $include "./modules/32_power/PyPSA/realization.gms"
 $Ifi "%power%" == "RLDC" $include "./modules/32_power/RLDC/realization.gms"
 *###################### R SECTION END (MODULETYPES) ############################
 *** EOF ./modules/32_power/module.gms
