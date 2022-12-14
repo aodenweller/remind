@@ -291,6 +291,7 @@ q32_flexAdj(t,regi,te)$(teFlexTax(te))..
 ***                  PyPSA equations
 ***------------------------------------------------------------
 
-
+*** Pre-factor equation to set the capacity factor (from PyPSA)
+***q32_capFac(t,regi,te)$(tPy32(t) AND regPy32(regi) AND )..
 
 *** EOF ./modules/32_power/PyPSA/equations.gms

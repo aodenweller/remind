@@ -68,4 +68,12 @@ v32_flexPriceShareMin(tall,all_regi,all_te)         "possible minimum of share o
 ***                  Declarations for PyPSA
 ***------------------------------------------------------------
 
+parameters
+    p32_Py2RM(tPy32,regPy32,tePyImp32,varPyImp32)   "Data import from PyPSA to REMIND (PyPSA2REMIND.gdx)"
+;
+
+***equations
+***    q32_capFac(ttot,all_regi,all_te)                "Pre-factor equation to set the capacity factor (from PyPSA)"
+***;
+
 *** EOF ./modules/32_power/PyPSA/declarations.gms

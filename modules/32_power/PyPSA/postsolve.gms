@@ -24,6 +24,40 @@ loop(t,
   );
 );
 
+***------------------------------------------------------------
+***                  PyPSA coupling
+***------------------------------------------------------------
+
+if ( (ord(iteration) ge cm_startIter_PyPSA) and (mod(ord(iteration), 5) eq 0),
+  !! Export REMIND output data for PyPSA (REMIND2PyPSA.gdx)
+  !! Don't use fulldata.gdx so that we keep track of which variables are exported to PyPSA
+  Execute_Unload "/p/tmp/adrianod/pypsa-eur/REMIND2PyPSA.gdx", vm_prodSe;
+
+  !! Run REMIND2PyPSA.R
+  !! This script uses output data from REMIND (REMIND2PyPSA.gdx) to create input data for PyPSA (multiple files)
+  !! This script expects the run name as a parameter, TODO: read in from config.Rdata cfg$results_folder (including time stamp)
+  Execute "Rscript -e '/p/tmp/adrianod/pypsa-eur/REMIND2PyPSA.R RM_Py_test'";
+
+  !! Run PyPSA
+   !! Pass iteration and run name as parameter, TODO: Read in from config.Rdata
+  put "Running PyPSA in iteration ", round(ord(iteration));
+  Put_utility 'Exec' / '/p/tmp/adrianod/pypsa-eur/StartPyPSA.sh' round(ord(iteration)) "RM_Py_test";
+
+  !! Run PyPSA2REMIND.R
+  !! This script uses output data from PyPSA (multiple files) to create input data for REMIND (PyPSA2REMIND.gdx)
+  !! This script expects the run name as a parameter, TODO: ...
+  Execute "Rscript -e '/p/tmp/adrianod/pypsa-eur/PyPSA2REMIND.R RM_Py_test'";
+
+  !! Import PyPSA data for REMIND
+  Execute_Loadpoint "/p/tmp/adrianod/pypsa-eur/PyPSA2REMIND.gdx" p32_Py2RM=PyPSA2REMIND;
+
+  !! Capacity factor
+  loop (tePyMapDisp32(tePyImp32,tePy32),
+    pm_cf(tPy32,regPy32,tePy32) =
+      p32_Py2RM(tPy32,regPy32,tePyImp32,"capfac")
+  );
+
+);
 
 *** EOF ./modules/32_power/PyPSA/postsolve.gms
 

@@ -9,9 +9,72 @@
 ***------------------------------------------------------------
 ***                  Sets for PyPSA
 ***------------------------------------------------------------
-*sets
-*    tPyPSA32(ttot)   "Time index coupled to PyPSA"     /2025, 2030, 2035, 2040, 2045, 2050, 2055, 2060, 2070, 2080, 2090, 2100, 2110, 2130, 2150/
-*;
+sets
+    tPy32(ttot)                 "Years coupled to PyPSA"
+        /2025, 2030, 2035, 2040, 2045, 2050, 2055, 2060, 2070, 2080, 2090, 2100, 2110, 2130, 2150/
+
+    regPy32(all_regi)           "Regions coupled to PyPSA"
+        /DEU/
+
+    tePyImp32                   "Technology names as imported from PyPSA"
+        /all_coal, all_offwind, biomass, CCGT, nuclear, OCGT, oil, onwind, ror, solar/
+
+    tePy32(all_te)              "REMIND secondary energy electricity technologies coupled to PyPSA"
+        /biochp, bioigcc, bioigccc, ngcc, ngccc, gaschp, igcc, igccc, pc, pcc, pco, coalchp, tnrs, fnrs, ngt, windoff, dot, wind, hydro, spv/  !! TODO: What about CSP and geohdr?
+
+    varPyImp32                  "Variable names as imported from PyPSA"
+        /capfac/
+;
+
+***------------------------------------------------------------
+***                  Mappings for PyPSA
+***------------------------------------------------------------
+sets
+    tePyMap32(tePyImp32,tePy32) "Technology mapping of PyPSA and REMIND"
+        /
+        all_coal.gaschp
+        all_coal.igcc
+        all_coal.igccc
+        all_coal.pc
+        all_coal.pcc
+        all_coal.pco
+        all_coal.coalchp
+        all_offwind.windoff
+        biomass.biochp
+        biomass.bioigcc
+        biomass.bioigccc
+        CCGT.ngcc
+        CCGT.ngccc
+        nuclear.tnrs
+        nuclear.fnrs
+        OCGT.ngt
+        oil.dot
+        onwind.wind
+        ror.hydro
+        solar.spv
+        /
+    
+    tePyMapDisp32(tePyImp32,tePy32) "Technology mapping of PyPSA and REMIND for dispatchable technologies only"
+        /
+        all_coal.gaschp
+        all_coal.igcc
+        all_coal.igccc
+        all_coal.pc
+        all_coal.pcc
+        all_coal.pco
+        all_coal.coalchp
+        biomass.biochp
+        biomass.bioigcc
+        biomass.bioigccc
+        CCGT.ngcc
+        CCGT.ngccc
+        nuclear.tnrs
+        nuclear.fnrs
+        OCGT.ngt
+        oil.dot
+        ror.hydro
+        /
+;
 
 
 *** EOF ./modules/32_power/PyPSA/sets.gms
