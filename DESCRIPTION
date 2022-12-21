@@ -60,6 +60,7 @@ Imports:
     readr,
     readxl,
     remind2 (>= 1.104.1),
+    remindPypsa,
     renv,
     reshape2,
     rlang,

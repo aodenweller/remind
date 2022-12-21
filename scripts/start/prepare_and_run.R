@@ -231,7 +231,7 @@ prepare <- function() {
             "flexdashboard", "gdx", "gdxdt", "gdxrrw", "ggplot2", "gtools",
             "lucode2", "luplot", "luscale", "magclass", "magpie4", "methods",
             "mip", "mrremind", "mrvalidation", "optparse", "parallel",
-            "plotly", "remind2", "rlang", "rmndt", "tidyverse",
+            "plotly", "remind2", "remindPypsa", "rlang", "rmndt", "tidyverse",
             "tools"),
 
         'Package') %>%
