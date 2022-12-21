@@ -28,7 +28,7 @@ loop(t,
 ***                  PyPSA coupling
 ***------------------------------------------------------------
 
-if ( (iteration.val ge cm_startIter_PyPSA) and (mod(iteration.val, 5) eq 0),
+if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val, 5) eq 0),
   !! Export REMIND output data for PyPSA (REMIND2PyPSA.gdx)
   !! Don't use fulldata.gdx so that we keep track of which variables are exported to PyPSA
   Execute_Unload '/p/tmp/adrianod/pypsa-eur/REMIND2PyPSA.gdx', vm_prodSe;

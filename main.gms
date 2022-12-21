@@ -1104,10 +1104,10 @@ parameter
   cm_EnSecScen_limit = 0; !! def = 0
 *'
 parameter
-  cm_startIter_PyPSA        "Starting iteration of PyPSA"
+  c32_startIter_PyPSA        "Starting iteration of PyPSA"
 *** Starting iteration of coupling with the power system model PyPSA
 ;
-  cm_startIter_PyPSA = 5; !! def = 5
+  c32_startIter_PyPSA = 5; !! def = 5
 *'
 ***-----------------------------------------------------------------------------
 *' ####                     FLAGS
