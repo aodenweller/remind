@@ -1584,6 +1584,9 @@ $setglobal cm_process_based_steel   off  !! off
 *** c_CO2priceDependent_AdjCosts
 ***    default on changes adjustment costs for advanced vehicles in dependence of CO2 prices
 $setglobal c_CO2priceDependent_AdjCosts    on   !! def = on
+*** c32_pypsa_dir
+*** Directory of PyPSA-Eur
+$setglobal c32_pypsa_dir /p/tmp/adrianod/pypsa-eur
 *** set conopt version. Warning: conopt4 is in beta
 $setGlobal cm_conoptv  conopt3    !! def = conopt3
 *' mode for solving nash problem
