@@ -31,22 +31,19 @@ loop(t,
 if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val, 5) eq 0),
   !! Export REMIND output data for PyPSA (REMIND2PyPSA.gdx)
   !! Don't use fulldata.gdx so that we keep track of which variables are exported to PyPSA
-  Execute_Unload 'REMIND2PyPSA_i' iteration.val:0:0 '.gdx', vm_prodSe;
+  Execute_Unload 'REMIND2PyPSA.gdx', vm_prodSe;
+  Put_utility 'shell' / "cp REMIND2PyPSA.gdx REMIND2PyPSA_i" iteration.val:0:0 '.gdx';
 
-  !! Run REMIND2PyPSA.R
-  !! This script uses output data from REMIND (REMIND2PyPSA.gdx) to create input data for PyPSA (multiple files)
-  Put_utility 'Exec' / 'Rscript REMIND2PyPSA.R %c32_pypsa_dir% ' iteration.val:0:0;
+  !! Run StartREMINDPyPSA.R (copied from scripts/iterative)
+  !! This executes three steps, using the pik-piam/remindPypsa package
+  !! 1) Exchange data from REMIND to PyPSA
+  !! 2) Execute PyPSA
+  !! 3) Exchange data from PyPSA to REMIND
+  Put_utility 'Exec' / 'Rscript StartREMINDPyPSA.R %c32_pypsa_dir% ' iteration.val:0:0;
 
-  !! Run PyPSA
-  !! Pass iteration and run name as parameter
-  Put_utility 'Exec' / 'Rscript StartPyPSA.R %c32_pypsa_dir% ' iteration.val:0:0;
-
-  !! Run PyPSA2REMIND.R
-  !! This script uses output data from PyPSA (multiple files) to create input data for REMIND (PyPSA2REMIND.gdx)
-  Put_utility 'Exec' / 'Rscript PyPSA2REMIND.R %c32_pypsa_dir% ' iteration.val:0:0;
-
-  !! Import PyPSA data for REMIND
-  Execute_Loadpoint 'PyPSA2REMIND_i' iteration.val:0:0 '.gdx', p32_Py2RM=PyPSA2REMIND;
+  !! Import PyPSA data for REMIND (PyPSA2REMIND.gdx)
+  Put_utility 'shell' / 'cp PyPSA2REMIND_i' iteration.val:0:0 '.gdx PyPSA2REMIND.gdx';
+  Execute_Loadpoint 'PyPSA2REMIND.gdx', p32_Py2RM=PyPSA2REMIND;
 
   !! Capacity factor
   loop (tePyMapDisp32(tePyImp32,tePy32),
