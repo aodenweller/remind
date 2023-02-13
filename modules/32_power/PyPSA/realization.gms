@@ -4,31 +4,15 @@
 *** |  AGPL-3.0, you are granted additional permissions described in the
 *** |  REMIND License Exception, version 1.0 (see LICENSE file).
 *** |  Contact: remind@pik-potsdam.de
-*** SOF ./modules/32_power/IntC/realization.gms
+*** SOF ./modules/32_power/PyPSA/realization.gms
 
 *' @description  
 *'
-*'The `IntC` realization (Integrated Costs) assumes a single electricity market balance.
+*'The `PyPSA` realization implements an iterative soft-link to Python for Power System Analysis based on the IntC realisation.
 *'
-*'This module determines power system supply specific technology behavior, which sums up to the general core capacity equations to define the power sector operation and investment decisions.
+*'A detailed description will follow.
 *'
-*'Contrary to other secondary energy types in REMIND, this requires to move the electricity secondary energy balance (supply = demand) from the core to the module code.
-*'
-*'
-*'In summary, the specific power technology equations found in this module reflect the points below.
-*'
-*'
-*'Storage requirements are based on intermittent renewables share, synergies between different renewables production profiles and curtailment.
-*'
-*'Additional grid capacities are calculated for high intermittent renewable capacity (solar and wind) and regional spatial differences. 
-*'
-*'Combined heat and power technologies flexibility is limited to technology and spatial observed data.
-*'
-*'Operation reserve requirements are enforced to provide enough flexibility to the power system frequency regulation.   
-*'
-*'Hydrogen can be used to reduce renewable power curtailment and provide flexibility to the system future generation. 
-*'
-*' @authors Robert Pietzcker, Falko Ueckerdt, Renato Rodrigues
+*' @authors Adrian Odenweller, Chris Gong, Falko Ueckerdt, Robert Pietzcker
 
 *####################### R SECTION START (PHASES) ##############################
 $Ifi "%phase%" == "sets" $include "./modules/32_power/PyPSA/sets.gms"
@@ -41,4 +25,4 @@ $Ifi "%phase%" == "presolve" $include "./modules/32_power/PyPSA/presolve.gms"
 $Ifi "%phase%" == "postsolve" $include "./modules/32_power/PyPSA/postsolve.gms"
 *######################## R SECTION END (PHASES) ###############################
 
-*** EOF ./modules/32_power/IntC/realization.gms
+*** EOF ./modules/32_power/PyPSA/realization.gms
