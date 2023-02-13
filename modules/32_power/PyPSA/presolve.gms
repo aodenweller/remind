@@ -11,8 +11,10 @@
 ***------------------------------------------------------------
 
 *** calculation of SE electricity price (useful for internal use and reporting purposes)
-pm_SEPrice(t,regi,entySE)$(abs (qm_budget.m(t,regi)) gt sm_eps AND sameas(entySE,"seel")) = 
-       q32_balSe.m(t,regi,entySE) / qm_budget.m(t,regi);
+pm_SEPrice(t,regi,entySE)$(    abs(qm_budget.m(t,regi)) gt sm_eps
+                           AND sameas(entySE,"seel") )
+  = q32_balSe.m(t,regi,entySE)
+  / qm_budget.m(t,regi);
 
 ***------------------------------------------------------------
 ***                  PyPSA postsolve copy for testing only
