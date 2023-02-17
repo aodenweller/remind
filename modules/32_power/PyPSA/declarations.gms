@@ -68,8 +68,10 @@ v32_flexPriceShareMin(tall,all_regi,all_te)         "possible minimum of share o
 ***                  Declarations for PyPSA
 ***------------------------------------------------------------
 
+*** All parameters for the PyPSA coupling start with p32_Py...
 parameters
     p32_Py2RM(tPy32,regPy32,tePyImp32,varPyImp32)   "Data import from PyPSA to REMIND (PyPSA2REMIND.gdx)"
+    p32_PyDisrate(tPy32,regPy32)                    "Discount rate to annualise capital costs in PyPSA"
 ;
 
 ***equations
