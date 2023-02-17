@@ -54,7 +54,7 @@ sets
         solar.spv
         /
     
-    tePyMapDisp32(tePyImp32,tePy32) "Technology mapping of PyPSA and REMIND for dispatchable technologies only"
+    tePyMapDisp32(tePyImp32,tePy32) "Technology mapping of PyPSA and REMIND for dispatchable technologies"
         /
         all_coal.gaschp
         all_coal.igcc
@@ -72,6 +72,13 @@ sets
         nuclear.fnrs
         OCGT.ngt
         oil.dot
+        /
+    
+    tePyMapNonDisp32(tePyImp32,tePy32) "Technology mapping of PyPSA and REMIND for non-dispatchable technologies (implemented with rlf /grades in REMIND)"
+        /
+        all_offwind.windoff
+        onwind.wind
+        solar.spv
         ror.hydro
         /
 ;
