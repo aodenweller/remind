@@ -9,19 +9,13 @@ library(gdx)
 args <- commandArgs(trailingOnly = TRUE)
 
 # Step 1: Call REMIND2PyPSA.R
-print(paste(
-    "Calling REMIND2PyPSA.R in iteration", args[2],
-    "using PyPSA directory", args[1]))
+cat("Calling REMIND2PyPSA.R in iteration", args[2], "\n")
 remindPypsa::callREMIND2PyPSA(pyDir = args[1], iter = args[2])
 
 # Step 2: Call startPyPSA.R
-print(paste(
-    "Starting PyPSA in iteration", args[2],
-    "using PyPSA directory", args[1]))
+cat("Starting PyPSA in iteration", args[2], "\n")
 remindPypsa::startPyPSA(pyDir = args[1], iter = args[2])
 
 # Step 3: Call PyPSA2REMIND.R
-print(paste(
-    "Calling PyPSA2REMIND.R in iteration", args[2],
-    "using PyPSA directory", args[1]))
+cat("Calling PyPSA2REMIND.R in iteration", args[2], "\n")
 remindPypsa::callPyPSA2REMIND(pyDir = args[1], iter = args[2])
