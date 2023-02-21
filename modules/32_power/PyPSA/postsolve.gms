@@ -28,7 +28,7 @@ loop(t,
 ***                  PyPSA coupling
 ***------------------------------------------------------------
 
-if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIter_PyPSA, 2) eq 0),
+if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIter_PyPSA, 1) eq 0),
 
   !! Calculate parameters that will be passed to REMIND
   !! Discount rate
@@ -45,7 +45,7 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
   !! Don't use fulldata.gdx so that we keep track of which variables are exported to PyPSA
   Execute_Unload "REMIND2PyPSA.gdx",
     vm_prodSe, vm_prodFe, !! To scale up the load time series
-  vm_costTeCapital, pm_data, p32_PyDisrate !! To calculate annualised capital costs 
+    vm_costTeCapital, pm_data, p32_PyDisrate !! To calculate annualised capital costs 
     pm_eta_conv, pm_dataeta, pm_PEPrice, p_priceCO2, fm_dataemiglob  !! To calculate marginal costs
   ;
 
@@ -79,19 +79,20 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
   logfile.nd = sm_tmp2;
 
   !! Capacity factor for dispatchable technologies
+  !! TODO: Put in equation with prefactor
   loop (tePyMapDisp32(tePyImp32,tePy32),
     pm_cf(tPy32,regPy32,tePy32) =
       p32_Py2RM(tPy32,regPy32,tePyImp32,"capfac")
   );
 
   !! Capacity factor for non-dispatchable technologies with grades
-  !! This uses pm_cf as a "correction factor" for the CFs in pm_dataren, weighted by 
-  !! TODO: Put in equation instead?
+  !! This uses pm_cf as a "correction factor" for the CFs in pm_dataren, weighted by vm_capDistr
+  !! TODO: Put in equation with prefactor
   loop (tePyMapNondisp32(tePyImp32,tePy32),
     pm_cf(tPy32,regPy32,tePy32) =
         p32_Py2RM(tPy32,regPy32,tePyImp32,"capfac")
       * vm_cap.l(tPy32,regPy32,tePy32,"1")
-      / sum(teRe2rlfDetail(all_te,rlf), vm_capDistr.l(tPy32,regPy32,all_te,rlf) * pm_dataren(regPy32,"nur",rlf,all_te))
+      / (sum(teRe2rlfDetail(all_te,rlf), vm_capDistr.l(tPy32,regPy32,all_te,rlf) * pm_dataren(regPy32,"nur",rlf,all_te)))
   );
 
 );
