@@ -48,18 +48,35 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
   vm_costTeCapital, pm_data, p32_PyDisrate !! To calculate annualised capital costs 
     pm_eta_conv, pm_dataeta, pm_PEPrice, p_priceCO2, fm_dataemiglob  !! To calculate marginal costs
   ;
-  Put_utility 'shell' / "cp REMIND2PyPSA.gdx REMIND2PyPSA_i" iteration.val:0:0 '.gdx';
+
+  !! Temporarily store and then set numeric round format and number of decimals
+  sm_tmp  = logfile.nr;
+  sm_tmp2 = logfile.nd;
+  logfile.nr = 1;
+  logfile.nd = 0;
+
+  !! Copy REMIND2PyPSA for iteration i
+  Put_utility logfile, "shell" /
+    "cp REMIND2PyPSA.gdx REMIND2PyPSA_i" iteration.val:0:0 ".gdx";
 
   !! Run StartREMINDPyPSA.R (copied from scripts/iterative)
   !! This executes three steps, using the pik-piam/remindPypsa package
   !! 1) Process data from REMIND to PyPSA
   !! 2) Execute PyPSA
   !! 3) Process data from PyPSA to REMIND
-  Put_utility 'Exec' / 'Rscript StartREMINDPyPSA.R %c32_pypsa_dir% ' iteration.val:0:0;
+  Put_utility logfile, "Exec" /
+    "Rscript StartREMINDPyPSA.R %c32_pypsa_dir% " iteration.val:0:0;
+
+  !! Copy PyPSA2REMIND from iteration i
+  Put_utility logfile, "shell" / 
+    "cp PyPSA2REMIND_i" iteration.val:0:0 ".gdx PyPSA2REMIND.gdx";
 
   !! Import PyPSA data for REMIND (PyPSA2REMIND.gdx)
-  Put_utility 'shell' / 'cp PyPSA2REMIND_i' iteration.val:0:0 '.gdx PyPSA2REMIND.gdx';
-  Execute_Loadpoint 'PyPSA2REMIND.gdx', p32_Py2RM=PyPSA2REMIND;
+  Execute_Loadpoint "PyPSA2REMIND.gdx", p32_Py2RM=PyPSA2REMIND;
+
+  !! Reset round format and number of decimals
+  logfile.nr = sm_tmp;
+  logfile.nd = sm_tmp2;
 
   !! Capacity factor for dispatchable technologies
   loop (tePyMapDisp32(tePyImp32,tePy32),
