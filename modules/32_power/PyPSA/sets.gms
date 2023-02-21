@@ -13,6 +13,9 @@ sets
     tPy32(ttot)                 "Years coupled to PyPSA"
         /2025, 2030, 2035, 2040, 2045, 2050, 2055, 2060, 2070, 2080, 2090, 2100, 2110, 2130, 2150/
 
+    tPy32s(ttot)                "Years coupled to PyPSA for which the discount rate p32_PyDisrate can be calculated"
+        /2025, 2030, 2035, 2040, 2045, 2050, 2055, 2060, 2070, 2080, 2090, 2100, 2110, 2130/
+
     regPy32(all_regi)           "Regions coupled to PyPSA"
         /DEU/
 
@@ -36,8 +39,6 @@ sets
         all_coal.igcc
         all_coal.igccc
         all_coal.pc
-        all_coal.pcc
-        all_coal.pco
         all_coal.coalchp
         all_offwind.windoff
         biomass.biochp
@@ -60,8 +61,6 @@ sets
         all_coal.igcc
         all_coal.igccc
         all_coal.pc
-        all_coal.pcc
-        all_coal.pco
         all_coal.coalchp
         biomass.biochp
         biomass.bioigcc
