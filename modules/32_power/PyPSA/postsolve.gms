@@ -32,21 +32,21 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
 
   !! Calculate parameters that will be passed to REMIND
   !! Discount rate
-  p32_PyDisrate(tPy32,regPy32) = (( (vm_cons.l(tPy32+1,regPy32)/pm_pop(tPy32+1,regPy32)) /
-    (vm_cons.l(tPy32-1,regPy32)/pm_pop(tPy32-1,regPy32)) )
-    ** (1 / ( pm_ttot_val(tPy32+1)- pm_ttot_val(tPy32-1))) - 1) + pm_prtp(regPy32);
-  !! Fuel prices
-  p32_PyFuelPrice(tPy32,regPy32,entyPe)$
-            ((abs(q_balPe.m(tPy32,regPy32,entyPe) gt sm_eps))
-        AND  (abs(qm_budget.m(tPy32,regPy32))     gt sm_eps))
-    = q_balPe.m(tPy32,regPy32,entyPe) / qm_budget.m(tPy32,regPy32);
+  p32_PyDisrate(ttot,all_regi)$(tPy32s(ttot) AND regPy32(all_regi))
+    = (   (   (vm_cons.l(ttot+1,all_regi)/pm_pop(ttot+1,all_regi))
+            / (vm_cons.l(ttot-1,all_regi)/pm_pop(ttot-1,all_regi)) 
+          )
+          ** (1 / ( pm_ttot_val(ttot+1)- pm_ttot_val(ttot-1))) 
+        - 1
+      )
+      + pm_prtp(all_regi);
   
   !! Export REMIND output data for PyPSA (REMIND2PyPSA.gdx)
   !! Don't use fulldata.gdx so that we keep track of which variables are exported to PyPSA
-  Execute_Unload 'REMIND2PyPSA.gdx',
-  vm_prodFe, !! To scale up the load time series
+  Execute_Unload "REMIND2PyPSA.gdx",
+    vm_prodSe, vm_prodFe, !! To scale up the load time series
   vm_costTeCapital, pm_data, p32_PyDisrate !! To calculate annualised capital costs 
-  pm_eta_conv, pm_dataeta, p32_PyFuelPrice, p_priceCO2, fm_dataemiglob  !! To calculate marginal costs
+    pm_eta_conv, pm_dataeta, pm_PEPrice, p_priceCO2, fm_dataemiglob  !! To calculate marginal costs
   ;
   Put_utility 'shell' / "cp REMIND2PyPSA.gdx REMIND2PyPSA_i" iteration.val:0:0 '.gdx';
 
