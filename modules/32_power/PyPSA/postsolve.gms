@@ -92,7 +92,7 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
     pm_cf(tPy32,regPy32,tePy32) =
         p32_Py2RM(tPy32,regPy32,tePyImp32,"capfac")
       * vm_cap.l(tPy32,regPy32,tePy32,"1")
-      / (sum(teRe2rlfDetail(all_te,rlf), vm_capDistr.l(tPy32,regPy32,all_te,rlf) * pm_dataren(regPy32,"nur",rlf,all_te)))
+      / sum(teRe2rlfDetail(tePy32,rlf), vm_capDistr.l(tPy32,regPy32,tePy32,rlf) * pm_dataren(regPy32,"nur",rlf,tePy32))
   );
 
 );
