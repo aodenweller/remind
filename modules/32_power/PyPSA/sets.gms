@@ -35,7 +35,6 @@ sets
 sets
     tePyMap32(tePyImp32,tePy32) "Technology mapping of PyPSA and REMIND"
         /
-        all_coal.gaschp
         all_coal.igcc
         all_coal.igccc
         all_coal.pc
@@ -46,6 +45,7 @@ sets
         biomass.bioigccc
         CCGT.ngcc
         CCGT.ngccc
+        CCGT.gaschp
         nuclear.tnrs
         nuclear.fnrs
         OCGT.ngt
@@ -57,7 +57,6 @@ sets
     
     tePyMapDisp32(tePyImp32,tePy32) "Technology mapping of PyPSA and REMIND for dispatchable technologies"
         /
-        all_coal.gaschp
         all_coal.igcc
         all_coal.igccc
         all_coal.pc
@@ -67,6 +66,7 @@ sets
         biomass.bioigccc
         CCGT.ngcc
         CCGT.ngccc
+        CCGT.gaschp
         nuclear.tnrs
         nuclear.fnrs
         OCGT.ngt
@@ -78,7 +78,8 @@ sets
         all_offwind.windoff
         onwind.wind
         solar.spv
-        ror.hydro
+*** TODO: Capacity factor for hydro much too large in PyPSA?
+***        ror.hydro
         /
 ;
 
