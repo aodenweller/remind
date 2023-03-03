@@ -14,7 +14,7 @@ remindPypsa::callREMIND2PyPSA(pyDir = args[1], iter = args[2])
 
 # Step 2: Call startPyPSA.R
 cat("Starting PyPSA in iteration", args[2], "\n")
-remindPypsa::startPyPSA(pyDir = args[1], iter = args[2])
+remindPypsa::startPyPSA(pyDir = args[1], iter = args[2], copyConfig = FALSE)
 
 # Step 3: Call PyPSA2REMIND.R
 cat("Calling PyPSA2REMIND.R in iteration", args[2], "\n")
