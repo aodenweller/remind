@@ -32,6 +32,7 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
 
   !! Calculate parameters that will be passed to REMIND
   !! Discount rate
+  !! TODO: Already exists somewhere else?
   p32_PyDisrate(ttot,all_regi)$(tPy32s(ttot) AND regPy32(all_regi))
     = (   (   (vm_cons.l(ttot+1,all_regi)/pm_pop(ttot+1,all_regi))
             / (vm_cons.l(ttot-1,all_regi)/pm_pop(ttot-1,all_regi)) 
@@ -45,8 +46,9 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
   !! Don't use fulldata.gdx so that we keep track of which variables are exported to PyPSA
   Execute_Unload "REMIND2PyPSA.gdx",
     vm_prodSe, vm_prodFe, !! To scale up the load time series
-    vm_costTeCapital, pm_data, p32_PyDisrate !! To calculate annualised capital costs 
+    vm_costTeCapital, pm_data, p32_PyDisrate, !! To calculate annualised capital costs 
     pm_eta_conv, pm_dataeta, pm_PEPrice, p_priceCO2, fm_dataemiglob  !! To calculate marginal costs
+    vm_cap, pm_ts, vm_deltaCap, vm_capEarlyReti !! To calculate pre-investment capacities
   ;
 
   !! Temporarily store and then set numeric round format and number of decimals
