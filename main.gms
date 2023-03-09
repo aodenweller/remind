@@ -1097,6 +1097,16 @@ parameter
 *' * (any other number) limit of gas demand from 2025 on in Germany in EJ/yr
 *'
 parameter
+  c_SlackMultiplier   "Muliplicative factor to up/downscale the slack size for v_changeProdStartyearSlack"
+;
+  c_SlackMultiplier = 1; !! def 1
+*'
+parameter
+  c_changeProdCost   "Muliplicative factor to up/downscale the costs for vm_changeProdStartyearCost"
+;
+  c_changeProdCost = 5; !! def 5
+*'
+parameter
   c32_startIter_PyPSA        "Starting iteration of PyPSA"
 *** Starting iteration of coupling with the power system model PyPSA
 ;
