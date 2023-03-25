@@ -17,5 +17,14 @@ pm_SEPrice(t,regi,entySE)$(    abs(qm_budget.m(t,regi)) gt sm_eps
   / qm_budget.m(t,regi);
 
 
+***------------------------------------------------------------
+***                  PyPSA coupling
+***------------------------------------------------------------
+
+*** Render validation RMarkdown file
+*** Don't put in postsolve.gms because fulldata_i.gdx is only written afterwards
+if ((iteration.val gt c32_startIter_PyPSA),
+  Execute "Rscript -e 'library(gdx); library(remindPypsa); remindPypsa::createValidation();'";
+);
 
 *** EOF ./modules/32_power/PyPSA/presolve.gms
