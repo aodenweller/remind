@@ -48,7 +48,7 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
     vm_prodSe, vm_prodFe, !! To scale up the load time series
     vm_costTeCapital, pm_data, p32_PyDisrate, !! To calculate annualised capital costs 
     pm_eta_conv, pm_dataeta, pm_PEPrice, p_priceCO2, fm_dataemiglob  !! To calculate marginal costs
-    vm_cap, pm_ts, vm_deltaCap, vm_capEarlyReti !! To calculate pre-investment capacities
+    vm_cap, pm_dt, vm_deltaCap, vm_capEarlyReti !! To calculate pre-investment capacities
   ;
 
   !! Temporarily store and then set numeric round format and number of decimals

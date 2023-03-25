@@ -10,12 +10,17 @@ args <- commandArgs(trailingOnly = TRUE)
 
 # Step 1: Call REMIND2PyPSA.R
 cat("Calling REMIND2PyPSA.R in iteration", args[2], "\n")
-remindPypsa::callREMIND2PyPSA(pyDir = args[1], iter = args[2])
+remindPypsa::callREMIND2PyPSA(pyDir = args[1],
+                              pyNameDefault = "REMIND-PyPSA_prepare",
+                              iter = args[2])
 
 # Step 2: Call startPyPSA.R
 cat("Starting PyPSA in iteration", args[2], "\n")
-remindPypsa::startPyPSA(pyDir = args[1], iter = args[2], copyConfig = FALSE)
+remindPypsa::startPyPSA(pyDir = args[1],
+                        iter = args[2],
+                        copyConfig = FALSE)
 
 # Step 3: Call PyPSA2REMIND.R
 cat("Calling PyPSA2REMIND.R in iteration", args[2], "\n")
-remindPypsa::callPyPSA2REMIND(pyDir = args[1], iter = args[2])
+remindPypsa::callPyPSA2REMIND(pyDir = args[1],
+                              iter = args[2])
