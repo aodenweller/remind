@@ -1,3 +1,9 @@
+# |  (C) 2006-2023 Potsdam Institute for Climate Impact Research (PIK)
+# |  authors, and contributors see CITATION.cff file. This file is part
+# |  of REMIND and licensed under AGPL-3.0-or-later. Under Section 7 of
+# |  AGPL-3.0, you are granted additional permissions described in the
+# |  REMIND License Exception, version 1.0 (see LICENSE file).
+# |  Contact: remind@pik-potsdam.de
 #' read a REMIND scenario_config*.csv file, make sure it contains all columns specified
 #' in path_gdx_list.
 #' Checks whether scenario titles are neither too long, don't contain dots and don't end with a _
@@ -106,7 +112,10 @@ readCheckScenarioConfig <- function(filename, remindPath = ".", testmode = FALSE
        "cm_build_costDecayStart" = "Rename to cm_build_H2costDecayStart, see https://github.com/remindmodel/remind/pull/1057",
        "c_BaselineAgriEmiRed" = "Use more flexible c_agricult_base_shift switch instead, see https://github.com/remindmodel/remind/issues/1157",
        "cm_bioprod_histlim" = "Use more flexible cm_bioprod_regi_lim switch instead, see https://github.com/remindmodel/remind/issues/1157",
-       "cm_BioImportTax_EU" = "Use more flexible cm_import_tax switch instead, see https://github.com/remindmodel/remind/issues/1157"
+       "cm_BioImportTax_EU" = "Use more flexible cm_import_tax switch instead, see https://github.com/remindmodel/remind/issues/1157",
+       "cm_trdcst" = "Now always fixed to 1.5, see https://github.com/remindmodel/remind/pull/1052",
+       "cm_trdadj" = "Now always fixed to 2, see https://github.com/remindmodel/remind/pull/1052",
+       "cm_OILRETIRE" = "Now always on by default, see https://github.com/remindmodel/remind/pull/1102"
      )
     for (i in intersect(names(forbiddenColumnNames), unknownColumnNames)) {
       if (testmode) {

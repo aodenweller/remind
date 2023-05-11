@@ -1,4 +1,4 @@
-*** |  (C) 2006-2022 Potsdam Institute for Climate Impact Research (PIK)
+*** |  (C) 2006-2023 Potsdam Institute for Climate Impact Research (PIK)
 *** |  authors, and contributors see CITATION.cff file. This file is part
 *** |  of REMIND and licensed under AGPL-3.0-or-later. Under Section 7 of
 *** |  AGPL-3.0, you are granted additional permissions described in the
@@ -112,6 +112,29 @@ p47_emiTargetMkt(ttot,regi, emiMktExt,"netGHG_LULUCFGrassi") =
 p47_emiTargetMkt(ttot,regi, emiMktExt,"netGHG_LULUCFGrassi_noBunkers") =
   p47_emiTargetMkt(ttot,regi, emiMktExt,"netGHG_noBunkers")
   - ( p47_LULUCFEmi_GrassiShift(ttot,regi) )$(sameas(emiMktExt,"other") or sameas(emiMktExt,"all"));
+
+*** net CO2 per Mkt without bunkers and with Grassi LULUCF shift
+p47_emiTargetMkt(ttot,regi, emiMktExt,"netCO2_LULUCFGrassi_intraRegBunker") =
+  p47_emiTargetMkt(ttot,regi, emiMktExt,"netCO2_noBunkers")
+  - ( p47_LULUCFEmi_GrassiShift(ttot,regi) )$(sameas(emiMktExt,"other") or sameas(emiMktExt,"all"))
+  + (
+    sum(se2fe(enty,enty2,te),
+      pm_emifac(ttot,regi,enty,enty2,te,"co2")
+      * vm_demFeSector.l(ttot,regi,enty,enty2,"trans","other")
+      ) * 0.35  !!35% of total bunkers in average from 2000-2020 for EU27 + UKI countries according UNFCCC numbers
+  )$((regi_group("EUR_regi",regi)) and (sameas(emiMktExt,"other") or sameas(emiMktExt,"all")));
+
+*** net GHG per Mkt without bunkers and with Grassi LULUCF shift
+p47_emiTargetMkt(ttot,regi, emiMktExt,"netGHG_LULUCFGrassi_intraRegBunker") =
+  p47_emiTargetMkt(ttot,regi, emiMktExt,"netGHG_noBunkers")
+  - ( p47_LULUCFEmi_GrassiShift(ttot,regi) )$(sameas(emiMktExt,"other") or sameas(emiMktExt,"all"))
+  + (
+    sum(se2fe(enty,enty2,te),
+      pm_emifac(ttot,regi,enty,enty2,te,"co2")
+      * vm_demFeSector.l(ttot,regi,enty,enty2,"trans","other")
+      ) * 0.35  !!35% of total bunkers in average from 2000-2020 for EU27 + UKI countries according UNFCCC numbers
+  )$((regi_group("EUR_regi",regi)) and (sameas(emiMktExt,"other") or sameas(emiMktExt,"all")));
+
 
 ***--------------------------------------------------
 *** Emission markets (EU Emission trading system and Effort Sharing)

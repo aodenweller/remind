@@ -1,31 +1,24 @@
 Running REMIND and MAgPIE in coupled mode
 ================
 David Klein (<dklein@pik-potsdam.de>)
-27 April, 2020
 
 - [Running REMIND and MAgPIE in coupled mode](#running-remind-and-magpie-in-coupled-mode)
 - [How to start coupled runs](#how-to-start-coupled-runs)
-    - [Clone the models](#clone-the-models)
-    - [Switch to relevant branchs](#switch-to-relevant-branchs)
-    - [Create snapshot of R libraries](#create-snapshot-of-r-libraries)
-    - [Activate snapshot for REMIND and MAgPIE](#activate-snapshot-for-remind-and-magpie)
-    - [What happens during a single coupled run](#what-happens-during-a-single-coupled-run)
-    - [What happens during a bundle of coupled runs](#what-happens-during-a-bundle-of-coupled-runs)
-    - [Configure start_bundle_coupled.R](#configure-start_bundle_coupledr)
-    - [Configure the config files of your choice](#configure-the-config-files-of-your-choice)
-    - [Perform test start before actually submitting runs](#perform-test-start-before-actually-submitting-runs)
-    - [Start runs after checking that coupling scripts finds all gdxes and mifs](#start-runs-after-checking-that-coupling-scripts-finds-all-gdxes-and-mifs)
+    + [Clone the models](#clone-the-models)
+    + [Switch to relevant branchs](#switch-to-relevant-branchs)
+    + [Create snapshot of R libraries](#create-snapshot-of-r-libraries)
+    + [Activate snapshot for REMIND and MAgPIE](#activate-snapshot-for-remind-and-magpie)
+    + [What happens during a single coupled run](#what-happens-during-a-single-coupled-run)
+    + [What happens during a bundle of coupled runs](#what-happens-during-a-bundle-of-coupled-runs)
+    + [Configure start_bundle_coupled.R](#configure-start_bundle_coupledr)
+    + [Configure the config files of your choice](#configure-the-config-files-of-your-choice)
+    + [Perform test start before actually submitting runs](#perform-test-start-before-actually-submitting-runs)
+    + [Start runs after checking that coupling scripts finds all gdxes and mifs](#start-runs-after-checking-that-coupling-scripts-finds-all-gdxes-and-mifs)
 - [Check the convergence](#check-the-convergence)
 - [Technical concept](#technical-concept)
-    - [Dynamic part](#dynamic-part)
-    - [Static part](#static-part)
-    - [Assumptions](#assumptions)
-    - [The coupling scripts](#the-coupling-scripts)
-
-- [Check the convergence](#Check-the-convergence)
-- [Technical concept](#technical-concept)
-    + [Dynamic](#dynamic)
-    + [Static](#static)
+    + [Dynamic part](#dynamic-part)
+    + [Static part](#static-part)
+    + [Assumptions](#assumptions)
     + [The coupling scripts](#the-coupling-scripts)
 
 # How to start coupled runs
@@ -214,7 +207,7 @@ There are two components of the REMIND-MAgPIE coupling: the prominent dynamic pa
 * GHG emission baselines for SSPs/RCPs (delivered to REMIND via (updated in coupled runs)
 * total agricultural production costs (fixed for standalone and coupled)
 
-Please find here a [detailed list of the REMIND input files and were they come from](https://redmine.pik-potsdam.de/projects/remind-r/wiki/Updating_inputs_from_MAgPIE).
+Please find a detailed list of the REMIND input files and were they come from [in the gitlab wiki](https://gitlab.pik-potsdam.de/REMIND/wiki/-/wikis/Updating-Inputs-from-Magpie).
 
 ### Assumptions
 
