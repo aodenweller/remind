@@ -23,8 +23,23 @@ pm_SEPrice(t,regi,entySE)$(    abs(qm_budget.m(t,regi)) gt sm_eps
 
 *** Render validation RMarkdown file
 *** Don't put in postsolve.gms because fulldata_i.gdx is only written afterwards
-if ((iteration.val gt c32_startIter_PyPSA),
-  Execute "Rscript -e 'library(gdx); library(remindPypsa); remindPypsa::createValidation();'";
-);
+***if ((iteration.val gt c32_startIter_PyPSA),
+***  Execute "Rscript -e 'library(gdx); library(remindPypsa); remindPypsa::createValidation();'";
+***);
+
+!! Temporarily store and then set numeric round format and number of decimals
+sm_tmp  = logfile.nr;
+sm_tmp2 = logfile.nd;
+logfile.nr = 1;
+logfile.nd = 0;
+
+!! TEST CALL
+Put_utility logfile, "Exec" /
+  "./RunPyPSA-Eur.sh";
+
+!! Reset round format and number of decimals
+logfile.nr = sm_tmp;
+logfile.nd = sm_tmp2;
+
 
 *** EOF ./modules/32_power/PyPSA/presolve.gms

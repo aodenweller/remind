@@ -303,7 +303,7 @@ $setglobal fossil  grades2poly        !! def = grades2poly
 *' * (RLDC)      :    Power sector formulation with Residual Load Duration Curve (RLDC) formulation for VRE power integration, and flexible capacity factors for dispatchable power plants
 *' * (DTcoup)    :    (currently not merged, only a copy of IntC) Power sector formulation with iterative coupling to hourly power-sector model DIETER: REMIND gives DIETER costs of technologies, power demand, CO2 price and capacity bounds; DIETER gives REMIND markups of generation, capacity factors, peak hourly residual demand
 *' * (PyPSA)     :    Power sector formulation with iterative coupling to hourly power system model PyPSA
-$setglobal power  IntC        !! def = IntC
+$setglobal power  PyPSA        !! def = IntC
 *'---------------------    33_CDR       ----------------------------------------
 *'
 *' * (off)        : no carbon dioxide removal technologies except BECCS
