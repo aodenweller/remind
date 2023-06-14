@@ -99,4 +99,11 @@ $offtext
 *** initialize p32_PriceDurSlope parameter
 p32_PriceDurSlope(regi,"elh2") = cm_PriceDurSlope_elh2;
 
+***------------------------------------------------------------
+***                  PyPSA-Eur
+***------------------------------------------------------------
+
+*** Initialise at 0
+p32_PyPSA_shSeEl(ttot,all_regi,all_te) = 0;
+
 *** EOF ./modules/32_power/PyPSA/datainput.gms

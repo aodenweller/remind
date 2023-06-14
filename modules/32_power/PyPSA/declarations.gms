@@ -70,12 +70,23 @@ v32_flexPriceShareMin(tall,all_regi,all_te)         "possible minimum of share o
 
 *** All parameters for the PyPSA coupling start with p32_Py...
 parameters
-    p32_Py2RM(tPy32,regPy32,tePyImp32,varPyImp32)   "Imported dataset from PyPSA (PyPSA2REMIND.gdx)"
+    p32_PyPSA_CF(tPy32,regPy32,tePy32)              "PyPSA import: Capacity factors"
+    p32_PyPSA_shSeEl(ttot,all_regi,all_te)          "PyPSA import: Electricity generation share by technology"
     p32_PyDisrate(ttot,all_regi)                    "Discount rate to annualise capital costs in PyPSA"
 ;
 
-***equations
-***    q32_capFac(ttot,all_regi,all_te)                "Pre-factor equation to set the capacity factor (from PyPSA)"
-***;
+
+variables
+    v32_usableSeDisp(ttot,all_regi,all_enty)
+    v32_usableSeTeDisp(ttot,all_regi,all_enty,all_te)
+    v32_shSeElDisp(ttot,all_regi,all_te)
+;
+
+equations
+    q32_usableSeDisp(ttot,all_regi,all_enty)
+    q32_usableSeTeDisp(ttot,all_regi,all_enty,all_te)
+    q32_shSeElDisp(ttot,all_regi,all_te)                       "Dispatchable generation share equation"
+    q32_capFac(ttot,all_regi,all_te)                "REMIND-PyPSA: Capacity factor equation (with linear pre-factor for convergence)"
+;
 
 *** EOF ./modules/32_power/PyPSA/declarations.gms

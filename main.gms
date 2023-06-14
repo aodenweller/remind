@@ -1112,6 +1112,11 @@ parameter
 ;
   c32_startIter_PyPSA = 5; !! def = 5
 *'
+parameter
+  cm_PyPSA_eq               "Switch to activate PyPSA coupling equations (in 32_power and 21_tax)"
+;
+  cm_PyPSA_eq = 0; !! def = 0
+*'
 ***-----------------------------------------------------------------------------
 *' ####                     FLAGS
 ***-----------------------------------------------------------------------------

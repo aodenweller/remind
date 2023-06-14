@@ -23,23 +23,38 @@ pm_SEPrice(t,regi,entySE)$(    abs(qm_budget.m(t,regi)) gt sm_eps
 
 *** Render validation RMarkdown file
 *** Don't put in postsolve.gms because fulldata_i.gdx is only written afterwards
-***if ((iteration.val gt c32_startIter_PyPSA),
-***  Execute "Rscript -e 'library(gdx); library(remindPypsa); remindPypsa::createValidation();'";
-***);
+$ontext
+if ((iteration.val gt c32_startIter_PyPSA),
+  Execute "Rscript -e 'library(gdx); library(remindPypsa); remindPypsa::createValidation();'";
+);
+$offtext
 
+*** Only for testing
+Execute_Unload "REMIND2PyPSA.gdx",
+  !! REMIND to PyPSA
+  vm_usableSe, !! To scale up the load time series
+  vm_costTeCapital, pm_data, p_r, !! To calculate annualised capital costs 
+  pm_eta_conv, pm_dataeta, pm_PEPrice, pe2se, p_priceCO2, fm_dataemiglob  !! To calculate marginal costs
+  vm_cap, pm_dt, vm_deltaCap, vm_capEarlyReti !! To calculate pre-investment capacities
+  !! PyPSA to REMIND
+  v32_shSeElDisp  !! To downscale PyPSA generation shares to REMIND technologies
+;
+
+$ontext
+!! Test call PyPSA-Eur
 !! Temporarily store and then set numeric round format and number of decimals
 sm_tmp  = logfile.nr;
 sm_tmp2 = logfile.nd;
 logfile.nr = 1;
 logfile.nd = 0;
 
-!! TEST CALL
+!! Command line arguments: (i) PyPSA directory and (ii) current iteration
 Put_utility logfile, "Exec" /
-  "./RunPyPSA-Eur.sh";
+  "./RunPyPSA-Eur.sh %c32_pypsa_dir% " iteration.val:0:0;
 
 !! Reset round format and number of decimals
 logfile.nr = sm_tmp;
 logfile.nd = sm_tmp2;
-
+$offtext
 
 *** EOF ./modules/32_power/PyPSA/presolve.gms

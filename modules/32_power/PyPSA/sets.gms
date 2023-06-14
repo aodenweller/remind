@@ -7,7 +7,7 @@
 *** SOF ./modules/32_power/PyPSA/sets.gms
 
 ***------------------------------------------------------------
-***                  Sets for PyPSA
+***                  PyPSA-Eur coupling
 ***------------------------------------------------------------
 sets
     tPy32(ttot)                 "Years coupled to PyPSA"
@@ -19,69 +19,21 @@ sets
     regPy32(all_regi)           "Regions coupled to PyPSA"
         /DEU/
 
-    tePyImp32                   "Technology names as imported from PyPSA"
-        /all_coal, all_offwind, biomass, CCGT, nuclear, OCGT, oil, onwind, ror, solar/
-
     tePy32(all_te)              "REMIND secondary energy electricity technologies coupled to PyPSA"
         /biochp, bioigcc, bioigccc, ngcc, ngccc, gaschp, igcc, igccc, pc, pcc, pco, coalchp, tnrs, fnrs, ngt, windoff, dot, wind, hydro, spv/  !! TODO: What about CSP and geohdr?
 
-    varPyImp32                  "Variable names as imported from PyPSA"
-        /capfac/
+    tePy32disp(tePy32)          "REMIND dispatchable secondary energy electricity technologies (no grades)"
+        /biochp, bioigcc, bioigccc, ngcc, ngccc, gaschp, igcc, igccc, pc, pcc, pco, coalchp, tnrs, fnrs, ngt, dot/
+
+    tePy32nondisp(tePy32)       "REMIND non-dispatchable secondary energy electricity technologies (with grades)"
+        /windoff, wind, spv/
 ;
 
 ***------------------------------------------------------------
-***                  Mappings for PyPSA
+***                  PyPSA-Eur mappings
 ***------------------------------------------------------------
-sets
-    tePyMap32(tePyImp32,tePy32) "Technology mapping of PyPSA and REMIND"
-        /
-        all_coal.igcc
-        all_coal.igccc
-        all_coal.pc
-        all_coal.coalchp
-        all_offwind.windoff
-        biomass.biochp
-        biomass.bioigcc
-        biomass.bioigccc
-        CCGT.ngcc
-        CCGT.ngccc
-        CCGT.gaschp
-        nuclear.tnrs
-        nuclear.fnrs
-        OCGT.ngt
-        oil.dot
-        onwind.wind
-        ror.hydro
-        solar.spv
-        /
-    
-    tePyMapDisp32(tePyImp32,tePy32) "Technology mapping of PyPSA and REMIND for dispatchable technologies"
-        /
-        all_coal.igcc
-        all_coal.igccc
-        all_coal.pc
-        all_coal.coalchp
-        biomass.biochp
-        biomass.bioigcc
-        biomass.bioigccc
-        CCGT.ngcc
-        CCGT.ngccc
-        CCGT.gaschp
-        nuclear.tnrs
-        nuclear.fnrs
-        OCGT.ngt
-        oil.dot
-        /
-    
-    tePyMapNonDisp32(tePyImp32,tePy32) "Technology mapping of PyPSA and REMIND for non-dispatchable technologies (implemented with rlf /grades in REMIND)"
-        /
-        all_offwind.windoff
-        onwind.wind
-        solar.spv
-*** TODO: Capacity factor for hydro much too large in PyPSA?
-***        ror.hydro
-        /
-;
+
+*** Most mappings have been shifted to  the PyPSA snakemake workflow
 
 
 *** EOF ./modules/32_power/PyPSA/sets.gms
