@@ -29,17 +29,6 @@ if ((iteration.val gt c32_startIter_PyPSA),
 );
 $offtext
 
-*** Only for testing
-Execute_Unload "REMIND2PyPSA.gdx",
-  !! REMIND to PyPSA
-  vm_usableSe, !! To scale up the load time series
-  vm_costTeCapital, pm_data, p_r, !! To calculate annualised capital costs 
-  pm_eta_conv, pm_dataeta, pm_PEPrice, pe2se, p_priceCO2, fm_dataemiglob  !! To calculate marginal costs
-  vm_cap, pm_dt, vm_deltaCap, vm_capEarlyReti !! To calculate pre-investment capacities
-  !! PyPSA to REMIND
-  v32_shSeElDisp  !! To downscale PyPSA generation shares to REMIND technologies
-;
-
 $ontext
 !! Test call PyPSA-Eur
 !! Temporarily store and then set numeric round format and number of decimals

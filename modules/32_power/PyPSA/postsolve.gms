@@ -35,7 +35,7 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
   !! Don't use fulldata.gdx so that we keep track of which variables are exported to PyPSA
   Execute_Unload "REMIND2PyPSA.gdx",
     !! REMIND to PyPSA
-    vm_usableSe, !! To scale up the load time series
+    v32_usableSeDisp, v32_usableSeTeDisp, !! To scale up the load time series
     vm_costTeCapital, pm_data, p_r, !! To calculate annualised capital costs 
     pm_eta_conv, pm_dataeta, pm_PEPrice, pe2se, p_priceCO2, fm_dataemiglob  !! To calculate marginal costs
     vm_cap, pm_dt, vm_deltaCap, vm_capEarlyReti !! To calculate pre-investment capacities
