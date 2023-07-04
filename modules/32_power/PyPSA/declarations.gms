@@ -68,25 +68,26 @@ v32_flexPriceShareMin(tall,all_regi,all_te)         "possible minimum of share o
 ***                  Declarations for PyPSA
 ***------------------------------------------------------------
 
-*** All parameters for the PyPSA coupling start with p32_Py...
 parameters
-    p32_PyPSA_CF(tPy32,regPy32,tePy32)              "PyPSA import: Capacity factors"
-    p32_PyPSA_shSeEl(ttot,all_regi,all_te)          "PyPSA import: Electricity generation share by technology"
-    p32_PyDisrate(ttot,all_regi)                    "Discount rate to annualise capital costs in PyPSA"
+    p32_PyPSA_CF(tPy32,regPy32,tePy32)                  "PyPSA import: Capacity factors [1]"
+    p32_PyPSA_shSeEl(ttot,all_regi,all_te)              "PyPSA import: Electricity generation share by technology [1]"
+    p32_PyPSA_MV(ttot,all_regi,all_te)                  "PyPSA import: Market values [$/MWh]"
+    p32_PyPSA_ElecPrice(ttot,all_regi,tePyImpCarrier32) "PyPSA import: Electricity prices [$/MWh]"
+    p32_preInvCap(ttot,all_regi,all_te)                 "PyPSA export: Pre-investment capacities [TW]"
 ;
 
-
 variables
-    v32_usableSeDisp(ttot,all_regi,all_enty)
-    v32_usableSeTeDisp(ttot,all_regi,all_enty,all_te)
-    v32_shSeElDisp(ttot,all_regi,all_te)
+    v32_usableSeDisp(ttot,all_regi,all_enty)            "PyPSA export: Usable SE electricity for dispatch without own consumption [TWa]"
+    v32_usableSeTeDisp(ttot,all_regi,all_enty,all_te)   "PyPSA export: Usable SE electricity for dispatch without own consumption by technology [TWa]"
+    v32_shSeElDisp(ttot,all_regi,all_te)                "PyPSA export: Share of usable SE electricity for dispatch without own consumption [1]"
 ;
 
 equations
-    q32_usableSeDisp(ttot,all_regi,all_enty)
-    q32_usableSeTeDisp(ttot,all_regi,all_enty,all_te)
-    q32_shSeElDisp(ttot,all_regi,all_te)                       "Dispatchable generation share equation"
-    q32_capFac(ttot,all_regi,all_te)                "REMIND-PyPSA: Capacity factor equation (with linear pre-factor for convergence)"
+    q32_usableSeDisp(ttot,all_regi,all_enty)            "PyPSA coupling: Equation to calculate v32_usableSeDisp"
+    q32_usableSeTeDisp(ttot,all_regi,all_enty,all_te)   "PyPSA coupling: Equation to calculate v32_usableSeTeDisp"
+    q32_shSeElDisp(ttot,all_regi,all_te)                "PyPSA coupling: Equation to calculate v32_shSeElDisp"
+    q32_capFac(ttot,all_regi,all_te)                    "PyPSA coupling: Pre-factor equation to import the capacity factor"
+    q32_MarkUp(ttot,all_regi,all_te)                    "PyPSA coupling: Equation to calculate the markup vm_MarkUp"
 ;
 
 *** EOF ./modules/32_power/PyPSA/declarations.gms

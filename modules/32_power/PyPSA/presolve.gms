@@ -29,21 +29,4 @@ if ((iteration.val gt c32_startIter_PyPSA),
 );
 $offtext
 
-$ontext
-!! Test call PyPSA-Eur
-!! Temporarily store and then set numeric round format and number of decimals
-sm_tmp  = logfile.nr;
-sm_tmp2 = logfile.nd;
-logfile.nr = 1;
-logfile.nd = 0;
-
-!! Command line arguments: (i) PyPSA directory and (ii) current iteration
-Put_utility logfile, "Exec" /
-  "./RunPyPSA-Eur.sh %c32_pypsa_dir% " iteration.val:0:0;
-
-!! Reset round format and number of decimals
-logfile.nr = sm_tmp;
-logfile.nd = sm_tmp2;
-$offtext
-
 *** EOF ./modules/32_power/PyPSA/presolve.gms

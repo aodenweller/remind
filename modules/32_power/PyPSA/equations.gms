@@ -298,7 +298,7 @@ q32_flexAdj(t,regi,te)$(teFlexTax(te))..
 ***------------------------------------------------------------
 
 *** Calculate usable electricity generation in total
-q32_usableSeDisp(t,regi,entySe)$(regPy32(regi) AND sameas(entySe,"seel"))..
+q32_usableSeDisp(t,regi,entySe)$(sameas(entySe,"seel"))..
 	v32_usableSeDisp(t,regi,entySe)
 	=e=
 	sum(pe2se(enty,entySe,te), vm_prodSe(t,regi,enty,entySe,te)$(tePy32(te)) )
@@ -307,7 +307,7 @@ q32_usableSeDisp(t,regi,entySe)$(regPy32(regi) AND sameas(entySe,"seel"))..
 ;
 
 *** Calculate usable electricity generation by technology
-q32_usableSeTeDisp(t,regi,entySe,te)$(regPy32(regi) AND sameas(entySe,"seel") AND tePy32(te))..
+q32_usableSeTeDisp(t,regi,entySe,te)$(sameas(entySe,"seel") AND tePy32(te))..
  	v32_usableSeTeDisp(t,regi,entySe,te)
  	=e=
  	sum(pe2se(enty,entySe,te), vm_prodSe(t,regi,enty,entySe,te) )
@@ -316,12 +316,13 @@ q32_usableSeTeDisp(t,regi,entySe,te)$(regPy32(regi) AND sameas(entySe,"seel") AN
 ;
 
 *** Calculate electricity generation shares by technology
-q32_shSeElDisp(t,regi,te)$(regPy32(regi) AND tePy32(te))..
+q32_shSeElDisp(t,regi,te)$(tePy32(te))..
     v32_shSeElDisp(t,regi,te) * v32_usableSeDisp(t,regi,"seel")
     =e=
     v32_usableSeTeDisp(t,regi,"seel",te)
 ;
 
+$ontext
 *** Pre-factor equation to set the capacity factor (from PyPSA)
 q32_capFac(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) and (cm_PyPSA_eq ne 0))..
   vm_capFac(t,regi,te) !! * 1$(tPy32(t) AND regPy32(regi) AND tePy32(te))
@@ -333,13 +334,20 @@ q32_capFac(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) and (cm_PyPSA_e
   * (1 - 0.5 * ((v32_shSeElDisp(t,regi,te)) - p32_PyPSA_shSeEl(t,regi,te)))
   * 1$(pm_cf(t,regi,te) lt 0.5)
 ;
+$offtext
 
-$ontext
 q32_capFac(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) and (cm_PyPSA_eq ne 0))..
   vm_capFac(t,regi,te) * 1$(tPy32(t) AND regPy32(regi) AND tePy32(te))
   =e=
     pm_cf(t,regi,te)
 ;
-$offtext
+
+*** Equation to set the market value (from PyPSA)
+q32_MarkUp(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (cm_PyPSA_eq ne 0))..
+	vm_Markup(t,regi,te)
+	=e=
+    ( p32_PyPSA_MV(t,regi,te) - p32_PyPSA_ElecPrice(t,regi,"AC") ) 
+  / 1E12 * sm_TWa_2_MWh
+;
 
 *** EOF ./modules/32_power/PyPSA/equations.gms

@@ -31,28 +31,31 @@ loop(t,
 *** Execute PyPSA-Eur only every x-th iteration after iteration c32_startIter_PyPSA
 if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIter_PyPSA, 1) eq 0),
 
+  p32_preInvCap(t,regi,te)$(tePy32(te)) = vm_cap.l(t,regi,te,"1")$(tePy32(te)) * (1 - vm_capEarlyReti.l(t,regi,te))$(tePy32(te))
+
   !! Export REMIND output data for PyPSA (REMIND2PyPSA.gdx)
   !! Don't use fulldata.gdx so that we keep track of which variables are exported to PyPSA
   Execute_Unload "REMIND2PyPSA.gdx",
     !! REMIND to PyPSA
-    v32_usableSeDisp, v32_usableSeTeDisp, !! To scale up the load time series
-    vm_costTeCapital, pm_data, p_r, !! To calculate annualised capital costs 
-    pm_eta_conv, pm_dataeta, pm_PEPrice, pe2se, p_priceCO2, fm_dataemiglob  !! To calculate marginal costs
-    vm_cap, pm_dt, vm_deltaCap, vm_capEarlyReti !! To calculate pre-investment capacities
+    tPy32, regPy32, tePy32, !! General info: Coupled time steps, regions and technologies
+    v32_usableSeDisp, !! Load
+    vm_costTeCapital, pm_data, p_r, !! Capital cost components
+    pm_eta_conv, pm_dataeta, pm_PEPrice, pe2se, p_priceCO2, fm_dataemiglob  !! Marginal cost components
+    p32_preInvCap, !! Pre-investment capacities
+    v32_usableSeTeDisp, !! For weighted averages
     !! PyPSA to REMIND
     v32_shSeElDisp  !! To downscale PyPSA generation shares to REMIND technologies
   ;
-
+$ontext
   !! Temporarily store and then set numeric round format and number of decimals
   sm_tmp  = logfile.nr;
   sm_tmp2 = logfile.nd;
   logfile.nr = 1;
   logfile.nd = 0;
 
-$ontext
   !! Copy REMIND2PyPSA.gdx for iteration i
   Put_utility logfile, "shell" /
-  !!  "cp REMIND2PyPSA.gdx REMIND2PyPSA_i" iteration.val:0:0 ".gdx";
+    "cp REMIND2PyPSA.gdx REMIND2PyPSA_i" iteration.val:0:0 ".gdx";
 
   !! Start PyPSA-Eur
   !! This executes a shell script (copied from scripts/iterative)
@@ -67,11 +70,11 @@ $ontext
   Put_utility logfile, "shell" / 
     "cp PyPSA2REMIND_i" iteration.val:0:0 ".gdx PyPSA2REMIND.gdx";
 $offtext
-
   !! Import PyPSA data for REMIND (PyPSA2REMIND.gdx)
   Execute_Loadpoint "coupling-parameters.gdx", p32_PyPSA_CF=capacity_factor;
   Execute_Loadpoint "coupling-parameters.gdx", p32_PyPSA_shSeEl=generation_share;
-  !!Execute_Loadpoint "coupling-parameters.gdx", p32_PyPSA_MV=market_value;
+  Execute_Loadpoint "coupling-parameters.gdx", p32_PyPSA_MV=market_value;
+  Execute_Loadpoint "coupling-parameters.gdx", p32_PyPSA_ElecPrice=electricity_price;
 
   !! Reset round format and number of decimals
   logfile.nr = sm_tmp;
