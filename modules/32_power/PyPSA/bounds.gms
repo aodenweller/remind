@@ -10,11 +10,12 @@
 ***                  Bounds copied from IntC
 ***------------------------------------------------------------
 
+***AO: Don't fix capacity factors any longer
 *** Fix capacity factors to the standard value from data
-vm_capFac.fx(t,regi,te) = pm_cf(t,regi,te);
-
-*** AO: Deactivate the dispatch part
 $ontext
+vm_capFac.fx(t,regi,te) = pm_cf(t,regi,te);
+$offtext
+
 $IFTHEN.dispatchSetyDown not "%cm_dispatchSetyDown%" == "off"
   loop(pe2se(enty,enty2,te),
     vm_capFac.lo(t,regi,te) = ( 1 - %cm_dispatchSetyDown% / 100 ) * pm_cf(t,regi,te);
@@ -26,7 +27,6 @@ $IFTHEN.dispatchSeelDown not "%cm_dispatchSeelDown%" == "off"
     vm_capFac.lo(t,regi,te) = ( 1 - %cm_dispatchSeelDown% / 100 ) * pm_cf(t,regi,te);  
   );
 $ENDIF.dispatchSeelDown
-$offtext
 
 
 *** FS: if flexibility tax on, let capacity factor be endogenuously determined between 0.1 and 1 
