@@ -41,6 +41,7 @@ p21_taxemiMkt0(ttot,all_regi,all_emiMkt)         "reference level value of co2 e
 p21_taxrevFlex0(ttot,all_regi)                   "reference level value of flexibility tax"
 p21_taxrevImport0(ttot,all_regi,all_enty)        "reference level value of import tax"
 p21_taxrevChProdStartYear0(ttot,all_regi)        "reference level value of tax to limit changes compared to reference run in cm_startyear"
+p21_taxrevMarkup0(ttot,all_regi)                 "reference level value of markup from PyPSA"
 
 p21_taxrevGHG_iter(iteration,ttot,all_regi)                "reference level value of GHG emission tax revenue"
 p21_taxrevCCS_iter(iteration,ttot,all_regi)                "reference level value of CCS tax revenue"
@@ -116,6 +117,7 @@ v21_implicitDiscRate(ttot,all_regi)              "implicit tax on energy efficie
 v21_taxemiMkt(ttot,all_regi,all_emiMkt)         "tax on greenhouse gas emissions"
 v21_taxrevImport(ttot,all_regi,all_enty)        "tax on energy imports"
 v21_taxrevChProdStartYear(ttot,all_regi)        "tax to limit changes compared to reference run in cm_startyear"
+v21_taxrevMarkup(ttot,all_regi)                 "tax revenue from markup from PyPSA"
 ;
 
 Positive Variable
@@ -146,6 +148,7 @@ q21_implicitDiscRate(ttot,all_regi)             "calculation of the implicit dis
 q21_taxemiMkt(ttot,all_regi,all_emiMkt)         "calculation of specific emission market tax on CO2 emissions"
 q21_taxrevImport(ttot,all_regi,all_enty)        "calculation of import tax"
 q21_taxrevChProdStartYear(ttot,all_regi)        "calculation of tax to limit changes compared to reference run in cm_startyear"
+q21_taxrevMarkup(ttot,all_regi)                 "calculation of markup from PyPSA-Eur implemented as a tax"
 ;
 
 *** EOF ./modules/21_tax/on/declarations.gms

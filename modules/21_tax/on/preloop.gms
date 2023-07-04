@@ -159,4 +159,8 @@ v21_taxrevImport.l(t,regi,tradePe) = 0;
 *** initialize taxrevImport
 v21_taxrevChProdStartYear.l(t,regi) = 0;
 
+*** initialise markup
+vm_Markup.l(ttot,all_regi,all_te) = 0;
+v21_taxrevMarkup.l(ttot,all_regi) = 0;
+
 *** EOF ./modules/21_tax/on/preloop.gms

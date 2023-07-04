@@ -59,6 +59,7 @@ $endIf.cm_implicitPriceTarget
 $ifthen.cm_implicitPePriceTarget not "%cm_implicitPePriceTarget%" == "off"
   + sum(entyPe,vm_taxrevimplicitPePriceTax(t,regi,entyPe))
 $endIf.cm_implicitPePriceTarget
+  + v21_taxrevMarkup(t,regi)$(tPy32(t) AND regPy32(regi) AND (cm_PyPSA_eq ne 0))
 ;
 
 ***---------------------------------------------------------------------------
@@ -307,6 +308,16 @@ q21_taxrevChProdStartYear(t,regi)$(t.val ge max(2010,cm_startyear))..
   - p21_taxrevChProdStartYear0(t,regi)
 ;
 
-
+***---------------------------------------------------------------------------
+*'  Markup from PyPSA-Eur
+***---------------------------------------------------------------------------
+*** vm_Markup is the markup/markdown for each generation technology
+q21_taxrevMarkup(t,regi)$(tPy32(t) AND regPy32(regi) AND (cm_PyPSA_eq ne 0))..
+  v21_taxrevMarkup(t,regi)
+  =e=
+  sum(en2en(enty,enty2,te)$(tePy32(te)),
+   - vm_Markup(t,regi,te) * (vm_prodSe(t,regi,enty,enty2,te) - v32_storloss(t,regi,te)) )
+   - p21_taxrevMarkup0(t,regi)
+;
 
 *** EOF ./modules/21_tax/on/equations.gms

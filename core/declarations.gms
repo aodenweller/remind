@@ -362,6 +362,7 @@ vm_taxrevimplicitPePriceTax(ttot,all_regi,all_enty)  "primary energy price targe
 v_changeProdStartyear(ttot,all_regi,all_te)          "absolute change of output with respect to the reference run for each te. Unit: [TWa] for all energy-conversion tech, [GtC] for the CCS chain in ccs2te (pipelines/injection)"
 v_relChangeProdStartYear(ttot,all_regi,all_te)       "calculating the relative change of output with respect to the reference run for each te. Unit: [Percent]"
 v_changeProdStartyearSlack(ttot,all_regi,all_te)     "slack variable to allow a minimum cost-free change with respect to the reference run"
+vm_MarkUp(ttot,all_regi,all_te)                      "Markup or markdown for electricity technologies according to PyPSA [Tr$/TWa]"
 ;
 
 ***----------------------------------------------------------------------------------------
