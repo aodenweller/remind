@@ -104,6 +104,8 @@ p32_PriceDurSlope(regi,"elh2") = cm_PriceDurSlope_elh2;
 ***------------------------------------------------------------
 
 *** Initialise at 0
-p32_PyPSA_shSeEl(ttot,all_regi,all_te) = 0;
+p32_PyPSA_shSeEl(tPy32,regPy32,tePy32) = 0;
+p32_PyPSA_MV(tPy32,regPy32,tePy32) = 0;
+p32_PyPSA_ElecPrice(tPy32,regPy32,tePyImpCarrier32) = 0;
 
 *** EOF ./modules/32_power/PyPSA/datainput.gms
