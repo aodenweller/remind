@@ -34,6 +34,7 @@ vm_fuExtr.l(ttot,regi,"pebiolc","1")$(ttot.val ge 2005)  = 0;
 vm_pebiolc_price.l(ttot,regi)$(ttot.val ge 2005)         = 0;
 vm_emiAllMkt.l(t,regi,enty,emiMkt) = 0;
 vm_co2eqMkt.l(ttot,regi,emiMkt) = 0;
+v32_storloss.l(ttot,regi,te) = 0;
 
 v_shfe.l(t,regi,enty,sector) = 0;
 v_shGasLiq_fe.l(t,regi,sector) = 0;  
