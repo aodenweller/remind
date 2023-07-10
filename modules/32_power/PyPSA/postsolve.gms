@@ -35,7 +35,7 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
 
   !! Export REMIND output data for PyPSA (REMIND2PyPSA.gdx)
   !! Don't use fulldata.gdx so that we keep track of which variables are exported to PyPSA
-  Execute_Unload "REMIND2PyPSA.gdx",
+  Execute_Unload "REMIND2PyPSAEUR.gdx",
     !! REMIND to PyPSA
     tPy32, regPy32, tePy32, !! General info: Coupled time steps, regions and technologies
     v32_usableSeDisp, !! Load
@@ -46,7 +46,6 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
     !! PyPSA to REMIND
     v32_shSeElDisp  !! To downscale PyPSA generation shares to REMIND technologies
   ;
-$ontext
   !! Temporarily store and then set numeric round format and number of decimals
   sm_tmp  = logfile.nr;
   sm_tmp2 = logfile.nd;
@@ -55,26 +54,26 @@ $ontext
 
   !! Copy REMIND2PyPSA.gdx for iteration i
   Put_utility logfile, "shell" /
-    "cp REMIND2PyPSA.gdx REMIND2PyPSA_i" iteration.val:0:0 ".gdx";
+    "cp REMIND2PyPSAEUR.gdx REMIND2PyPSAEUR_i" iteration.val:0:0 ".gdx";
 
   !! Start PyPSA-Eur
   !! This executes a shell script (copied from scripts/iterative)
   !! and starts the full coupling workflow:
-  !! 1) Transfer data from REMIND to PyPSA-Eur (REMIND2PyPSA.gdx)
+  !! 1) Copy REMIND2PyPSAEUR.gdx to PyPSA-Eur directory
   !! 2) Start PyPSA-Eur
-  !! 3) Transfer data from PyPSA-Eur to REMIND (PyPSA2REMIND.gdx)
+  !! 3) Copy PyPSAEUR2REMIND.gdx to REMIND directory
   Put_utility logfile, "Exec" /
   "./RunPyPSA-Eur.sh %c32_pypsa_dir% " iteration.val:0:0;
 
   !! Copy PyPSA2REMIND from iteration i
   Put_utility logfile, "shell" / 
-    "cp PyPSA2REMIND_i" iteration.val:0:0 ".gdx PyPSA2REMIND.gdx";
-$offtext
+    "cp PyPSAEUR2REMIND.gdx PyPSAEUR2REMIND_" iteration.val:0:0.gdx;
+
   !! Import PyPSA data for REMIND (PyPSA2REMIND.gdx)
-  Execute_Loadpoint "coupling-parameters.gdx", p32_PyPSA_CF=capacity_factor;
-  Execute_Loadpoint "coupling-parameters.gdx", p32_PyPSA_shSeEl=generation_share;
-  Execute_Loadpoint "coupling-parameters.gdx", p32_PyPSA_MV=market_value;
-  Execute_Loadpoint "coupling-parameters.gdx", p32_PyPSA_ElecPrice=electricity_price;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_CF=capacity_factor;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_shSeEl=generation_share;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_MV=market_value;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_ElecPrice=electricity_price;
 
   !! Reset round format and number of decimals
   logfile.nr = sm_tmp;
