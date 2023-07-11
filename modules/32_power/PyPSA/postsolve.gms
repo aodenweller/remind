@@ -52,10 +52,6 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
   logfile.nr = 1;
   logfile.nd = 0;
 
-  !! Copy REMIND2PyPSA.gdx for iteration i
-  Put_utility logfile, "shell" /
-    "cp REMIND2PyPSAEUR.gdx REMIND2PyPSAEUR_i" iteration.val:0:0 ".gdx";
-
   !! Start PyPSA-Eur
   !! This executes a shell script (copied from scripts/iterative)
   !! and starts the full coupling workflow:
@@ -64,10 +60,6 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
   !! 3) Copy PyPSAEUR2REMIND.gdx to REMIND directory
   Put_utility logfile, "Exec" /
   "./RunPyPSA-Eur.sh %c32_pypsa_dir% " iteration.val:0:0;
-
-  !! Copy PyPSA2REMIND from iteration i
-  Put_utility logfile, "shell" / 
-    "cp PyPSAEUR2REMIND.gdx PyPSAEUR2REMIND_" iteration.val:0:0.gdx;
 
   !! Import PyPSA data for REMIND (PyPSA2REMIND.gdx)
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_CF=capacity_factor;
