@@ -346,7 +346,7 @@ q32_capFac(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) and (cm_PyPSA_e
 q32_MarkUp(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (cm_PyPSA_eq ne 0))..
 	vm_Markup(t,regi,te)
 	=e=
-    ( p32_PyPSA_MV(t,regi,te) - p32_PyPSA_ElecPrice(t,regi,"AC") ) 
+    ( p32_PyPSA_MV(t,regi,te) - p32_PyPSA_ElecPrice(t,regi) ) 
   / 1E12 * sm_TWa_2_MWh
 ;
 

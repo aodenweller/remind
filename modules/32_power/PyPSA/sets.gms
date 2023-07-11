@@ -25,8 +25,6 @@ sets
     tePy32nondisp(tePy32)       "REMIND non-dispatchable SE electricity technologies (with grades)"
         /windoff, wind, spv/
 
-    tePyImpCarrier32            "PyPSA import electricity price"
-        /AC/
 ;
 
 ***------------------------------------------------------------

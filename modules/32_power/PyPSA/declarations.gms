@@ -72,7 +72,7 @@ parameters
     p32_PyPSA_CF(tPy32,regPy32,tePy32)                  "PyPSA import: Capacity factors [1]"
     p32_PyPSA_shSeEl(ttot,all_regi,all_te)              "PyPSA import: Electricity generation share by technology [1]"
     p32_PyPSA_MV(ttot,all_regi,all_te)                  "PyPSA import: Market values [$/MWh]"
-    p32_PyPSA_ElecPrice(ttot,all_regi,tePyImpCarrier32) "PyPSA import: Electricity prices [$/MWh]"
+    p32_PyPSA_ElecPrice(ttot,all_regi)                  "PyPSA import: Electricity prices [$/MWh]"
     p32_preInvCap(ttot,all_regi,all_te)                 "PyPSA export: Pre-investment capacities [TW]"
 ;
 
