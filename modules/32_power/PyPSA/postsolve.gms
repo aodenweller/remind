@@ -1,4 +1,4 @@
-*** |  (C) 2006-2022 Potsdam Institute for Climate Impact Research (PIK)
+*** |  (C) 2006-2023 Potsdam Institute for Climate Impact Research (PIK)
 *** |  authors, and contributors see CITATION.cff file. This file is part
 *** |  of REMIND and licensed under AGPL-3.0-or-later. Under Section 7 of
 *** |  AGPL-3.0, you are granted additional permissions described in the
@@ -79,8 +79,6 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
   pm_cf(tPy32,regPy32,tePy32nondisp) = p32_PyPSA_CF(tPy32,regPy32,tePy32nondisp)
                                      * vm_cap.l(tPy32,regPy32,tePy32nondisp,"1")
                                      / sum(teRe2rlfDetail(tePy32nondisp,rlf), vm_capDistr.l(tPy32,regPy32,tePy32nondisp,rlf) * pm_dataren(regPy32,"nur",rlf,tePy32nondisp));
-
-  !!
 
 );
 

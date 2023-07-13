@@ -1609,6 +1609,9 @@ $setglobal c_CO2priceDependent_AdjCosts    on   !! def = on
 *** c32_pypsa_dir
 *** Directory of PyPSA-Eur
 $setglobal c32_pypsa_dir /p/tmp/adrianod/pypsa-eur
+*** cm_pypsa_markup
+*** enable markups via tax module
+$setglobal cm_pypsa_markup off !! def = off
 *** set conopt version. Warning: conopt4 is in beta
 $setGlobal cm_conoptv  conopt3    !! def = conopt3
 *' c_empty_model  "Short-circuit the model, just use the input as solution"

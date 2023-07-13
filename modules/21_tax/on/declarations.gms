@@ -148,7 +148,9 @@ q21_implicitDiscRate(ttot,all_regi)             "calculation of the implicit dis
 q21_taxemiMkt(ttot,all_regi,all_emiMkt)         "calculation of specific emission market tax on CO2 emissions"
 q21_taxrevImport(ttot,all_regi,all_enty)        "calculation of import tax"
 q21_taxrevChProdStartYear(ttot,all_regi)        "calculation of tax to limit changes compared to reference run in cm_startyear"
+$ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
 q21_taxrevMarkup(ttot,all_regi)                 "calculation of markup from PyPSA-Eur implemented as a tax"
+$endif.cm_pypsa_markup
 ;
 
 *** EOF ./modules/21_tax/on/declarations.gms

@@ -1,4 +1,4 @@
-*** |  (C) 2006-2022 Potsdam Institute for Climate Impact Research (PIK)
+*** |  (C) 2006-2023 Potsdam Institute for Climate Impact Research (PIK)
 *** |  authors, and contributors see CITATION.cff file. This file is part
 *** |  of REMIND and licensed under AGPL-3.0-or-later. Under Section 7 of
 *** |  AGPL-3.0, you are granted additional permissions described in the
@@ -10,11 +10,8 @@
 ***                  Bounds copied from IntC
 ***------------------------------------------------------------
 
-***AO: Don't fix capacity factors any longer
 *** Fix capacity factors to the standard value from data
-$ontext
 vm_capFac.fx(t,regi,te) = pm_cf(t,regi,te);
-$offtext
 
 $IFTHEN.dispatchSetyDown not "%cm_dispatchSetyDown%" == "off"
   loop(pe2se(enty,enty2,te),
@@ -80,5 +77,9 @@ vm_cap.fx(t,regi,"elh2VRE",rlf) = 0;
 if ((iteration.val ge c32_startIter_PyPSA),
   cm_PyPSA_eq = 1;
 );
+
+* v32_shSeElDisp must be between 0 and 1
+v32_shSeElDisp.lo(tPy32,regPy32,tePy32) = 0;
+v32_shSeElDisp.up(tPy32,regPy32,tePy32) = 1;
 
 *** EOF ./modules/32_power/PyPSA/bounds.gms

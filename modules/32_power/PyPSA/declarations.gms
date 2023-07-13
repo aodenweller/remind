@@ -1,4 +1,4 @@
-*** |  (C) 2006-2022 Potsdam Institute for Climate Impact Research (PIK)
+*** |  (C) 2006-2023 Potsdam Institute for Climate Impact Research (PIK)
 *** |  authors, and contributors see CITATION.cff file. This file is part
 *** |  of REMIND and licensed under AGPL-3.0-or-later. Under Section 7 of
 *** |  AGPL-3.0, you are granted additional permissions described in the
@@ -75,19 +75,19 @@ parameters
     p32_PyPSA_ElecPrice(ttot,all_regi)                  "PyPSA import: Electricity prices [$/MWh]"
     p32_preInvCap(ttot,all_regi,all_te)                 "PyPSA export: Pre-investment capacities [TW]"
 ;
-
 variables
     v32_usableSeDisp(ttot,all_regi,all_enty)            "PyPSA export: Usable SE electricity for dispatch without own consumption [TWa]"
     v32_usableSeTeDisp(ttot,all_regi,all_enty,all_te)   "PyPSA export: Usable SE electricity for dispatch without own consumption by technology [TWa]"
     v32_shSeElDisp(ttot,all_regi,all_te)                "PyPSA export: Share of usable SE electricity for dispatch without own consumption [1]"
 ;
-
 equations
     q32_usableSeDisp(ttot,all_regi,all_enty)            "PyPSA coupling: Equation to calculate v32_usableSeDisp"
     q32_usableSeTeDisp(ttot,all_regi,all_enty,all_te)   "PyPSA coupling: Equation to calculate v32_usableSeTeDisp"
     q32_shSeElDisp(ttot,all_regi,all_te)                "PyPSA coupling: Equation to calculate v32_shSeElDisp"
-    q32_capFac(ttot,all_regi,all_te)                    "PyPSA coupling: Pre-factor equation to import the capacity factor"
+*    q32_capFac(ttot,all_regi,all_te)                    "PyPSA coupling: Pre-factor equation to import the capacity factor"
+$ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
     q32_MarkUp(ttot,all_regi,all_te)                    "PyPSA coupling: Equation to calculate the markup vm_MarkUp"
+$endif.cm_pypsa_markup
 ;
 
 *** EOF ./modules/32_power/PyPSA/declarations.gms
