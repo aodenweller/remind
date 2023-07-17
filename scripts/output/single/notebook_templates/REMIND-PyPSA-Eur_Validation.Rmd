@@ -1,0 +1,362 @@
+---
+title: "REMIND-PyPSA-Eur Validation"
+author: "Adrian Odenweller, Johannes Hampp"
+date: "2023-07-12"
+output:
+  pdf_document:
+    number_sections: true
+    fig_width: 10
+    fig_height: 6
+    extra_dependencies: ["float"]
+params:
+  pyDir: "/p/tmp/adrianod/pypsa-eur"
+fontsize: 11pt
+geometry: margin=0.5in
+---
+
+This RMarkdown file contains various plots for validation of the REIMND-PyPSA-Eur model coupling.
+
+```{r setup, include=FALSE}
+# Load libraries
+library(gdx)
+library(tidyverse)
+
+knitr::opts_chunk$set(fig.pos = "H", out.extra = "")
+theme_set(theme_bw())
+
+# Color mapping
+colorsTech <- c(
+  "solar" = "#ffcc00",
+  "onwind" = "#337fff",
+  "all_offwind" = "#334cff",
+  "offwind" = "#334cff",
+  "biomass" = "#005900",
+  "ror" = "#191999",
+  "CCGT" = "#999959",
+  "OCGT" = "#e5e5b2",
+  "oil" = "#663a00",
+  "all_coal" = "#0c0c0c",
+  "coal" = "#0c0c0c",
+  "lignite" = "#392306",
+  "nuclear" = "#ff33ff"
+  )
+
+# Pretty names
+namesTech <- c(
+  "solar" = "Solar",
+  "onwind" = "Wind Onshore",
+  "all_offwind" = "Wind Offshore",
+  "offwind" = "Wind Offshore",
+  "biomass" = "Biomass",
+  "ror" = "Run of river",
+  "CCGT" = "CCGT",
+  "OCGT" = "OCGT",
+  "oil" = "Oil",
+  "all_coal" = "Coal+Lignite",
+  "coal" = "Coal",
+  "lignite" = "Lignite",
+  "nuclear" = "Nuclear")
+
+# REMIND to PyPSA technology mapping
+rm2pyTech <- c(
+  "biochp" = "biomass",
+  "bioigcc" = "biomass",
+  "bioigccc" = "biomass",
+  "ngcc" = "CCGT",
+  "ngccc" = "CCGT",
+  "gaschp" = "CCGT",
+  "igcc" = "all_coal",
+  "igccc" = "all_coal",
+  "pc" = "all_coal",
+  "coalchp" = "all_coal",
+  "tnrs" = "nuclear",
+  "fnrs" = "nuclear",
+  "ngt" =  "OCGT",
+  "windoff" = "all_offwind",  # Or just offwind?
+  "dot" = "oil",
+  "wind" = "onwind",
+  "hydro" = "ror",
+  "spv" = "solar"
+  )
+
+# PyPSA to REMIND technology mapping
+py2rmTech <- c(
+  "biomass" = "biomass",
+  "CCGT" = "CCGT",
+  "coal" = "all_coal",  # Aggregate coal
+  "lignite" = "all_coal",  # Aggregate coal
+  "nuclear" = "nuclear",
+  "OCGT" = "OCGT",
+  "offwind-ac" = "all_offwind",  # Aggregate offshore wind
+  "offwind-dc" = "all_offwind",  # Aggregate offshore wind
+  "oil" = "oil",
+  "onwind" = "onwind",
+  "ror" = "ror",
+  "solar" = "solar"
+)
+
+# Years to plot
+years <- c(seq(2025, 2060, 5), seq(2070, 2110, 10), 2130, 2150)
+
+# Regions to plot
+regions <- "DEU"
+
+# Unit conversions
+twa2twh <- 8760
+
+```
+
+# Get REMIND and PyPSA-Eur files
+
+```{r data, echo=FALSE}
+
+# REMIND directories
+rmOutdir <- getwd()
+#rmOutdir <- "/p/tmp/adrianod/remind-pypsa/output/PyPSA_base_testOneRegi_2023-07-14_16.58.29"
+scenario <- basename(rmOutdir)  # Scenario name
+# REMIND fulldata.gdx files
+rmFulldataFiles <- list.files(
+  rmOutdir,
+  pattern = "fulldata\\_\\d{1,}.gdx",
+  full.names = TRUE)
+# REMIND2PyPSA-Eur.gdx files
+rm2pyFiles <- list.files(
+  rmOutdir,
+  pattern = "REMIND2PyPSAEUR\\_\\d{1,}.gdx",
+  full.names = TRUE)
+
+# PyPSA directories
+pyDir <- params$pyDir  # Main PyPSA directory
+#pyDir <- "/p/tmp/adrianod/pypsa-eur"
+#pyResourcesDir <- file.path(pyDir, "resources", scenario)
+pyResultsDir <- file.path(pyDir, "results", scenario)
+pyResultsDirs <- list.dirs(pyResultsDir,
+                            recursive = TRUE,
+                            full.names = TRUE)
+# Filter for coupling-parameters directories
+pyResultsDirs <- pyResultsDirs[grepl("coupling-parameters", pyResultsDirs)]
+
+# Some logging
+cat(paste("Found", length(rmFulldataFiles), "REMIND fulldata_i.gdx files.\n"))
+cat(paste("Found", length(rm2pyFiles), "REMIND2PyPSAEUR_i.gdx files.\n"))
+cat(paste("Found", length(pyResultsDirs), "PyPSA coupling-parameters directories.\n"))
+
+```
+
+
+```{r helpers, include = FALSE, echo = FALSE}
+
+# This function reads in csv files in the PyPSA-Eur directory
+# Expected path: <PyPSA-Eur results folder>/i<iteration>/coupling-parameters/<some file>.csv
+readPyPSAcsv <- function(paths) {
+  data <- tibble()
+  # Could also replace the loop by lapply at some point
+  for (p in paths) {
+    # Get iteration from file path
+    iteration <- as.integer(str_extract(p, "(?<=i)\\d{1,3}(?=/coupling-parameters)"))
+    # Read data
+    dataP <- read.csv(p, header = TRUE) %>% 
+      mutate(iteration = iteration)
+    data <- bind_rows(data, dataP)
+  }
+  return(data)
+}
+
+# This function reads in gdx files into tibbles
+# rmFile: Path to gdx file
+# gdxVar: Name of gdx variable to read
+# columns: Named *vector* of columns to select and rename
+# colFilter: *List* of renamed columns and values to filter for
+readGDX <- function(rmFile, gdxVar, columns, colFilter,
+                    restoreZeros = TRUE, field = "l", recalcUnit = 1) {
+  # Read data from gdx file
+  gdx::readGDX(rmFile, gdxVar, restore_zeros = restoreZeros, field = field) %>%
+  tibble::as_tibble(.name_repair = "unique") %>%
+  # Select desired columns and rename
+  dplyr::select_at(names(columns), ~ columns) %>%
+  # Filter columns according to colFilter
+  dplyr::filter(if_all(names(colFilter), ~ . %in% colFilter$.)) %>% 
+  # Change units
+  dplyr::mutate_at(dplyr::vars(columns["value"]), ~ . * recalcUnit)
+}
+
+# This function reads in multiple fulldata_<iteration>.gdx files from REMIND
+readREMINDgdx <- function(paths, gdxVar, columns, colFilter,
+                       restoreZeros = TRUE, field = "l", recalcUnit = 1) {
+  data <- tibble()
+  # Could also replace the loop by lapply at some point
+  for (p in paths) {
+    # Get iteration and year from file path
+    iteration <- as.integer(str_extract(p, "(?<=(fulldata_)|(REMIND2PyPSAEUR_))\\d{1,3}(?=.gdx)"))
+    dataP <- readGDX(p, gdxVar, columns, colFilter,
+                     restoreZeros, field, recalcUnit) %>% 
+      mutate(iteration = iteration)
+    data <- bind_rows(data, dataP)
+  }
+  return(data)
+}
+
+```
+
+# Coupled variables
+
+This section includes plots of all variables that are exchanged between REMIND
+and PyPSA-Eur.
+
+## REMIND to PyPSA-Eur
+
+This section includes variables that are transferred from REMIND to PyPSA-Eur
+
+### Electricity load
+
+```{r load, echo = FALSE, message = FALSE}
+
+# Read REMIND data
+dataLoad <- readREMINDgdx(
+  paths = rm2pyFiles,
+  gdxVar = "v32_usableSeDisp",
+  columns = c("ttot" = "year", "all_regi" = "region", "all_enty" = "technology", "value" = "value"),
+  colFilter = list("year" = years, "region" = regions, "technology" = "seel"),
+  restoreZeros = FALSE,
+  recalcUnit = twa2twh)
+
+# Could also load PyPSA-Eur results here to double check
+# ...
+
+# Plot by year
+pYear <- ggplot() +
+  geom_line(data = dataLoad, aes(x = year, y = value, color = region)) +
+  labs(x = "Year", y = "Electricity load (TWh)") +
+  ggtitle("Electricity load by year") +
+  facet_wrap(~ iteration)
+
+# Plot by iteration
+pIter <- ggplot() +
+  geom_line(data = dataLoad, aes(x = iteration, y = value, color = region)) +
+  labs(x = "Iteration", y = "Electricity load (TWh)") +
+  ggtitle("Electricity load by iteration") +
+  facet_wrap(~ year)
+
+print(pYear)
+
+print(pIter)
+
+```
+
+### Pre-investment capacities
+
+### Specific capital costs
+
+### Fuel costs
+
+### CO2 prices
+
+## PyPSA-Eur to REMIND
+
+### Capacity factors
+
+REMIND values are retrieved from fulldata_*.gdx to cross-check.
+
+```{r capfac, echo = FALSE, message = FALSE}
+
+# REMIND data
+# TODO: This is incorrect for VRE technologies
+dataCapfacREMIND <- readREMINDgdx(
+  paths = rmFulldataFiles,
+  gdxVar = "vm_capFac",
+  columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "value"),
+  colFilter = list("year" = years, "region" = regions, "technology" = names(rm2pyTech)),
+  restoreZeros = FALSE)
+
+# PyPSA-Eur data
+dataCapfacPyPSA <- readPyPSAcsv(
+  paths = file.path(pyResultsDirs, "capacity_factors.csv")) %>% 
+  # Increment iteration by 1 to match REMIND
+  mutate(iteration = iteration + 1)
+
+# Plot by year
+pCapfacYear <- ggplot() +
+  # Layer 1: REMIND
+  geom_line(data = dataCapfacREMIND, aes(x = year, y = value, color = technology)) +
+  # Layer 2: PyPSA-Eur
+  geom_point(data = dataCapfacPyPSA, aes(x = year, y = value, color = carrier)) +
+  labs(x = "Year", y = "Capacity factor") +
+  ggtitle("Capacity factor by year") +
+  facet_wrap(~ iteration)
+
+# Plot by iteration
+pCapfacIter <- ggplot() +
+  # Layer 1: REMIND
+  geom_line(data = dataCapfacREMIND, aes(x = iteration, y = value, color = technology)) +
+  # Layer 2: PyPSA-Eur
+  geom_point(data = dataCapfacPyPSA, aes(x = iteration, y = value, color = carrier)) +
+  labs(x = "Iteration", y = "Capacity factor") +
+  ggtitle("Capacity factor by iteration") +
+  facet_wrap(~ year)
+
+print(pCapfacYear)
+
+print(pCapfacIter)
+
+```
+
+### Market values
+
+```{r market value, echo = FALSE, message = FALSE}
+
+# REMIND data
+# ...
+
+# PyPSA-Eur data
+dataMarketValuePyPSA <- readPyPSAcsv(
+  paths = file.path(pyResultsDirs, "market_values.csv")) %>% 
+  # Increment iteration by 1 to match REMIND
+  mutate(iteration = iteration + 1)
+
+pMarketValueYear <- ggplot() +
+  # Layer 1: REMIND
+  #geom_line(data = dataMarketValueREMIND, aes(x = year, y = value, color = technology)) +
+  # Layer 2: PyPSA-Eur
+  geom_line(data = dataMarketValuePyPSA, aes(x = year, y = value, color = carrier)) +
+  labs(x = "Year", y = "Market value ($/MWh)") +
+  ggtitle("Market values by year") +
+  facet_wrap(~ iteration)
+
+pMarketValueIter <- ggplot() +
+  # Layer 1: REMIND
+  #geom_line(data = dataMarketValueREMIND, aes(x = iteration, y = value, color = technology)) +
+  # Layer 2: PyPSA-Eur
+  geom_line(data = dataMarketValuePyPSA, aes(x = iteration, y = value, color = carrier)) +
+  labs(x = "Iteration", y = "Market value ($/MWh)") +
+  ggtitle("Market values by iteration") +
+  facet_wrap(~ year)
+
+print(pMarketValueYear)
+
+print(pMarketValueIter)
+
+```
+
+# Non-coupled variables
+
+This section includes plots of several key variables that are not coupled
+between REMIND and PyPSA, but that should get harmonised.
+
+## Capacity
+
+## Generation
+
+## Electricity price
+
+# Model-specific variables
+
+## REMIND
+
+## PyPSA
+
+### Screening curve
+
+### Inverse screening curve
+
+### Residual Load Duration Curve
+
