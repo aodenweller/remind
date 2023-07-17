@@ -24,11 +24,9 @@ pm_SEPrice(t,regi,entySE)$(    abs(qm_budget.m(t,regi)) gt sm_eps
 *** Render validation RMarkdown file
 *** Don't put in postsolve.gms because fulldata_i.gdx is only written afterwards
 
-$ontext
 if ((iteration.val gt c32_startIter_PyPSA),
   Put_utility logfile, "Exec" /
   "sbatch RenderREMIND-PyPSA-Eur_Validation.sh %c32_pypsa_dir%";
 );
-$offtext
 
 *** EOF ./modules/32_power/PyPSA/presolve.gms
