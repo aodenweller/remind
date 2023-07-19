@@ -247,9 +247,19 @@ print(pIter)
 
 ### Specific capital costs
 
+### Fixed O&M costs
+
 ### Fuel costs
 
 ### CO2 prices
+
+### Variable O&M costs
+
+### Efficiencies
+
+### Lifetimes
+
+### Discount rate
 
 ## PyPSA-Eur to REMIND
 
