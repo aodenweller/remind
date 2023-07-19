@@ -130,16 +130,17 @@ pyDir <- params$pyDir  # Main PyPSA directory
 #pyDir <- "/p/tmp/adrianod/pypsa-eur"
 #pyResourcesDir <- file.path(pyDir, "resources", scenario)
 pyResultsDir <- file.path(pyDir, "results", scenario)
+# Get subdirectories labeled "i" for iteration followed by an integer number
 pyResultsDirs <- list.dirs(pyResultsDir,
-                            recursive = TRUE,
+                            recursive = FALSE,
                             full.names = TRUE)
-# Filter for coupling-parameters directories
-pyResultsDirs <- pyResultsDirs[grepl("coupling-parameters", pyResultsDirs)]
+# Add "/" to end of directory names
+pyResultsDirs <- paste0(pyResultsDirs, "/")
 
 # Some logging
 cat(paste("Found", length(rmFulldataFiles), "REMIND fulldata_i.gdx files.\n"))
 cat(paste("Found", length(rm2pyFiles), "REMIND2PyPSAEUR_i.gdx files.\n"))
-cat(paste("Found", length(pyResultsDirs), "PyPSA coupling-parameters directories.\n"))
+cat(paste("Found", length(pyResultsDirs), "PyPSA-EUR iteration directories.\n"))
 
 ```
 
@@ -147,13 +148,13 @@ cat(paste("Found", length(pyResultsDirs), "PyPSA coupling-parameters directories
 ```{r helpers, include = FALSE, echo = FALSE}
 
 # This function reads in csv files in the PyPSA-Eur directory
-# Expected path: <PyPSA-Eur results folder>/i<iteration>/coupling-parameters/<some file>.csv
+# Expected path: <PyPSA-Eur results folder>/i<iteration>/<some file>.csv
 readPyPSAcsv <- function(paths) {
   data <- tibble()
   # Could also replace the loop by lapply at some point
   for (p in paths) {
     # Get iteration from file path
-    iteration <- as.integer(str_extract(p, "(?<=i)\\d{1,3}(?=/coupling-parameters)"))
+    iteration <- as.integer(str_extract(p, "(?<=i)\\d(?=//)"))
     # Read data
     dataP <- read.csv(p, header = TRUE) %>% 
       mutate(iteration = iteration)
@@ -205,7 +206,8 @@ and PyPSA-Eur.
 
 ## REMIND to PyPSA-Eur
 
-This section includes variables that are transferred from REMIND to PyPSA-Eur
+This section includes variables that are transferred from REMIND to PyPSA-Eur (displayed as lines).
+Values used by PyPSA-EUR are also retrieved to cross-check (displayed as points).
 
 ### Electricity load
 
@@ -220,12 +222,18 @@ dataLoad <- readREMINDgdx(
   restoreZeros = FALSE,
   recalcUnit = twa2twh)
 
-# Could also load PyPSA-Eur results here to double check
-# ...
+# Load PyPSAEUR electricity loads for cross-checking
+dataLoadPyPSA <- readPyPSAcsv(
+  paths = file.path(pyResultsDirs, "electricity_loads.csv")) %>% 
+  # Increment iteration by 1 to match REMIND
+  mutate(iteration = as.integer(iteration + 1),)
+
+dataLoadPyPSA$value <- dataLoadPyPSA$value / 1e6 # Convert MWh to TWh
 
 # Plot by year
 pYear <- ggplot() +
   geom_line(data = dataLoad, aes(x = year, y = value, color = region)) +
+  geom_point(data = dataLoadPyPSA, aes(x = year, y = value, color = region)) +
   labs(x = "Year", y = "Electricity load (TWh)") +
   ggtitle("Electricity load by year") +
   facet_wrap(~ iteration)
@@ -233,6 +241,7 @@ pYear <- ggplot() +
 # Plot by iteration
 pIter <- ggplot() +
   geom_line(data = dataLoad, aes(x = iteration, y = value, color = region)) +
+  geom_point(data = dataLoadPyPSA, aes(x = iteration, y = value, color = region)) +
   labs(x = "Iteration", y = "Electricity load (TWh)") +
   ggtitle("Electricity load by iteration") +
   facet_wrap(~ year)
@@ -251,8 +260,6 @@ print(pIter)
 
 ### Fuel costs
 
-### CO2 prices
-
 ### Variable O&M costs
 
 ### Efficiencies
@@ -260,6 +267,45 @@ print(pIter)
 ### Lifetimes
 
 ### Discount rate
+
+### CO2 prices
+
+```{r co2 price, echo = FALSE, message = FALSE}
+
+# TODO load REMIND data to cross-check with values used by PyPSA-Eur
+
+# Read the CO2 prices from the CSV files
+dataCO2PricePyPSA <- readPyPSAcsv(
+  paths = file.path(pyResultsDirs, "co2_price_scenarios.csv")) %>% 
+  # Increment iteration by 1 to match REMIND
+  mutate(iteration = as.integer(iteration + 1),)
+
+# Extract the CO2 price from the opts columns which starts with Ep followed by a number of format 0.0
+dataCO2PricePyPSA$value <- as.numeric(str_extract(dataCO2PricePyPSA$opts, "(?<=Ep)\\d+\\.\\d{1,2}"))
+
+# Plot by year
+pYear <- ggplot() +
+  geom_line(data = dataCO2PricePyPSA, aes(x = year, y = value)) +
+  geom_point(data = dataCO2PricePyPSA, aes(x = year, y = value)) +
+  labs(x = "Year", y = "CO2 price (EUR/tCO2)") +
+  ggtitle("CO2 price by year") +
+  facet_wrap(~ iteration)
+
+# Plot by iteration
+pIter <- ggplot() +
+  geom_line(data = dataCO2PricePyPSA, aes(x = iteration, y = value)) +
+  geom_point(data = dataCO2PricePyPSA, aes(x = iteration, y = value)) +
+  labs(x = "Iteration", y = "CO2 price (EUR/tCO2)") +
+  ggtitle("CO2 price by iteration") +
+  facet_wrap(~ year)
+
+print(pYear)
+
+print(pIter)
+
+```
+
+
 
 ## PyPSA-Eur to REMIND
 
@@ -352,7 +398,52 @@ print(pMarketValueIter)
 This section includes plots of several key variables that are not coupled
 between REMIND and PyPSA, but that should get harmonised.
 
-## Capacity
+## Capacities
+
+```{r capacities, echo = FALSE, message = FALSE}
+# Load optimal_capacities.csv for each iteration and plot the capacities by type and carrier in bar plots
+# with subplots for each year and iterations being lines within the same plot
+
+# Read the optimal capacities from the CSV files
+dataCapPyPSA <- readPyPSAcsv(
+  paths = file.path(pyResultsDirs, "optimal_capacities.csv")) %>% 
+  # Increment iteration by 1 to match REMIND
+  mutate(iteration = as.integer(iteration + 1),)
+
+# Convert capacities to GW
+dataCapPyPSA$value <- dataCapPyPSA$value / 1e3
+
+# Remove rows with nan values and rows with carrier == "Load shedding" which has a fixed capacity
+dataCapPyPSA <- dataCapPyPSA %>% 
+  filter(!is.nan(value)) %>% 
+  filter(value > 0.1) %>% 
+  filter(carrier != "Load shedding")
+
+# Sum over all carriers and group the results by type
+dataCapPyPSA_type <- dataCapPyPSA %>% 
+  group_by(type, year, iteration) %>% 
+  summarise(value = sum(value))
+
+# Plot the summed values by type, with subplots for each type, the x axis for years and a line per plot for the different itations
+pType <- ggplot() +
+  geom_point(data = dataCapPyPSA_type, aes(x = year, y = value, color = iteration)) +
+  geom_line(data = dataCapPyPSA_type, aes(x = year, y = value, color = iteration)) +
+  labs(x = "Year", y = "Capacity (GW)") +
+  ggtitle("Optimal capacity by type") +
+  facet_wrap(~ type)
+
+print(pType)
+
+pYear <- ggplot() +
+  geom_bar(data = dataCapPyPSA, aes(x = carrier, y = value, fill=factor(year)), stat = "identity", position_dodge(width = 0.9)) +
+  labs(x = "Technology", y = "Capacity (GW)") +
+  ggtitle("Capacity by iteration") +
+  facet_wrap(~ iteration) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+print(pYear)
+    
+```
 
 ## Generation
 
