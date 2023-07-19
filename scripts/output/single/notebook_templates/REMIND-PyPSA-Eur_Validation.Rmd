@@ -103,6 +103,7 @@ regions <- "DEU"
 
 # Unit conversions
 twa2twh <- 8760
+tC2tCO2 <- 44/12
 
 ```
 
@@ -112,7 +113,7 @@ twa2twh <- 8760
 
 # REMIND directories
 rmOutdir <- getwd()
-#rmOutdir <- "/p/tmp/adrianod/remind-pypsa/output/PyPSA_base_testOneRegi_2023-07-14_16.58.29"
+#rmOutdir <- "/p/tmp/adrianod/remind-pypsa/output/PyPSA_base_testOneRegi_2023-07-17_16.36.56"
 scenario <- basename(rmOutdir)  # Scenario name
 # REMIND fulldata.gdx files
 rmFulldataFiles <- list.files(
@@ -128,14 +129,11 @@ rm2pyFiles <- list.files(
 # PyPSA directories
 pyDir <- params$pyDir  # Main PyPSA directory
 #pyDir <- "/p/tmp/adrianod/pypsa-eur"
-#pyResourcesDir <- file.path(pyDir, "resources", scenario)
 pyResultsDir <- file.path(pyDir, "results", scenario)
 # Get subdirectories labeled "i" for iteration followed by an integer number
 pyResultsDirs <- list.dirs(pyResultsDir,
                             recursive = FALSE,
                             full.names = TRUE)
-# Add "/" to end of directory names
-pyResultsDirs <- paste0(pyResultsDirs, "/")
 
 # Some logging
 cat(paste("Found", length(rmFulldataFiles), "REMIND fulldata_i.gdx files.\n"))
@@ -154,7 +152,7 @@ readPyPSAcsv <- function(paths) {
   # Could also replace the loop by lapply at some point
   for (p in paths) {
     # Get iteration from file path
-    iteration <- as.integer(str_extract(p, "(?<=i)\\d(?=//)"))
+    iteration <- as.integer(str_extract(p, "(?<=i)\\d{1,}(?=/)"))
     # Read data
     dataP <- read.csv(p, header = TRUE) %>% 
       mutate(iteration = iteration)
@@ -170,15 +168,24 @@ readPyPSAcsv <- function(paths) {
 # colFilter: *List* of renamed columns and values to filter for
 readGDX <- function(rmFile, gdxVar, columns, colFilter,
                     restoreZeros = TRUE, field = "l", recalcUnit = 1) {
-  # Read data from gdx file
-  gdx::readGDX(rmFile, gdxVar, restore_zeros = restoreZeros, field = field) %>%
-  tibble::as_tibble(.name_repair = "unique") %>%
-  # Select desired columns and rename
-  dplyr::select_at(names(columns), ~ columns) %>%
-  # Filter columns according to colFilter
-  dplyr::filter(if_all(names(colFilter), ~ . %in% colFilter$.)) %>% 
-  # Change units
-  dplyr::mutate_at(dplyr::vars(columns["value"]), ~ . * recalcUnit)
+  data <-
+    # Read data from gdx file
+    gdx::readGDX(rmFile, gdxVar, restore_zeros = restoreZeros, field = field) %>%
+    tibble::as_tibble(.name_repair = "unique")
+  # If no data is found create tibble with dimensions from colFilter and values zero
+  if (nrow(data) == 0) {
+    data <- tibble::tibble(expand.grid(colFilter)) %>% 
+      mutate(value = 0)
+  } else {
+     data <- data %>% 
+      # Select desired columns and rename
+      dplyr::select_at(names(columns), ~ columns) %>%
+      # Filter columns according to colFilter
+      dplyr::filter(if_all(names(colFilter), ~ . %in% colFilter$.)) %>% 
+      # Change units
+      dplyr::mutate_at(dplyr::vars(columns["value"]), ~ . * recalcUnit)
+  }
+  return(data)
 }
 
 # This function reads in multiple fulldata_<iteration>.gdx files from REMIND
@@ -188,7 +195,7 @@ readREMINDgdx <- function(paths, gdxVar, columns, colFilter,
   # Could also replace the loop by lapply at some point
   for (p in paths) {
     # Get iteration and year from file path
-    iteration <- as.integer(str_extract(p, "(?<=(fulldata_)|(REMIND2PyPSAEUR_))\\d{1,3}(?=.gdx)"))
+    iteration <- as.integer(str_extract(p, "(?<=(fulldata_)|(REMIND2PyPSAEUR_))\\d{1,}(?=.gdx)"))
     dataP <- readGDX(p, gdxVar, columns, colFilter,
                      restoreZeros, field, recalcUnit) %>% 
       mutate(iteration = iteration)
@@ -214,7 +221,7 @@ Values used by PyPSA-EUR are also retrieved to cross-check (displayed as points)
 ```{r load, echo = FALSE, message = FALSE}
 
 # Read REMIND data
-dataLoad <- readREMINDgdx(
+dataLoadREMIND <- readREMINDgdx(
   paths = rm2pyFiles,
   gdxVar = "v32_usableSeDisp",
   columns = c("ttot" = "year", "all_regi" = "region", "all_enty" = "technology", "value" = "value"),
@@ -225,14 +232,11 @@ dataLoad <- readREMINDgdx(
 # Load PyPSAEUR electricity loads for cross-checking
 dataLoadPyPSA <- readPyPSAcsv(
   paths = file.path(pyResultsDirs, "electricity_loads.csv")) %>% 
-  # Increment iteration by 1 to match REMIND
-  mutate(iteration = as.integer(iteration + 1),)
-
-dataLoadPyPSA$value <- dataLoadPyPSA$value / 1e6 # Convert MWh to TWh
+  mutate(value = value / 1e6)  # Convert MWh to TWh
 
 # Plot by year
 pYear <- ggplot() +
-  geom_line(data = dataLoad, aes(x = year, y = value, color = region)) +
+  geom_line(data = dataLoadREMIND, aes(x = year, y = value, color = region)) +
   geom_point(data = dataLoadPyPSA, aes(x = year, y = value, color = region)) +
   labs(x = "Year", y = "Electricity load (TWh)") +
   ggtitle("Electricity load by year") +
@@ -240,7 +244,7 @@ pYear <- ggplot() +
 
 # Plot by iteration
 pIter <- ggplot() +
-  geom_line(data = dataLoad, aes(x = iteration, y = value, color = region)) +
+  geom_line(data = dataLoadREMIND, aes(x = iteration, y = value, color = region)) +
   geom_point(data = dataLoadPyPSA, aes(x = iteration, y = value, color = region)) +
   labs(x = "Iteration", y = "Electricity load (TWh)") +
   ggtitle("Electricity load by iteration") +
@@ -273,19 +277,24 @@ print(pIter)
 ```{r co2 price, echo = FALSE, message = FALSE}
 
 # TODO load REMIND data to cross-check with values used by PyPSA-Eur
+dataCO2PriceREMIND <- readREMINDgdx(
+  paths = rm2pyFiles,
+  gdxVar = "p_priceCO2",
+  columns = c("tall" = "year", "all_regi" = "region", "value" = "value"),
+  colFilter = list("year" = years, "region" = regions),
+  restoreZeros = TRUE,
+  recalcUnit = tC2tCO2
+)
 
 # Read the CO2 prices from the CSV files
 dataCO2PricePyPSA <- readPyPSAcsv(
-  paths = file.path(pyResultsDirs, "co2_price_scenarios.csv")) %>% 
-  # Increment iteration by 1 to match REMIND
-  mutate(iteration = as.integer(iteration + 1),)
-
-# Extract the CO2 price from the opts columns which starts with Ep followed by a number of format 0.0
-dataCO2PricePyPSA$value <- as.numeric(str_extract(dataCO2PricePyPSA$opts, "(?<=Ep)\\d+\\.\\d{1,2}"))
+    paths = file.path(pyResultsDirs, "co2_price_scenarios.csv")) %>% 
+  # Extract the CO2 price from the opts columns which starts with Ep followed by a number of format 0.0
+  mutate(value = as.numeric(str_extract(opts, "(?<=Ep)\\d+\\.\\d{1,2}")))
 
 # Plot by year
 pYear <- ggplot() +
-  geom_line(data = dataCO2PricePyPSA, aes(x = year, y = value)) +
+  geom_line(data = dataCO2PriceREMIND, aes(x = year, y = value)) +
   geom_point(data = dataCO2PricePyPSA, aes(x = year, y = value)) +
   labs(x = "Year", y = "CO2 price (EUR/tCO2)") +
   ggtitle("CO2 price by year") +
@@ -293,7 +302,7 @@ pYear <- ggplot() +
 
 # Plot by iteration
 pIter <- ggplot() +
-  geom_line(data = dataCO2PricePyPSA, aes(x = iteration, y = value)) +
+  geom_line(data = dataCO2PriceREMIND, aes(x = iteration, y = value)) +
   geom_point(data = dataCO2PricePyPSA, aes(x = iteration, y = value)) +
   labs(x = "Iteration", y = "CO2 price (EUR/tCO2)") +
   ggtitle("CO2 price by iteration") +
@@ -305,13 +314,12 @@ print(pIter)
 
 ```
 
-
-
 ## PyPSA-Eur to REMIND
 
-### Capacity factors
+This section includes variables that are transferred from PyPSA-Eur to REMIND (displayed as points).
+Values used by REMIND are also retrieved to cross-check (displayed as lines).
 
-REMIND values are retrieved from fulldata_*.gdx to cross-check.
+### Capacity factors
 
 ```{r capfac, echo = FALSE, message = FALSE}
 
@@ -400,34 +408,37 @@ between REMIND and PyPSA, but that should get harmonised.
 
 ## Capacities
 
+Work in progress...
+
 ```{r capacities, echo = FALSE, message = FALSE}
-# Load optimal_capacities.csv for each iteration and plot the capacities by type and carrier in bar plots
-# with subplots for each year and iterations being lines within the same plot
+
+# REMIND
+dataCapREMIND <- readREMINDgdx(
+  paths = rmFulldataFiles,
+  gdxVar = "vm_cap",
+  columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "rlf" = "grade", "value" = "value"),
+  colFilter = list("year" = years, "region" = regions, "technology" = names(rm2pyTech), "grade" = 1),
+  restoreZeros = FALSE,
+  recalcUnit = 1e3)  # TW to GW
 
 # Read the optimal capacities from the CSV files
 dataCapPyPSA <- readPyPSAcsv(
   paths = file.path(pyResultsDirs, "optimal_capacities.csv")) %>% 
-  # Increment iteration by 1 to match REMIND
-  mutate(iteration = as.integer(iteration + 1),)
-
-# Convert capacities to GW
-dataCapPyPSA$value <- dataCapPyPSA$value / 1e3
-
-# Remove rows with nan values and rows with carrier == "Load shedding" which has a fixed capacity
-dataCapPyPSA <- dataCapPyPSA %>% 
-  filter(!is.nan(value)) %>% 
-  filter(value > 0.1) %>% 
-  filter(carrier != "Load shedding")
+  mutate(iteration = iteration + 1,  # Increment iteration
+         value = value / 1e3) %>%  # Convert capacities to GW
+  filter(!is.na(value),
+         value > 0.1,
+         carrier != "Load shedding")
 
 # Sum over all carriers and group the results by type
-dataCapPyPSA_type <- dataCapPyPSA %>% 
+dataCapPyPSAtype <- dataCapPyPSA %>% 
   group_by(type, year, iteration) %>% 
   summarise(value = sum(value))
 
 # Plot the summed values by type, with subplots for each type, the x axis for years and a line per plot for the different itations
 pType <- ggplot() +
-  geom_point(data = dataCapPyPSA_type, aes(x = year, y = value, color = iteration)) +
-  geom_line(data = dataCapPyPSA_type, aes(x = year, y = value, color = iteration)) +
+  geom_point(data = dataCapPyPSAtype, aes(x = year, y = value, color = factor(iteration))) +
+  geom_line(data = dataCapPyPSAtype, aes(x = year, y = value, color = factor(iteration))) +
   labs(x = "Year", y = "Capacity (GW)") +
   ggtitle("Optimal capacity by type") +
   facet_wrap(~ type)
@@ -435,10 +446,10 @@ pType <- ggplot() +
 print(pType)
 
 pYear <- ggplot() +
-  geom_bar(data = dataCapPyPSA, aes(x = carrier, y = value, fill=factor(year)), stat = "identity", position_dodge(width = 0.9)) +
+  geom_bar(data = dataCapPyPSA, aes(x = year, y = value), stat = "identity", position_dodge(width = 0.9)) +
   labs(x = "Technology", y = "Capacity (GW)") +
   ggtitle("Capacity by iteration") +
-  facet_wrap(~ iteration) +
+  facet_grid(carrier ~ iteration, scales = "free") +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 print(pYear)
