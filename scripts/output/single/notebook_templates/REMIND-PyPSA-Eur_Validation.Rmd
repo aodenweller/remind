@@ -206,6 +206,41 @@ readREMINDgdx <- function(paths, gdxVar, columns, colFilter,
 
 ```
 
+# General model information
+
+## Runtime PyPSA-EUR
+
+Runtime for PyPSA-EUR required for each iteration from start of first job to end of last job, based on the change time of the "co2_price_scenarios.csv" and "PyPSAEUR2REMIND.gdx" files.
+
+```{r runtime, echo = FALSE, message = FALSE}
+# Get last change time and creation time of "co2_price_scenarios.csv" and "PyPSAEUR2REMIND.gdx" in each directory
+fileTimes <- lapply(pyResultsDirs, function(dir) {
+  co2PriceFile <- file.path(dir, "co2_price_scenarios.csv")
+  couplingFile <- file.path(dir, "PyPSAEUR2REMIND.gdx")
+  co2PriceCtime <- file.info(co2PriceFile)$ctime
+  couplingCtime <- file.info(couplingFile)$ctime
+  timeDiff <- difftime(couplingCtime, co2PriceCtime, units = "mins")
+  iteration <- gsub("i", "", basename(dir))
+  return(list(directory = dir, iteration = iteration, co2_price_last_change_time = co2PriceCtime, coupling_creation_time = couplingCtime, time_diff = timeDiff))
+})
+
+# Combine results into a data frame
+fileTimes <- do.call(rbind.data.frame, fileTimes)
+
+# Print results
+print(fileTimes)
+
+# Plot the time difference for each iteration as a bar plot
+pTimeDiff <- ggplot() +
+  geom_bar(data = fileTimes, aes(x = iteration, y = time_diff), stat = "identity") +
+  labs(x = "Iteration", y = "Runtime [minutes]") +
+  ggtitle("Runtime for PyPSA-EUR") + 
+  ylim(0, NA)
+
+print(pTimeDiff)
+    
+```
+
 # Coupled variables
 
 This section includes plots of all variables that are exchanged between REMIND
