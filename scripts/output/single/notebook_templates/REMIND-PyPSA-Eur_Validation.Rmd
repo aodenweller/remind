@@ -57,8 +57,8 @@ namesTech <- c(
   "lignite" = "Lignite",
   "nuclear" = "Nuclear")
 
-# REMIND to PyPSA technology mapping
-rm2pyTech <- c(
+# Technology mapping: REMIND to General
+rm2genTech <- c(
   "biochp" = "biomass",
   "bioigcc" = "biomass",
   "bioigccc" = "biomass",
@@ -79,8 +79,8 @@ rm2pyTech <- c(
   "spv" = "solar"
   )
 
-# PyPSA to REMIND technology mapping
-py2rmTech <- c(
+# Technology mapping: General to REMIND
+gen2rmTech <- c(
   "biomass" = "biomass",
   "CCGT" = "CCGT",
   "coal" = "all_coal",  # Aggregate coal
@@ -321,41 +321,119 @@ Values used by REMIND are also retrieved to cross-check (displayed as lines).
 
 ### Capacity factors
 
-```{r capfac, echo = FALSE, message = FALSE}
+```{r capacity factors, echo = FALSE, message = FALSE}
 
-# REMIND data
-# TODO: This is incorrect for VRE technologies
-dataCapfacREMIND <- readREMINDgdx(
+# REMIND capacity factors
+# Capacity factors are handled differently for dispatchable and VRE technologies
+
+# Read vm_capFac (for dispatchable technologies)
+vmCapFac <- readREMINDgdx(
   paths = rmFulldataFiles,
   gdxVar = "vm_capFac",
-  columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "value"),
-  colFilter = list("year" = years, "region" = regions, "technology" = names(rm2pyTech)),
+  columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "vmCapFac"),
+  colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
   restoreZeros = FALSE)
 
-# PyPSA-Eur data
+# Read vm_capDistr (for VRE technologies)
+vmCapDistr <- readREMINDgdx(
+  paths = rmFulldataFiles,
+  gdxVar = "vm_capDistr",
+  columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "vmCapDistr"),
+  colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+  restoreZeros = FALSE)
+
+# Read pm_dataren (for VRE technologies)
+pmDataren <- readREMINDgdx(
+  paths = rmFulldataFiles,
+  gdxVar = "pm_dataren",
+  columns = c("all_regi" = "region", "all_te" = "technology", "char" = "char", "rlf" = "rlf", "value" = "pmDataren"),
+  colFilter = list("region" = "DEU", "char" = "nur", "technology" = names(rm2genTech)),
+  restoreZeros = FALSE)
+
+# Read teReNoBio set (for VRE technologies)
+teReNoBio <- gdx::readGDX(rmFulldataFiles[1], "teReNoBio", restore_zeros = FALSE)
+
+# Calculate capacity factor for VRE technologies
+capfacRlf <- vmCapFac %>%
+  filter(.data$technology %in% teReNoBio) %>%
+  full_join(vmCapDistr %>%
+              filter(.data$technology %in% teReNoBio)) %>%
+  full_join(pmDataren %>%
+              filter(.data$technology %in% teReNoBio)) %>%
+  # Filter away rlfs that are not used
+  filter(!is.na(pmDataren)) %>%
+  group_by(.data$year, .data$region, .data$technology, .data$iteration) %>%
+  summarise(capfac = sum(vmCapFac * vmCapDistr * pmDataren) / sum(vmCapDistr))
+
+# Capacity factor for non-rlf technologies
+capfacNoRlf <- vmCapFac %>%
+  filter(!(.data$technology %in% teReNoBio)) %>%
+  group_by(.data$year, .data$region, .data$technology, .data$iteration) %>%
+  dplyr::transmute(capfac = vmCapFac)
+
+# Combine capacity factors for all technologies
+dataCapfacREMIND <- bind_rows(capfacRlf, capfacNoRlf) %>% 
+  quitte::revalue.levels(technology = rm2genTech) %>% 
+  group_by(.data$year, .data$region, .data$technology, .data$iteration) %>%
+  mutate(dummy = ifelse(iteration > 1,
+                        as.integer(dplyr::n_distinct(.data$capfac) == 1),
+                        1))
+  
+# Throw warning if some capacity factors don't match within group
+if (any(dataCapfacREMIND$dummy == 0)) {
+  techProb <- as.character(unique(remind$technology[remind$dummy == 0]))
+  warning(paste("Capacity factors for", techProb, "don't match.\n"))
+  }
+
+# REMIND data for plotting
+dataCapfacREMINDplot <- dataCapfacREMIND %>%
+  # Take the average of all general technologies
+  # Values should be the same as they come from PyPSA-Eur
+  # However, in iterations before PyPSA starts, they are not the same
+  summarise(capfac = mean(.data$capfac)) %>%
+  quitte::order.levels(technology = names(colorsTech)) %>% 
+  rename(value = capfac)
+
+# PyPSA-Eur capacity factors
 dataCapfacPyPSA <- readPyPSAcsv(
   paths = file.path(pyResultsDirs, "capacity_factors.csv")) %>% 
   # Increment iteration by 1 to match REMIND
-  mutate(iteration = iteration + 1)
+  mutate(iteration = iteration + 1) %>% 
+  quitte::revalue.levels(carrier = rm2genTech) %>% 
+  group_by(.data$year, .data$region, .data$carrier, .data$iteration) %>%
+  summarise(value = unique(.data$value))
+
 
 # Plot by year
 pCapfacYear <- ggplot() +
   # Layer 1: REMIND
-  geom_line(data = dataCapfacREMIND, aes(x = year, y = value, color = technology)) +
+  geom_line(data = dataCapfacREMINDplot, aes(x = year, y = value, color = technology)) +
   # Layer 2: PyPSA-Eur
   geom_point(data = dataCapfacPyPSA, aes(x = year, y = value, color = carrier)) +
+  # Legend formatting
+  scale_color_manual(
+    name = "Technology",
+    values = colorsTech,
+    labels = namesTech,
+  ) +
   labs(x = "Year", y = "Capacity factor") +
-  ggtitle("Capacity factor by year") +
+  ggtitle("Capacity factor, iterations in panels") +
   facet_wrap(~ iteration)
 
 # Plot by iteration
 pCapfacIter <- ggplot() +
   # Layer 1: REMIND
-  geom_line(data = dataCapfacREMIND, aes(x = iteration, y = value, color = technology)) +
+  geom_line(data = dataCapfacREMINDplot, aes(x = iteration, y = value, color = technology)) +
   # Layer 2: PyPSA-Eur
   geom_point(data = dataCapfacPyPSA, aes(x = iteration, y = value, color = carrier)) +
+  # Legend formatting
+  scale_color_manual(
+    name = "Technology",
+    values = colorsTech,
+    labels = namesTech,
+  ) +
   labs(x = "Iteration", y = "Capacity factor") +
-  ggtitle("Capacity factor by iteration") +
+  ggtitle("Capacity factor, years in panels") +
   facet_wrap(~ year)
 
 print(pCapfacYear)
@@ -366,12 +444,12 @@ print(pCapfacIter)
 
 ### Market values
 
-```{r market value, echo = FALSE, message = FALSE}
+```{r market values, echo = FALSE, message = FALSE}
 
 # REMIND data
-# ...
+#dataMarketValueREMIND <- ...
 
-# PyPSA-Eur data
+
 dataMarketValuePyPSA <- readPyPSAcsv(
   paths = file.path(pyResultsDirs, "market_values.csv")) %>% 
   # Increment iteration by 1 to match REMIND
@@ -381,7 +459,7 @@ pMarketValueYear <- ggplot() +
   # Layer 1: REMIND
   #geom_line(data = dataMarketValueREMIND, aes(x = year, y = value, color = technology)) +
   # Layer 2: PyPSA-Eur
-  geom_line(data = dataMarketValuePyPSA, aes(x = year, y = value, color = carrier)) +
+  geom_point(data = dataMarketValuePyPSA, aes(x = year, y = value, color = carrier)) +
   labs(x = "Year", y = "Market value ($/MWh)") +
   ggtitle("Market values by year") +
   facet_wrap(~ iteration)
@@ -390,7 +468,7 @@ pMarketValueIter <- ggplot() +
   # Layer 1: REMIND
   #geom_line(data = dataMarketValueREMIND, aes(x = iteration, y = value, color = technology)) +
   # Layer 2: PyPSA-Eur
-  geom_line(data = dataMarketValuePyPSA, aes(x = iteration, y = value, color = carrier)) +
+  geom_point(data = dataMarketValuePyPSA, aes(x = iteration, y = value, color = carrier)) +
   labs(x = "Iteration", y = "Market value ($/MWh)") +
   ggtitle("Market values by iteration") +
   facet_wrap(~ year)
@@ -401,10 +479,16 @@ print(pMarketValueIter)
 
 ```
 
+## Markups / Markdowns
+
+Markups and markdowns are read into REMIND from PYPSA-Eur.
+
+Markup = Average market value - Average electricity price
+
 # Non-coupled variables
 
 This section includes plots of several key variables that are not coupled
-between REMIND and PyPSA, but that should get harmonised.
+between REMIND and PyPSA-Eur, but that should get harmonised.
 
 ## Capacities
 
@@ -464,11 +548,11 @@ print(pYear)
 
 ## REMIND
 
-## PyPSA
+## PyPSA-Eur
 
-### Screening curve
+### Screening curves
 
-### Inverse screening curve
+### Inverse screening curves
 
-### Residual Load Duration Curve
+### Residual load duration curves (RLDCs)
 
