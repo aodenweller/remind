@@ -21,7 +21,7 @@ This RMarkdown file contains various plots for validation of the REIMND-PyPSA-Eu
 library(gdx)
 library(tidyverse)
 
-knitr::opts_chunk$set(fig.pos = "H", out.extra = "")
+knitr::opts_chunk$set(dpi = 300, fig.pos = "H", out.extra = "")
 theme_set(theme_bw())
 
 # Color mapping
@@ -588,14 +588,63 @@ dataCapREMIND <- readREMINDgdx(
   restoreZeros = FALSE,
   recalcUnit = 1e3)  # TW to GW
 
-# Read the optimal capacities from the CSV files
+# Aggregate generalised technologies to aggregated PyPSA-Eur technologies
+gen2pyAggTech <- c(
+  "biomass" = "Biomass",
+  "CCGT" = "Combined-Cycle Gas",
+  "all_coal" = "Coal+Lignite",
+  "nuclear" = "Nuclear",
+  "OCGT" = "Open-Cycle Gas",
+  "all_offwind" = "Offshore Wind",
+  "oil" = "Oil",
+  "onwind" = "Onshore Wind",
+  "ror" = "Run of River",
+  "solar" = "Solar"
+)
+dataCapREMINDagg <- dataCapREMIND %>% 
+  quitte::revalue.levels(technology = rm2genTech) %>%
+  quitte::revalue.levels(technology = gen2pyAggTech) %>% 
+  group_by(.data$year, .data$region, .data$technology, .data$iteration) %>%
+  summarise(value = sum(.data$value))
+
+# Read optimal capacities from the CSV files
 dataCapPyPSA <- readPyPSAcsv(
   paths = file.path(pyResultsDirs, "optimal_capacities.csv")) %>% 
-  mutate(iteration = iteration + 1,  # Increment iteration
-         value = value / 1e3) %>%  # Convert capacities to GW
+  mutate(value = value / 1e3) %>%  # Convert capacities to GW
   filter(!is.na(value),
          value > 0.1,
          carrier != "Load shedding")
+
+# Aggregate PyPSA-Eur technologies to aggregated PyPSA-Eur technologies
+py2pyAggTech <- c(
+  "Offshore Wind (DC)" = "Offshore Wind",
+  "Offshore Wind (AC)" = "Offshore Wind",
+  "Coal" = "Coal+Lignite",
+  "Lignite" = "Coal+Lignite"
+)
+dataCapPyPSAagg <- dataCapPyPSA %>%
+  filter(type == "Generator") %>%
+  quitte::revalue.levels(carrier = py2pyAggTech) %>% 
+  group_by(.data$year, .data$carrier, .data$iteration) %>%
+  summarise(value = sum(.data$value)) %>%
+  mutate(technology = as.factor(carrier))
+
+p <- ggplot() +
+  geom_bar(data = dataCapREMINDagg,
+           mapping = aes(x = year, y = value, fill = "REMIND"),
+           stat = "identity",
+           position = position_nudge(x = -0.5),
+           width = 1) +
+  geom_bar(data = dataCapPyPSAagg,
+           mapping = aes(x = year, y = value, fill = "PyPSA-Eur"),
+           stat = "identity",
+           position = position_nudge(x = 0.5),
+           width = 1) +
+  labs(x = "Year", y = "Capacity (GW)") +
+  ggtitle("Capacity by year") +
+  facet_grid(technology ~ iteration, scales = "free")
+
+print(p)
 
 # Sum over all carriers and group the results by type
 dataCapPyPSAtype <- dataCapPyPSA %>% 
