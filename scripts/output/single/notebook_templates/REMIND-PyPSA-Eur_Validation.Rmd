@@ -335,6 +335,10 @@ pIter <- ggplot() +
   ggtitle("Pre-investment capacity by iteration") +
   facet_wrap(~ year, scales = "free")
 
+print(pYear)
+
+print(pIter)
+
 ```
 
 ### Specific capital costs
@@ -580,7 +584,7 @@ dataCapREMIND <- readREMINDgdx(
   paths = rmFulldataFiles,
   gdxVar = "vm_cap",
   columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "rlf" = "grade", "value" = "value"),
-  colFilter = list("year" = years, "region" = regions, "technology" = names(rm2pyTech), "grade" = 1),
+  colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech), "grade" = 1),
   restoreZeros = FALSE,
   recalcUnit = 1e3)  # TW to GW
 
