@@ -301,6 +301,42 @@ print(pIter)
 
 ### Pre-investment capacities
 
+This could also be merged into a joint plot that shows both pre-investment and additional optimised capacities.
+
+```{r pre-investment capacities, echo = FALSE, message = FALSE}
+
+# Read REMIND data
+dataPreInvestREMIND <- readREMINDgdx(
+  paths = rm2pyFiles,
+  gdxVar = "p32_preInvCap",
+  columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "value"),
+  colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+  restoreZeros = TRUE,
+  recalcUnit = 1e3)  # TW to GW
+
+# Read PyPSA-Eur data
+dataPreInvestPyPSA <- readPyPSAcsv(
+  paths = file.path(pyResultsDirs, "installed_capacities.csv")) %>% 
+  mutate(value = value / 1e3)  # Convert capacities to GW
+
+# Plot by year
+pYear <- ggplot() +
+  geom_line(data = dataPreInvestREMIND, aes(x = year, y = value, color = technology)) +
+  geom_point(data = dataPreInvestPyPSA, aes(x = year, y = value, color = carrier)) +
+  labs(x = "Year", y = "Capacity (GW)") +
+  ggtitle("Pre-investment capacity by year") +
+  facet_wrap(~ iteration, scales = "free")
+
+# Plot by iteration
+pIter <- ggplot() +
+  geom_line(data = dataPreInvestREMIND, aes(x = iteration, y = value, color = technology)) +
+  geom_point(data = dataPreInvestPyPSA, aes(x = iteration, y = value, color = carrier)) +
+  labs(x = "Iteration", y = "Capacity (GW)") +
+  ggtitle("Pre-investment capacity by iteration") +
+  facet_wrap(~ year, scales = "free")
+
+```
+
 ### Specific capital costs
 
 ### Fixed O&M costs
@@ -580,7 +616,7 @@ pYear <- ggplot() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 print(pYear)
-    
+
 ```
 
 ## Generation
