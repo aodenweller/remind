@@ -113,22 +113,26 @@ tC2tCO2 <- 44/12
 
 # REMIND directories
 rmOutdir <- getwd()
-#rmOutdir <- "/p/tmp/adrianod/remind-pypsa/output/PyPSA_base_testOneRegi_2023-07-17_16.36.56"
 scenario <- basename(rmOutdir)  # Scenario name
 # REMIND fulldata.gdx files
 rmFulldataFiles <- list.files(
   rmOutdir,
   pattern = "fulldata\\_\\d{1,}.gdx",
   full.names = TRUE)
-# REMIND2PyPSA-Eur.gdx files
+# REMIND2PyPSAEUR.gdx files
 rm2pyFiles <- list.files(
   rmOutdir,
   pattern = "REMIND2PyPSAEUR\\_\\d{1,}.gdx",
   full.names = TRUE)
+# PyPSAEUR2REMIND.gdx files
+py2rmFiles <- list.files(
+  rmOutdir,
+  pattern = "PyPSAEUR2REMIND\\_\\d{1,}.gdx",
+  full.names = TRUE
+)
 
 # PyPSA directories
 pyDir <- params$pyDir  # Main PyPSA directory
-#pyDir <- "/p/tmp/adrianod/pypsa-eur"
 pyResultsDir <- file.path(pyDir, "results", scenario)
 # Get subdirectories labeled "i" for iteration followed by an integer number
 pyResultsDirs <- list.dirs(pyResultsDir,
@@ -139,6 +143,12 @@ pyResultsDirs <- list.dirs(pyResultsDir,
 cat(paste("Found", length(rmFulldataFiles), "REMIND fulldata_i.gdx files.\n"))
 cat(paste("Found", length(rm2pyFiles), "REMIND2PyPSAEUR_i.gdx files.\n"))
 cat(paste("Found", length(pyResultsDirs), "PyPSA-EUR iteration directories.\n"))
+cat(paste("Found", length(py2rmFiles), "PyPSAEUR2REMIND_i.gdx files.\n"))
+
+# Throw warning if number of files does not match
+if (length(unique(c(length(rmFulldataFiles), length(rm2pyFiles), length(pyResultsDirs), length(py2rmFiles)))) != 1) {
+  warning("Number of REMIND and PyPSA-Eur files does not match.\n")
+}
 
 ```
 
@@ -148,17 +158,21 @@ cat(paste("Found", length(pyResultsDirs), "PyPSA-EUR iteration directories.\n"))
 # This function reads in csv files in the PyPSA-Eur directory
 # Expected path: <PyPSA-Eur results folder>/i<iteration>/<some file>.csv
 readPyPSAcsv <- function(paths) {
-  data <- tibble()
-  # Could also replace the loop by lapply at some point
-  for (p in paths) {
-    # Get iteration from file path
-    iteration <- as.integer(str_extract(p, "(?<=i)\\d{1,}(?=/)"))
-    # Read data
-    dataP <- read.csv(p, header = TRUE) %>% 
-      mutate(iteration = iteration)
-    data <- bind_rows(data, dataP)
-  }
-  return(data)
+  map_df(paths, ~{
+    # Extract iteration from path
+    iteration <- as.integer(str_extract(.x, "(?<=i)\\d{1,}(?=/)"))
+    # Try to read csv file
+    tryCatch(
+      {
+        read.csv(.x, header = TRUE) %>% 
+          mutate(iteration = iteration)
+      },
+      error = function(e) {
+        cat("Error reading file:", .x, "\n")
+        tibble() # Return an empty tibble in case of an error
+      }
+    )
+  })
 }
 
 # This function reads in gdx files into tibbles
@@ -168,40 +182,33 @@ readPyPSAcsv <- function(paths) {
 # colFilter: *List* of renamed columns and values to filter for
 readGDX <- function(rmFile, gdxVar, columns, colFilter,
                     restoreZeros = TRUE, field = "l", recalcUnit = 1) {
-  data <-
-    # Read data from gdx file
-    gdx::readGDX(rmFile, gdxVar, restore_zeros = restoreZeros, field = field) %>%
-    tibble::as_tibble(.name_repair = "unique")
-  # If no data is found create tibble with dimensions from colFilter and values zero
+  # Read gdx file
+  data <- gdx::readGDX(rmFile, gdxVar, restore_zeros = restoreZeros, field = field) %>%
+    as_tibble(.name_repair = "unique")
+  # If data is empty create tibble with columns from colFilter and column "value" filled with 0
   if (nrow(data) == 0) {
-    data <- tibble::tibble(expand.grid(colFilter)) %>% 
-      mutate(value = 0)
+    data <- tibble(expand.grid(colFilter), value = 0)
   } else {
      data <- data %>% 
       # Select desired columns and rename
-      dplyr::select_at(names(columns), ~ columns) %>%
+      select_at(names(columns), ~ columns) %>%
       # Filter columns according to colFilter
-      dplyr::filter(if_all(names(colFilter), ~ . %in% colFilter$.)) %>% 
+      filter(if_all(names(colFilter), ~ . %in% colFilter$.)) %>% 
       # Change units
-      dplyr::mutate_at(dplyr::vars(columns["value"]), ~ . * recalcUnit)
+      mutate(across(all_of(columns["value"]), ~ . * recalcUnit))
   }
   return(data)
 }
 
 # This function reads in multiple fulldata_<iteration>.gdx files from REMIND
 readREMINDgdx <- function(paths, gdxVar, columns, colFilter,
-                       restoreZeros = TRUE, field = "l", recalcUnit = 1) {
-  data <- tibble()
-  # Could also replace the loop by lapply at some point
-  for (p in paths) {
-    # Get iteration and year from file path
-    iteration <- as.integer(str_extract(p, "(?<=(fulldata_)|(REMIND2PyPSAEUR_))\\d{1,}(?=.gdx)"))
-    dataP <- readGDX(p, gdxVar, columns, colFilter,
-                     restoreZeros, field, recalcUnit) %>% 
+                          restoreZeros = TRUE, field = "l", recalcUnit = 1) {
+  map_df(paths, ~{
+    # Extract iteration from path
+    iteration <- as.integer(str_extract(.x, "(?<=(fulldata_)|(REMIND2PyPSAEUR_))\\d{1,}(?=.gdx)"))
+    readGDX(.x, gdxVar, columns, colFilter, restoreZeros, field, recalcUnit) %>%
       mutate(iteration = iteration)
-    data <- bind_rows(data, dataP)
-  }
-  return(data)
+  })
 }
 
 ```
@@ -213,6 +220,7 @@ readREMINDgdx <- function(paths, gdxVar, columns, colFilter,
 Runtime for PyPSA-EUR required for each iteration from start of first job to end of last job, based on the change time of the "co2_price_scenarios.csv" and "PyPSAEUR2REMIND.gdx" files.
 
 ```{r runtime, echo = FALSE, message = FALSE}
+
 # Get last change time and creation time of "co2_price_scenarios.csv" and "PyPSAEUR2REMIND.gdx" in each directory
 fileTimes <- lapply(pyResultsDirs, function(dir) {
   co2PriceFile <- file.path(dir, "co2_price_scenarios.csv")
