@@ -194,8 +194,8 @@ readGDX <- function(rmFile, gdxVar, columns, colFilter,
       select_at(names(columns), ~ columns) %>%
       # Filter columns according to colFilter
       filter(if_all(names(colFilter), ~ . %in% colFilter$.)) %>% 
-      # Change units
-      mutate(across(all_of(columns["value"]), ~ . * recalcUnit))
+      # Multiply by recalcUnit
+      mutate(across(columns["value"][[1]], ~ . * recalcUnit))
   }
   return(data)
 }
@@ -421,7 +421,7 @@ vmCapFac <- readREMINDgdx(
 vmCapDistr <- readREMINDgdx(
   paths = rmFulldataFiles,
   gdxVar = "vm_capDistr",
-  columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "vmCapDistr"),
+  columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "rlf" = "rlf", "value" = "vmCapDistr"),
   colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
   restoreZeros = FALSE)
 
@@ -455,13 +455,13 @@ capfacNoRlf <- vmCapFac %>%
   dplyr::transmute(capfac = vmCapFac)
 
 # Combine capacity factors for all technologies
-dataCapfacREMIND <- bind_rows(capfacRlf, capfacNoRlf) %>% 
-  quitte::revalue.levels(technology = rm2genTech) %>% 
+dataCapfacREMIND <- bind_rows(capfacRlf, capfacNoRlf) %>%
+  quitte::revalue.levels(technology = rm2genTech) %>%
   group_by(.data$year, .data$region, .data$technology, .data$iteration) %>%
   mutate(dummy = ifelse(iteration > 1,
                         as.integer(dplyr::n_distinct(.data$capfac) == 1),
                         1))
-  
+
 # Throw warning if some capacity factors don't match within group
 if (any(dataCapfacREMIND$dummy == 0)) {
   techProb <- as.character(unique(remind$technology[remind$dummy == 0]))
@@ -474,15 +474,15 @@ dataCapfacREMINDplot <- dataCapfacREMIND %>%
   # Values should be the same as they come from PyPSA-Eur
   # However, in iterations before PyPSA starts, they are not the same
   summarise(capfac = mean(.data$capfac)) %>%
-  quitte::order.levels(technology = names(colorsTech)) %>% 
+  quitte::order.levels(technology = names(colorsTech)) %>%
   rename(value = capfac)
 
 # PyPSA-Eur capacity factors
 dataCapfacPyPSA <- readPyPSAcsv(
-  paths = file.path(pyResultsDirs, "capacity_factors.csv")) %>% 
+  paths = file.path(pyResultsDirs, "capacity_factors.csv")) %>%
   # Increment iteration by 1 to match REMIND
-  mutate(iteration = iteration + 1) %>% 
-  quitte::revalue.levels(carrier = rm2genTech) %>% 
+  mutate(iteration = iteration + 1) %>%
+  quitte::revalue.levels(carrier = rm2genTech) %>%
   group_by(.data$year, .data$region, .data$carrier, .data$iteration) %>%
   summarise(value = unique(.data$value))
 
