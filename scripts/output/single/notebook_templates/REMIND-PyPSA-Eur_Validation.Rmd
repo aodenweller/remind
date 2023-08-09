@@ -8,8 +8,6 @@ output:
     fig_width: 10
     fig_height: 6
     extra_dependencies: ["float"]
-params:
-  pyDir: "/p/tmp/adrianod/pypsa-eur"
 fontsize: 11pt
 geometry: margin=0.5in
 ---
@@ -158,8 +156,6 @@ if (length(grep("non_optimal", rmFulldataFiles)) > 0) {
 
 ```
 
-```
-
 ```{r helpers, include = FALSE, echo = FALSE}
 
 # This function reads in csv files in the PyPSA-Eur directory
@@ -214,7 +210,7 @@ readREMINDgdx <- function(paths, gdxVar, columns, colFilter,
     # Extract iteration from path.
     # Files may be named "fulldata_<iteration>.gdx" or
     # "non_optimal_<iteration>.gdx" or "REMIND2PyPSAEUR_<iteration>.gdx"
-    iteration <- as.integer(str_extract(.x, "((?<=fulldata_)|(?<=non_optimal_)|(REMIND2PyPSAEUR_))\\d{1,}(?=.gdx)"))
+    iteration <- as.integer(str_extract(.x, "((?<=fulldata_)|(?<=non_optimal_)|(?<=REMIND2PyPSAEUR_))\\d{1,}(?=.gdx)"))
     readGDX(.x, gdxVar, columns, colFilter, restoreZeros, field, recalcUnit) %>%
       mutate(iteration = iteration)
   })
