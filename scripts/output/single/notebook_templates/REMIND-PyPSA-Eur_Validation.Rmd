@@ -18,6 +18,7 @@ This RMarkdown file contains various plots for validation of the REIMND-PyPSA-Eu
 # Load libraries
 library(gdx)
 library(tidyverse)
+library(ggpp)
 
 knitr::opts_chunk$set(dpi = 300, fig.pos = "H", out.extra = "")
 theme_set(theme_bw())
@@ -128,6 +129,9 @@ py2rmFiles <- list.files(
   pattern = "PyPSAEUR2REMIND_\\d{1,}.gdx",
   full.names = TRUE
 )
+
+# Get iterations from rmFullDataFiles
+rmIterations <- as.numeric(gsub(".*_([0-9]+)\\.gdx", "\\1", rmFulldataFiles))
 
 # PyPSA directories
 load("config.Rdata")
@@ -590,8 +594,6 @@ between REMIND and PyPSA-Eur, but that should get harmonised.
 
 ## Capacities
 
-Work in progress...
-
 ```{r capacities, echo = FALSE, message = FALSE, fig.width = 10, fig.height = 12}
 
 # REMIND
@@ -720,6 +722,72 @@ pType <- ggplot() +
   facet_wrap(~ type, scales = "free")
 
 print(pType)
+
+```
+
+```{r capacity comparison, echo = FALSE, message = FALSE, fig.width = 10, fig.height = 6}
+
+# Loop over iterations
+for (i in rmIterations){
+
+  dataCapREMINDploti <- dataCapREMINDplot %>% 
+    ungroup() %>%
+    filter(iteration == i)
+
+  dataCapREMINDplotitot <- dataCapREMINDploti %>% 
+    group_by(year) %>% 
+    summarise(value = sum(value))
+
+  dataCapPyPSAploti <- dataCapPyPSAplot %>% 
+    ungroup() %>% 
+    filter(iteration == i)
+
+  dataCapPyPSAplotitot <- dataCapPyPSAploti %>% 
+    group_by(year) %>% 
+    summarise(value = sum(value))
+
+  pCapComp <- ggplot() +
+    geom_bar(data = dataCapREMINDploti,
+            mapping = aes(x = year, y = value, fill = technology),
+            stat = "identity",
+            position = position_stacknudge(x = -1.2),
+            width = 2) +
+    geom_bar(data = dataCapREMINDplotitot,
+            mapping = aes(x = year, y = value, linetype = "REMIND"),
+            stat = "identity",
+            position = position_nudge(x = -1.2),
+            width = 2,
+            linewidth = 0.25,
+            color = "black",
+            fill = NA) +
+    geom_bar(data = dataCapPyPSAploti,
+            mapping = aes(x = year, y = value, fill = technology),
+            stat = "identity",
+            position = position_stacknudge(x = 1.2),
+            width = 2) +
+    geom_bar(data = dataCapPyPSAplotitot,
+            mapping = aes(x = year, y = value, linetype = "PyPSA-Eur"),
+            stat = "identity",
+            position = position_nudge(x = 1.2),
+            width = 2,
+            linewidth = 0.25,
+            color = "black",
+            fill = NA) +
+    scale_fill_manual(
+      name = "Technology",
+      values = colorsTech,
+      labels = namesTech,
+    ) +
+    scale_linetype_manual(
+      name = "Model",
+      values = c("REMIND" = "solid", "PyPSA-Eur" = "dashed"),
+    ) +
+    scale_x_continuous(breaks = years) +
+    labs(x = "Year", y = "Capacity (GW)") +
+    ggtitle(paste("Capacity over years, model comparison, iteration", i))
+
+  print(pCapComp)
+}
 
 ```
 
