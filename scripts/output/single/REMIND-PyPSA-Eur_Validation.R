@@ -6,6 +6,12 @@
 # |  Contact: remind@pik-potsdam.de
 
 library(rmarkdown)
+library(lucode2)
+
+if(!exists("source_include")) {
+  ## Define arguments that can be read from command line
+  readArgs("outputdir")
+}
 
 # Load config.Rdata
 load(file.path(outputdir, "config.Rdata"))
