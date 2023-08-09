@@ -132,7 +132,8 @@ py2rmFiles <- list.files(
 )
 
 # PyPSA directories
-pyDir <- params$pyDir  # Main PyPSA directory
+load("config.Rdata")
+pyDir <- cfg$gms$c32_pypsa_dir  # Get PyPSA-Eur directory from config.Rdata
 pyResultsDir <- file.path(pyDir, "results", scenario)
 # Get subdirectories labeled "i" for iteration followed by an integer number
 pyResultsDirs <- list.dirs(pyResultsDir,
@@ -151,7 +152,6 @@ if (length(unique(c(length(rmFulldataFiles), length(rm2pyFiles), length(pyResult
 }
 
 ```
-
 
 ```{r helpers, include = FALSE, echo = FALSE}
 
@@ -536,13 +536,22 @@ print(pCapfacIter)
 dataMarketValuePyPSA <- readPyPSAcsv(
   paths = file.path(pyResultsDirs, "market_values.csv")) %>% 
   # Increment iteration by 1 to match REMIND
-  mutate(iteration = iteration + 1)
+  mutate(iteration = iteration + 1) %>% 
+  quitte::revalue.levels(carrier = rm2genTech) %>%
+  group_by(.data$year, .data$region, .data$carrier, .data$iteration) %>%
+  summarise(value = unique(.data$value)) %>% 
+  quitte::order.levels(carrier = names(namesTech))
 
 pMarketValueYear <- ggplot() +
   # Layer 1: REMIND
   #geom_line(data = dataMarketValueREMIND, aes(x = year, y = value, color = technology)) +
   # Layer 2: PyPSA-Eur
   geom_point(data = dataMarketValuePyPSA, aes(x = year, y = value, color = carrier)) +
+  scale_color_manual(
+    name = "Technology",
+    values = colorsTech,
+    labels = namesTech,
+  ) +
   labs(x = "Year", y = "Market value ($/MWh)") +
   ggtitle("Market values by year") +
   facet_wrap(~ iteration)
@@ -552,6 +561,11 @@ pMarketValueIter <- ggplot() +
   #geom_line(data = dataMarketValueREMIND, aes(x = iteration, y = value, color = technology)) +
   # Layer 2: PyPSA-Eur
   geom_point(data = dataMarketValuePyPSA, aes(x = iteration, y = value, color = carrier)) +
+  scale_color_manual(
+    name = "Technology",
+    values = colorsTech,
+    labels = namesTech,
+  ) +
   labs(x = "Iteration", y = "Market value ($/MWh)") +
   ggtitle("Market values by iteration") +
   facet_wrap(~ year)

@@ -7,13 +7,12 @@
 
 library(rmarkdown)
 
+# Load config.Rdata
 load(file.path(outputdir, "config.Rdata"))
 
-message(paste("Looking for PyPSA output in", cfg$gms$c32_pypsa_dir))
-
-## Check if run used the PyPSA power module
+# Check if run used the PyPSA power module
 if (cfg$gms$power == "PyPSA") {
-  ## Check if iteration gdxes were written
+  # Check if iteration gdxes were written
   if (cfg$gms$c_keep_iteration_gdxes == 1){
     # Copy and overwrite REMIND-PyPSA-Eur_Validation.Rmd (if it was changed)
     file.copy(
@@ -21,9 +20,7 @@ if (cfg$gms$power == "PyPSA") {
       to = file.path(outputdir, "REMIND-PyPSA-Eur_Validation.Rmd"),
       overwrite = TRUE)
     # Render REMIND-PyPSA-Eur_Validation.Rmd
-    rmarkdown::render(
-      input = file.path(outputdir, "REMIND-PyPSA-Eur_Validation.Rmd"),
-      params = list(pyDir = cfg$gms$c32_pypsa_dir))
+    rmarkdown::render(file.path(outputdir, "REMIND-PyPSA-Eur_Validation.Rmd"))
   } else {
     stop("This run didn't have c_keep_iteration_gdxes activated.")
     }
