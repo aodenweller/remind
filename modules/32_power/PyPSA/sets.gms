@@ -19,10 +19,10 @@ sets
     tePy32(all_te)              "REMIND SE electricity technologies coupled to PyPSA"
         /biochp, bioigcc, bioigccc, ngcc, ngccc, gaschp, igcc, igccc, pc, pcc, pco, coalchp, tnrs, fnrs, ngt, windoff, dot, wind, hydro, spv/  !! TODO: What about CSP and geohdr?
 
-    tePy32disp(tePy32)          "REMIND dispatchable SE electricity technologies (no grades)"
+    tePyDisp32(all_te)          "REMIND dispatchable SE electricity technologies (no grades)"
         /biochp, bioigcc, bioigccc, ngcc, ngccc, gaschp, igcc, igccc, pc, pcc, pco, coalchp, tnrs, fnrs, ngt, dot/
 
-    tePy32nondisp(tePy32)       "REMIND non-dispatchable SE electricity technologies (with grades)"
+    tePyVRE32(all_te)       "REMIND non-dispatchable SE electricity technologies (with grades)"
         /windoff, wind, spv/
 
 ;

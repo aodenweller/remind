@@ -69,7 +69,7 @@ v32_flexPriceShareMin(tall,all_regi,all_te)         "possible minimum of share o
 ***------------------------------------------------------------
 
 parameters
-    p32_PyPSA_CF(tPy32,regPy32,tePy32)                  "PyPSA import: Capacity factors [1]"
+    p32_PyPSA_CF(ttot,all_regi,all_te)                  "PyPSA import: Capacity factors [1]"
     p32_PyPSA_shSeEl(ttot,all_regi,all_te)              "PyPSA import: Electricity generation share by technology [1]"
     p32_PyPSA_MV(ttot,all_regi,all_te)                  "PyPSA import: Market values [$/MWh]"
     p32_PyPSA_ElecPrice(ttot,all_regi)                  "PyPSA import: Electricity prices [$/MWh]"
@@ -84,7 +84,8 @@ equations
     q32_usableSeDisp(ttot,all_regi,all_enty)            "PyPSA coupling: Equation to calculate v32_usableSeDisp"
     q32_usableSeTeDisp(ttot,all_regi,all_enty,all_te)   "PyPSA coupling: Equation to calculate v32_usableSeTeDisp"
     q32_shSeElDisp(ttot,all_regi,all_te)                "PyPSA coupling: Equation to calculate v32_shSeElDisp"
-*    q32_capFac(ttot,all_regi,all_te)                    "PyPSA coupling: Pre-factor equation to import the capacity factor"
+    q32_capFacVRE(ttot,all_regi,all_te)                 "PyPSA coupling: Pre-factor equation to import the capacity factor for VRE technologies"
+*    q32_capFacDisp(ttot,all_regi,all_te)                "PyPSA coupling: Pre-factor equation to import the capacity factor for dispatchable technologies"
 $ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
     q32_MarkUp(ttot,all_regi,all_te)                    "PyPSA coupling: Equation to calculate the markup vm_MarkUp"
 $endif.cm_pypsa_markup

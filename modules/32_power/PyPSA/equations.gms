@@ -317,9 +317,22 @@ q32_usableSeTeDisp(t,regi,entySe,te)$(tPy32(t) and regPy32(regi) and sameas(enty
 
 *** Calculate electricity generation shares by technology
 q32_shSeElDisp(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te))..
-    v32_shSeElDisp(t,regi,te) * v32_usableSeDisp(t,regi,"seel")
-    =e=
-    v32_usableSeTeDisp(t,regi,"seel",te)
+  v32_shSeElDisp(t,regi,te) * v32_usableSeDisp(t,regi,"seel")
+  =e=
+  v32_usableSeTeDisp(t,regi,"seel",te)
+;
+
+*** Equation to set the average capacity factor for VRE technologies
+* For VRE technologies the average capacity factor depends on the endogenous split-up into grades in vm_capDistr.
+* This equation ensures the capacity factor for VRE technologies matches that in p32_PyPSA_CF.
+q32_capFacVRE(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePyVRE32(te) AND (cm_PyPSA_eq eq 1))..
+  (vm_capFac(t,regi,te)) * 1$(cm_PyPSA_eq eq 1)
+  =e=
+  (   p32_PyPSA_CF(t,regi,te)
+    * vm_cap(t,regi,te,"1")
+    / sum(teRe2rlfDetail(te,rlf),
+          vm_capDistr(t,regi,te,rlf) * pm_dataren(regi,"nur",rlf,te))
+  ) * 1$(cm_PyPSA_eq eq 1)
 ;
 
 $ontext

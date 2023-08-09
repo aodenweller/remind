@@ -71,15 +71,12 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
   logfile.nr = sm_tmp;
   logfile.nd = sm_tmp2;
 
-  !! Capacity factor for dispatchable technologies
-  pm_cf(tPy32,regPy32,tePy32disp) = p32_PyPSA_CF(tPy32,regPy32,tePy32disp);
+  !! Capacity factor for dispatchable technologies (without grades)
+  !! Subsequently, vm_capFac is fixed to pm_cf (bounds.gms)
+  pm_cf(tPy32,regPy32,tePyDisp32) = p32_PyPSA_CF(tPy32,regPy32,tePyDisp32);
 
-  !! Capacity factor for non-dispatchable technologies with grades
-  !! This uses pm_cf as a "correction factor" for the CFs in pm_dataren, weighted by vm_capDistr
-  pm_cf(tPy32,regPy32,tePy32nondisp) = p32_PyPSA_CF(tPy32,regPy32,tePy32nondisp)
-                                     * vm_cap.l(tPy32,regPy32,tePy32nondisp,"1")
-                                     / sum(teRe2rlfDetail(tePy32nondisp,rlf), vm_capDistr.l(tPy32,regPy32,tePy32nondisp,rlf) * pm_dataren(regPy32,"nur",rlf,tePy32nondisp));
-
+  !! Capacity factor for VRE technologies (with grades)
+  !! Moved to q32_capFacVRE (equations.gms), using vm_capFac as a correction factor (bounds.gms)
 );
 
 *** EOF ./modules/32_power/PyPSA/postsolve.gms

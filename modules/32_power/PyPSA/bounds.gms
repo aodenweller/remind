@@ -73,9 +73,19 @@ vm_cap.fx(t,regi,"elh2VRE",rlf) = 0;
 ***                  PyPSA-Eur coupling
 ***------------------------------------------------------------
 
-* Set cm_PyPSA_eq to 1 after the designated iteration 
-if ((iteration.val ge c32_startIter_PyPSA),
+* Set cm_PyPSA_eq to 1 after the starting iteration of PyPSA
+if ((iteration.val gt c32_startIter_PyPSA),
   cm_PyPSA_eq = 1;
+);
+
+* All capacity factors come from PyPSA-Eur.
+* For dispatchable technologies, vm_capFac is fixed to pm_cf (see above), which is overwritten with p32_PyPSA_CF in postsolve.gms
+* (ToDo: Include a pre-factor equation that includes a gradient/slope.)
+* For VRE technologies, here we set vm_capFac free so that REMIND can adjust it using equation q32_capFacVRE.
+* vm_capFac can be larger than 1 since it is used as a "correction factor" so that the VRE capacity factor equals p32_PyPSA_CF.
+if ((cm_PyPSA_eq eq 1),
+  vm_capFac.lo(tPy32,regPy32,tePyVRE32) = 0;
+  vm_capFac.up(tPy32,regPy32,tePyVRE32) = 2;
 );
 
 * v32_shSeElDisp must be between 0 and 1
