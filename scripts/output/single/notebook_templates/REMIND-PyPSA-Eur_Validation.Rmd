@@ -117,17 +117,17 @@ scenario <- basename(rmOutdir)  # Scenario name
 # REMIND fulldata.gdx files
 rmFulldataFiles <- list.files(
   rmOutdir,
-  pattern = "fulldata\\_\\d{1,}.gdx",
+  pattern = "(fulldata_)|(non_optimal_)\\d{1,}.gdx",
   full.names = TRUE)
 # REMIND2PyPSAEUR.gdx files
 rm2pyFiles <- list.files(
   rmOutdir,
-  pattern = "REMIND2PyPSAEUR\\_\\d{1,}.gdx",
+  pattern = "REMIND2PyPSAEUR_\\d{1,}.gdx",
   full.names = TRUE)
 # PyPSAEUR2REMIND.gdx files
 py2rmFiles <- list.files(
   rmOutdir,
-  pattern = "PyPSAEUR2REMIND\\_\\d{1,}.gdx",
+  pattern = "PyPSAEUR2REMIND_\\d{1,}.gdx",
   full.names = TRUE
 )
 
@@ -150,6 +150,13 @@ cat(paste("Found", length(py2rmFiles), "PyPSAEUR2REMIND_i.gdx files.\n"))
 if (length(unique(c(length(rmFulldataFiles), length(rm2pyFiles), length(pyResultsDirs), length(py2rmFiles)))) != 1) {
   warning("Number of REMIND and PyPSA-Eur files does not match.\n")
 }
+
+# Throw warning if rmFullDataFiles contains at least one "non_optimal_i.gdx" file and give number of files
+if (length(grep("non_optimal", rmFulldataFiles)) > 0) {
+  warning(paste("Found", length(grep("non_optimal", rmFulldataFiles)), "non_optimal_i.gdx REMIND output files.\n"))
+}
+
+```
 
 ```
 
@@ -200,12 +207,14 @@ readGDX <- function(rmFile, gdxVar, columns, colFilter,
   return(data)
 }
 
-# This function reads in multiple fulldata_<iteration>.gdx files from REMIND
+# This function reads in multiple gdx files from REMIND
 readREMINDgdx <- function(paths, gdxVar, columns, colFilter,
                           restoreZeros = TRUE, field = "l", recalcUnit = 1) {
   map_df(paths, ~{
-    # Extract iteration from path
-    iteration <- as.integer(str_extract(.x, "(?<=(fulldata_)|(REMIND2PyPSAEUR_))\\d{1,}(?=.gdx)"))
+    # Extract iteration from path.
+    # Files may be named "fulldata_<iteration>.gdx" or
+    # "non_optimal_<iteration>.gdx" or "REMIND2PyPSAEUR_<iteration>.gdx"
+    iteration <- as.integer(str_extract(.x, "(?<=(fulldata_)|(?<=non_optimal_)|(REMIND2PyPSAEUR_))\\d{1,}(?=.gdx)"))
     readGDX(.x, gdxVar, columns, colFilter, restoreZeros, field, recalcUnit) %>%
       mutate(iteration = iteration)
   })
@@ -486,7 +495,6 @@ dataCapfacPyPSA <- readPyPSAcsv(
   group_by(.data$year, .data$region, .data$carrier, .data$iteration) %>%
   summarise(value = unique(.data$value))
 
-
 # Plot by year
 pCapfacYear <- ggplot() +
   # Layer 1: REMIND
@@ -591,7 +599,7 @@ between REMIND and PyPSA-Eur, but that should get harmonised.
 
 Work in progress...
 
-```{r capacities, echo = FALSE, message = FALSE}
+```{r capacities, echo = FALSE, message = FALSE, fig.width = 10, fig.height = 12}
 
 # REMIND
 dataCapREMIND <- readREMINDgdx(
