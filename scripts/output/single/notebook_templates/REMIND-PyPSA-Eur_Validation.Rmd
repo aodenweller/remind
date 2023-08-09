@@ -117,7 +117,7 @@ scenario <- basename(rmOutdir)  # Scenario name
 # REMIND fulldata.gdx files
 rmFulldataFiles <- list.files(
   rmOutdir,
-  pattern = "(fulldata_)|(non_optimal_)\\d{1,}.gdx",
+  pattern = "((fulldata_)|(non_optimal_))\\d{1,}.gdx",
   full.names = TRUE)
 # REMIND2PyPSAEUR.gdx files
 rm2pyFiles <- list.files(
@@ -214,7 +214,7 @@ readREMINDgdx <- function(paths, gdxVar, columns, colFilter,
     # Extract iteration from path.
     # Files may be named "fulldata_<iteration>.gdx" or
     # "non_optimal_<iteration>.gdx" or "REMIND2PyPSAEUR_<iteration>.gdx"
-    iteration <- as.integer(str_extract(.x, "(?<=(fulldata_)|(?<=non_optimal_)|(REMIND2PyPSAEUR_))\\d{1,}(?=.gdx)"))
+    iteration <- as.integer(str_extract(.x, "((?<=fulldata_)|(?<=non_optimal_)|(REMIND2PyPSAEUR_))\\d{1,}(?=.gdx)"))
     readGDX(.x, gdxVar, columns, colFilter, restoreZeros, field, recalcUnit) %>%
       mutate(iteration = iteration)
   })
@@ -243,9 +243,6 @@ fileTimes <- lapply(pyResultsDirs, function(dir) {
 
 # Combine results into a data frame
 fileTimes <- do.call(rbind.data.frame, fileTimes)
-
-# Print results
-print(fileTimes)
 
 # Plot the time difference for each iteration as a bar plot
 pTimeDiff <- ggplot() +
@@ -610,22 +607,9 @@ dataCapREMIND <- readREMINDgdx(
   restoreZeros = FALSE,
   recalcUnit = 1e3)  # TW to GW
 
-# Aggregate generalised technologies to aggregated PyPSA-Eur technologies
-gen2pyAggTech <- c(
-  "biomass" = "Biomass",
-  "CCGT" = "Combined-Cycle Gas",
-  "all_coal" = "Coal+Lignite",
-  "nuclear" = "Nuclear",
-  "OCGT" = "Open-Cycle Gas",
-  "all_offwind" = "Offshore Wind",
-  "oil" = "Oil",
-  "onwind" = "Onshore Wind",
-  "ror" = "Run of River",
-  "solar" = "Solar"
-)
-dataCapREMINDagg <- dataCapREMIND %>% 
+dataCapREMINDplot <- dataCapREMIND %>% 
   quitte::revalue.levels(technology = rm2genTech) %>%
-  quitte::revalue.levels(technology = gen2pyAggTech) %>% 
+  quitte::revalue.levels(technology = namesTech) %>%
   group_by(.data$year, .data$region, .data$technology, .data$iteration) %>%
   summarise(value = sum(.data$value))
 
@@ -637,36 +621,94 @@ dataCapPyPSA <- readPyPSAcsv(
          value > 0.1,
          carrier != "Load shedding")
 
-# Aggregate PyPSA-Eur technologies to aggregated PyPSA-Eur technologies
-py2pyAggTech <- c(
-  "Offshore Wind (DC)" = "Offshore Wind",
-  "Offshore Wind (AC)" = "Offshore Wind",
-  "Coal" = "Coal+Lignite",
-  "Lignite" = "Coal+Lignite"
+# PyPSA-Eur pretty names to generalised names
+py2genTech <- c(
+  "Biomass" = "biomass",
+  "Coal" = "all_coal",
+  "Combined-Cycle Gas" = "CCGT",
+  "Lignite" = "all_coal",
+  "Nuclear" = "nuclear",
+  "Offshore Wind (DC)" = "all_offwind",
+  "Offshore Wind (AC)" = "all_offwind",
+  "Oil" = "oil",
+  "Onshore Wind" = "onwind",
+  "Open-Cycle Gas" = "OCGT",
+  "Run of River" = "ror",
+  "Solar" = "solar"
 )
-dataCapPyPSAagg <- dataCapPyPSA %>%
-  filter(type == "Generator") %>%
-  quitte::revalue.levels(carrier = py2pyAggTech) %>% 
+
+dataCapPyPSAplot <- dataCapPyPSA %>% 
+  filter(type == "Generator") %>% 
+  quitte::revalue.levels(carrier = py2genTech) %>% 
+  quitte::revalue.levels(carrier = namesTech) %>%
   group_by(.data$year, .data$carrier, .data$iteration) %>%
   summarise(value = sum(.data$value)) %>%
   mutate(technology = as.factor(carrier))
 
-p <- ggplot() +
-  geom_bar(data = dataCapREMINDagg,
+pCap <- ggplot() +
+  geom_bar(data = dataCapREMINDplot,
            mapping = aes(x = year, y = value, fill = "REMIND"),
            stat = "identity",
            position = position_nudge(x = -0.5),
            width = 1) +
-  geom_bar(data = dataCapPyPSAagg,
+  geom_bar(data = dataCapPyPSAplot,
            mapping = aes(x = year, y = value, fill = "PyPSA-Eur"),
            stat = "identity",
            position = position_nudge(x = 0.5),
            width = 1) +
+  scale_fill_discrete(name = "Model") +
   labs(x = "Year", y = "Capacity (GW)") +
-  ggtitle("Capacity by year") +
+  ggtitle("Capacity over years, model comparison") +
   facet_grid(technology ~ iteration, scales = "free")
 
-print(p)
+print(pCap)
+
+# Plot REMIND capacities stacked by technology
+dataCapREMINDplot <- dataCapREMIND %>% 
+  quitte::revalue.levels(technology = rm2genTech) %>%
+  group_by(.data$year, .data$region, .data$technology, .data$iteration) %>%
+  summarise(value = sum(.data$value)) %>% 
+  mutate(technology = factor(technology, levels = names(namesTech)))
+
+pCapREMIND <- ggplot() + 
+  geom_bar(data = dataCapREMINDplot,
+           mapping = aes(x = year, y = value, fill = technology),
+           stat = "identity",
+           position = "stack") +
+  scale_fill_manual(
+    name = "Technology",
+    values = colorsTech,
+    labels = namesTech,
+  ) +
+  labs(x = "Year", y = "Capacity (GW)") +
+  ggtitle("Capacity over years, REMIND") +
+  facet_wrap(~ iteration, scales = "free")
+
+print(pCapREMIND)
+
+# Plot PyPSA capacities stacked by technology
+dataCapPyPSAplot <- dataCapPyPSA %>% 
+  filter(type == "Generator") %>% 
+  quitte::revalue.levels(carrier = py2genTech) %>% 
+  group_by(.data$year, .data$carrier, .data$iteration) %>%
+  summarise(value = sum(.data$value)) %>%
+  mutate(technology = factor(carrier, levels = names(namesTech)))
+
+pCapPyPSA <- ggplot() + 
+  geom_bar(data = dataCapPyPSAplot,
+           mapping = aes(x = year, y = value, fill = technology),
+           stat = "identity",
+           position = "stack") +
+  scale_fill_manual(
+    name = "Technology",
+    values = colorsTech,
+    labels = namesTech,
+  ) +
+  labs(x = "Year", y = "Capacity (GW)") +
+  ggtitle("Capacity over years, PyPSA-Eur") +
+  facet_wrap(~ iteration, scales = "free")
+
+print(pCapPyPSA)
 
 # Sum over all carriers and group the results by type
 dataCapPyPSAtype <- dataCapPyPSA %>% 
@@ -679,22 +721,19 @@ pType <- ggplot() +
   geom_line(data = dataCapPyPSAtype, aes(x = year, y = value, color = factor(iteration))) +
   labs(x = "Year", y = "Capacity (GW)") +
   ggtitle("Optimal capacity by type") +
-  facet_wrap(~ type)
+  facet_wrap(~ type, scales = "free")
 
 print(pType)
-
-pYear <- ggplot() +
-  geom_bar(data = dataCapPyPSA, aes(x = year, y = value), stat = "identity", position_dodge(width = 0.9)) +
-  labs(x = "Technology", y = "Capacity (GW)") +
-  ggtitle("Capacity by iteration") +
-  facet_grid(carrier ~ iteration, scales = "free") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
-print(pYear)
 
 ```
 
 ## Generation
+
+```{r generation, echo = FALSE, message = FALSE, fig.width = 10, fig.height = 12}
+
+
+
+```
 
 ## Electricity price
 
