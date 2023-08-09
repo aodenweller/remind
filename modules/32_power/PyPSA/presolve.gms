@@ -26,7 +26,7 @@ pm_SEPrice(t,regi,entySE)$(    abs(qm_budget.m(t,regi)) gt sm_eps
 
 if ((iteration.val gt c32_startIter_PyPSA),
   Put_utility logfile, "Exec" /
-  "sbatch RenderREMIND-PyPSA-Eur_Validation.sh %c32_pypsa_dir%";
+  "sbatch RenderREMIND-PyPSA-Eur_Validation.sh";
 );
 
 *** EOF ./modules/32_power/PyPSA/presolve.gms
