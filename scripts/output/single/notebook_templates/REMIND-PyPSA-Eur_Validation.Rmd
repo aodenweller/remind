@@ -20,6 +20,7 @@ This RMarkdown file contains various plots for validation of the REIMND-PyPSA-Eu
 # Load libraries
 library(gdx)
 library(tidyverse)
+library(stringr)
 
 knitr::opts_chunk$set(dpi = 300, fig.pos = "H", out.extra = "")
 theme_set(theme_bw())
@@ -134,11 +135,17 @@ py2rmFiles <- list.files(
 # PyPSA directories
 load("config.Rdata")
 pyDir <- cfg$gms$c32_pypsa_dir  # Get PyPSA-Eur directory from config.Rdata
+pyResourcesDir <- file.path(pyDir, "resources", scenario)
 pyResultsDir <- file.path(pyDir, "results", scenario)
 # Get subdirectories labeled "i" for iteration followed by an integer number
 pyResultsDirs <- list.dirs(pyResultsDir,
                             recursive = FALSE,
                             full.names = TRUE)
+pyResourcesDirs <- list.dirs(pyResourcesDir,
+                            recursive = FALSE,
+                            full.names = TRUE)
+# Add "/" to end of directory names
+pyResourcesDirs <- paste0(pyResourcesDirs, "/")
 
 # Some logging
 cat(paste("Found", length(rmFulldataFiles), "REMIND fulldata_i.gdx files.\n"))
@@ -344,25 +351,147 @@ pIter <- ggplot() +
 print(pYear)
 
 print(pIter)
-
 ```
 
-### Specific capital costs
+### Specific capital costs (investment costs)
+```{r specific capital costs, echo = FALSE, message = FALSE}
+
+# Loop over iteration directories and years to read costs.csv files
+# for each (iteration, year) combination
+costs_list <- list()
+for (i in seq_along(pyResourcesDirs)) {
+  # Get subdirectories labeled "y" for year followed by a year number
+  pyYearDirs <- list.dirs(pyResourcesDirs[i],
+                           recursive = FALSE,
+                           full.names = TRUE)
+  # Loop over year directories to read costs.csv files
+  for (j in seq_along(pyYearDirs)) {
+    # Get path to costs.csv file
+    costs_file <- file.path(pyYearDirs[j], "costs.csv")
+    # Read costs.csv file into data frame
+    costs_df <- read.csv(costs_file)
+    # Add iteration and year columns to data frame
+    iteration <- gsub("i", "", basename(pyResourcesDirs[i]))
+    year <- gsub("y", "", basename(pyYearDirs[j]))
+    costs_df$iteration <- iteration
+    costs_df$year <- year
+    # Add data frame to list
+    costs_list[[length(costs_list) + 1]] <- costs_df
+  }
+}
+
+# Combine the data frames into a single data frame.
+costs_df <- do.call(rbind, costs_list)
+# Only select cost data coming from REMIND-EU
+costs_df <- subset(costs_df, source == "REMIND-EU")
+costs_df$technology <- str_replace_all(costs_df$technology, "-", " ")
+
+# Plot investment costs for all technologies with different markers for each year and iterations offset along the y-axis
+# Only investment costs
+label <- "Investment Costs"
+plot_data <- subset(costs_df, parameter == "investment")
+ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
+    geom_point(position = position_dodge(width = 0.3)) +
+    labs(y = "technology", x = paste0(label," [", unique(plot_data$unit), "]")) +
+    scale_color_discrete(name = "Year") + 
+    scale_shape_discrete(name = "Iteration") +
+    scale_y_discrete(labels = function(y) str_wrap(y, width = 15), limits = rev) +
+    ggtitle(label)
+```
 
 ### Fixed O&M costs
+```{r fixed o&m costs, echo = FALSE, message = FALSE}
 
-### Fuel costs
-
-### Variable O&M costs
-
-### Efficiencies
+plot_data <- subset(costs_df, parameter == "FOM")
+label <- "Fixed O&M Costs"
+ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
+    geom_point(position = position_dodge(width = 0.3)) +
+    labs(y = "technology", x = paste0(label," [", unique(plot_data$unit), "]")) +
+    scale_color_discrete(name = "Year") + 
+    scale_shape_discrete(name = "Iteration") +
+    scale_y_discrete(labels = function(y) str_wrap(y, width = 15), limits = rev) +
+    ggtitle(label)
+```
 
 ### Lifetimes
+```{r lifetimes, echo = FALSE, message = FALSE}
+plot_data <- subset(costs_df, parameter == "lifetime")
+label <- "Lifetime"
+ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
+    geom_point(position = position_dodge(width = 0.3)) +
+    labs(y = "technology", x = paste0(label," [", unique(plot_data$unit), "]")) +
+    scale_color_discrete(name = "Year") + 
+    scale_shape_discrete(name = "Iteration") +
+    scale_y_discrete(labels = function(y) str_wrap(y, width = 15), limits = rev) +
+    ggtitle(label)
+```
 
-### Discount rate
+### Discount rates
+```{r discount rates, echo = FALSE, message = FALSE}
+plot_data <- subset(costs_df, parameter == "discount_rate")
+label <- "Discount Rate"
+ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
+    geom_point(position = position_dodge(width = 0.3)) +
+    labs(y = "technology", x = paste0(label," [", unique(plot_data$unit), "]")) +
+    scale_color_discrete(name = "Year") + 
+    scale_shape_discrete(name = "Iteration") +
+    scale_y_discrete(labels = function(y) str_wrap(y, width = 15), limits = rev) +
+    ggtitle(label)
+```
+
+### Variable O&M costs
+```{r variable o&m costs, echo = FALSE, message = FALSE}
+plot_data <- subset(costs_df, parameter == "VOM")
+label <- "Variable O&M Costs"
+ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
+    geom_point(position = position_dodge(width = 0.3)) +
+    labs(y = "technology", x = paste0(label," [", unique(plot_data$unit), "]")) +
+    scale_color_discrete(name = "Year") + 
+    scale_shape_discrete(name = "Iteration") +
+    scale_y_discrete(labels = function(y) str_wrap(y, width = 15), limits = rev) +
+    ggtitle(label)
+```
+
+### Fuel costs
+```{r fuel costs, echo = FALSE, message = FALSE}
+plot_data <- subset(costs_df, parameter == "fuel")
+label <- "Fuel Costs"
+ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
+    geom_point(position = position_dodge(width = 0.3)) +
+    labs(y = "technology", x = paste0(label," [", unique(plot_data$unit), "]")) +
+    scale_color_discrete(name = "Year") + 
+    scale_shape_discrete(name = "Iteration") +
+    scale_y_discrete(labels = function(y) str_wrap(y, width = 15), limits = rev) +
+    ggtitle(label)
+```
+
+### Efficiencies
+```{r efficiencies, echo = FALSE, message = FALSE}
+plot_data <- subset(costs_df, parameter == "efficiency")
+label <- "Efficiency"
+ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
+    geom_point(position = position_dodge(width = 0.3)) +
+    labs(y = "technology", x = paste0(label," [", unique(plot_data$unit), "]")) +
+    scale_color_discrete(name = "Year") + 
+    scale_shape_discrete(name = "Iteration") +
+    scale_y_discrete(labels = function(y) str_wrap(y, width = 15), limits = rev) +
+    ggtitle(label)
+```
+
+### CO2 intensity
+```{r co2 intensity, echo = FALSE, message = FALSE}
+plot_data <- subset(costs_df, parameter == "CO2 intensity")
+label <- "CO2 intensity"
+ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
+    geom_point(position = position_dodge(width = 0.3)) +
+    labs(y = "technology", x = paste0(label," [", unique(plot_data$unit), "]")) +
+    scale_color_discrete(name = "Year") + 
+    scale_shape_discrete(name = "Iteration") +
+    scale_y_discrete(labels = function(y) str_wrap(y, width = 15), limits = rev) +
+    ggtitle(label)
+```
 
 ### CO2 prices
-
 ```{r co2 price, echo = FALSE, message = FALSE}
 
 # TODO load REMIND data to cross-check with values used by PyPSA-Eur
