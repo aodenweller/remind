@@ -1,15 +1,15 @@
 ---
 title: "REMIND-PyPSA-Eur Validation"
 author: "Adrian Odenweller, Johannes Hampp"
-date: "2023-07-12"
+date: "`r format(Sys.Date())`"
 output:
   pdf_document:
     number_sections: true
-    fig_width: 10.7  # Full width of A4 paper
-    fig_height: 7.5  # Full height of A4 paper
+#    fig_width: 10.7  # Full width of A4 paper
+#    fig_height: 7.5  # Full height of A4 paper
     extra_dependencies: ["float"]
 fontsize: 11pt
-geometry: margin=0.5in
+geometry: "a4paper,landscape,left=0.5cm,right=0.5cm,top=0.5cm,bottom=0.5cm,footnotesep=0.0cm,footskip=0.1cm"
 documentclass: article
 classoption: a4paper, landscape
 ---
@@ -23,10 +23,19 @@ library(tidyverse)
 library(stringr)
 library(ggpp)
 library(quitte)
+library(cowplot)
 
-knitr::opts_chunk$set(dpi = 300, fig.pos = "p", out.extra = "")
-theme_set(theme_bw())
-theme_update(plot.title = element_text(face = "bold", hjust = 0.5))
+knitr::opts_chunk$set(
+  dpi = 300,
+  echo = FALSE,
+  message = FALSE,
+  cache = TRUE,
+  fig.pos = "H",
+  out.extra = "",
+  fig.width = 16,
+  fig.height = 12)
+
+theme_set(theme_minimal_hgrid(10))
 
 # Color mapping
 colorsTech <- c(
@@ -115,6 +124,7 @@ py2genTech <- c(
   "Solar" = "solar"
 )
 
+# ToDo: Get rid of this and switch to the PyPSA general mapping
 pygen2genTech <- c(
   "biomass" = "biomass",
   "all_coal" = "all_coal",
@@ -136,13 +146,14 @@ regions <- "DEU"
 
 # Unit conversions
 twa2twh <- 8760
-tC2tCO2 <- 44/12
+twa2mwh <- 8760 * 1e6
+tC2tCO2 <- 44 / 12
 
 ```
 
 # Get REMIND and PyPSA-Eur files
 
-```{r data, echo=FALSE}
+```{r data}
 
 # REMIND directories
 rmOutdir <- getwd()
@@ -174,8 +185,13 @@ pyResourcesDir <- file.path(pyDir, "resources", scenario)
 pyResultsDir <- file.path(pyDir, "results", scenario)
 # Get subdirectories labeled "i" for iteration followed by an integer number
 pyResultsDirs <- list.dirs(pyResultsDir,
-                            recursive = FALSE,
-                            full.names = TRUE)
+                           recursive = FALSE,
+                           full.names = TRUE)
+pyValidationDirs <- list.dirs(pyResultsDirs,
+                              recursive = FALSE,
+                              full.names = TRUE)
+# Only use "validation" directories
+pyValidationDirs <- pyValidationDirs[grep("validation", pyValidationDirs)]
 pyResourcesDirs <- list.dirs(pyResourcesDir,
                             recursive = FALSE,
                             full.names = TRUE)
@@ -185,12 +201,20 @@ pyResourcesDirs <- paste0(pyResourcesDirs, "/")
 # Some logging
 cat(paste("Found", length(rmFulldataFiles), "REMIND fulldata_i.gdx or non_optimal_i.gdx files.\n"))
 cat(paste("Found", length(rm2pyFiles), "REMIND2PyPSAEUR_i.gdx files.\n"))
-cat(paste("Found", length(pyResultsDirs), "PyPSA-EUR iteration directories.\n"))
+cat(paste("Found", length(pyResultsDirs), "PyPSA-EUR results directories.\n"))
+cat(paste("Found", length(pyValidationDirs), "PyPSA-EUR validation directories.\n"))
+cat(paste("Found", length(pyResourcesDirs), "PyPSA-EUR resources directories.\n"))
 cat(paste("Found", length(py2rmFiles), "PyPSAEUR2REMIND_i.gdx files.\n"))
 
 # Throw warning if number of files does not match
-if (length(unique(c(length(rmFulldataFiles), length(rm2pyFiles), length(pyResultsDirs), length(py2rmFiles)))) != 1) {
-  warning("Number of REMIND and PyPSA-Eur files does not match.\n")
+if (length(unique(c(
+  length(rmFulldataFiles),
+  length(rm2pyFiles),
+  length(pyResultsDirs),
+  length(pyValidationDirs),
+  length(pyResourcesDirs),
+  length(py2rmFiles)))) != 1) {
+  warning("Number of REMIND files and PyPSA-Eur directories does not match.\n")
 }
 
 # Throw warning if rmFullDataFiles contains at least one "non_optimal_i.gdx" file and give number of files
@@ -269,7 +293,7 @@ readREMINDgdx <- function(paths, gdxVar, columns, colFilter,
 
 Runtime for PyPSA-EUR required for each iteration from start of first job to end of last job, based on the change time of the "co2_price_scenarios.csv" and "PyPSAEUR2REMIND.gdx" files.
 
-```{r runtime, echo = FALSE, message = FALSE}
+```{r runtime}
 
 # Get last change time and creation time of "co2_price_scenarios.csv" and "PyPSAEUR2REMIND.gdx" in each directory
 fileTimes <- lapply(pyResultsDirs, function(dir) {
@@ -308,7 +332,7 @@ Values used by PyPSA-EUR are also retrieved to cross-check (displayed as points)
 
 ### Electricity load
 
-```{r load, echo = FALSE, message = FALSE}
+```{r load}
 
 # Read REMIND data
 dataLoadREMIND <- readREMINDgdx(
@@ -321,7 +345,7 @@ dataLoadREMIND <- readREMINDgdx(
 
 # Load PyPSAEUR electricity loads for cross-checking
 dataLoadPyPSA <- readPyPSAcsv(
-  paths = file.path(pyResultsDirs, "electricity_loads.csv")) %>% 
+  paths = file.path(pyValidationDirs, "electricity_loads.csv")) %>% 
   mutate(value = value / 1e6)  # Convert MWh to TWh
 
 # Plot by year
@@ -348,10 +372,9 @@ print(pIter)
 
 ### Pre-investment capacities
 
-This could also be merged into a joint plot that shows both pre-investment and additional optimised capacities.
-
 ```{r pre-investment capacities, echo = FALSE, message = FALSE}
-
+# Deactivate for now
+if (FALSE){
 # Read REMIND data
 dataPreInvestREMIND <- readREMINDgdx(
   paths = rm2pyFiles,
@@ -363,7 +386,7 @@ dataPreInvestREMIND <- readREMINDgdx(
 
 # Read PyPSA-Eur data
 dataPreInvestPyPSA <- readPyPSAcsv(
-  paths = file.path(pyResultsDirs, "installed_capacities.csv")) %>% 
+  paths = file.path(pyValidationDirs, "preinstalled_capacities.csv")) %>% 
   mutate(value = value / 1e3)  # Convert capacities to GW
 
 # Plot by year
@@ -385,10 +408,11 @@ pIter <- ggplot() +
 print(pYear)
 
 print(pIter)
+}
 ```
 
 ### Specific capital costs (investment costs)
-```{r specific capital costs, echo = FALSE, message = FALSE}
+```{r specific capital costs}
 
 # Loop over iteration directories and years to read costs.csv files
 # for each (iteration, year) combination
@@ -434,7 +458,7 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 ```
 
 ### Fixed O&M costs
-```{r fixed o&m costs, echo = FALSE, message = FALSE}
+```{r fixed o&m costs}
 
 plot_data <- subset(costs_df, parameter == "FOM")
 label <- "Fixed O&M Costs"
@@ -448,7 +472,7 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 ```
 
 ### Lifetimes
-```{r lifetimes, echo = FALSE, message = FALSE}
+```{r lifetimes}
 plot_data <- subset(costs_df, parameter == "lifetime")
 label <- "Lifetime"
 ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
@@ -461,7 +485,7 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 ```
 
 ### Discount rates
-```{r discount rates, echo = FALSE, message = FALSE}
+```{r discount rates}
 plot_data <- subset(costs_df, parameter == "discount_rate")
 label <- "Discount Rate"
 ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
@@ -474,7 +498,7 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 ```
 
 ### Variable O&M costs
-```{r variable o&m costs, echo = FALSE, message = FALSE}
+```{r variable o&m costs}
 plot_data <- subset(costs_df, parameter == "VOM")
 label <- "Variable O&M Costs"
 ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
@@ -487,7 +511,7 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 ```
 
 ### Fuel costs
-```{r fuel costs, echo = FALSE, message = FALSE}
+```{r fuel costs}
 plot_data <- subset(costs_df, parameter == "fuel")
 label <- "Fuel Costs"
 ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
@@ -500,7 +524,7 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 ```
 
 ### Efficiencies
-```{r efficiencies, echo = FALSE, message = FALSE}
+```{r efficiencies}
 plot_data <- subset(costs_df, parameter == "efficiency")
 label <- "Efficiency"
 ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
@@ -513,7 +537,7 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 ```
 
 ### CO2 intensity
-```{r co2 intensity, echo = FALSE, message = FALSE}
+```{r co2 intensity}
 plot_data <- subset(costs_df, parameter == "CO2 intensity")
 label <- "CO2 intensity"
 ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
@@ -526,7 +550,7 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 ```
 
 ### CO2 prices
-```{r co2 price, echo = FALSE, message = FALSE}
+```{r co2 price}
 
 # REMIND data
 dataCO2PriceREMIND <- readREMINDgdx(
@@ -573,7 +597,7 @@ Values used by REMIND are also retrieved to cross-check (displayed as lines).
 
 ### Capacity factors
 
-```{r capacity factors, echo = FALSE, message = FALSE}
+```{r capacity factors}
 
 # REMIND capacity factors
 # Capacity factors are handled differently for dispatchable and VRE technologies
@@ -648,7 +672,7 @@ dataCapfacREMINDplot <- dataCapfacREMIND %>%
 
 # PyPSA-Eur capacity factors
 dataCapfacPyPSA <- readPyPSAcsv(
-  paths = file.path(pyResultsDirs, "capacity_factors.csv")) %>%
+  paths = file.path(pyValidationDirs, "capacity_factors.csv")) %>%
   # Increment iteration by 1 to match REMIND
   mutate(iteration = iteration + 1) %>%
   quitte::revalue.levels(carrier = rm2genTech) %>%
@@ -697,13 +721,13 @@ print(pCapfacIter)
 
 Work in progress...
 
-```{r market values, echo = FALSE, message = FALSE}
+```{r market values}
 
 # REMIND data
 #dataMarketValueREMIND <- ...
 
 dataMarketValuePyPSA <- readPyPSAcsv(
-  paths = file.path(pyResultsDirs, "market_values.csv")) %>% 
+  paths = file.path(pyValidationDirs, "market_values.csv")) %>% 
   # Increment iteration by 1 to match REMIND
   mutate(iteration = iteration + 1) %>% 
   quitte::revalue.levels(carrier = rm2genTech) %>%
@@ -758,11 +782,11 @@ between REMIND and PyPSA-Eur, but that should get harmonised.
 
 ## Capacities
 
-```{r, capacity investment, echo = FALSE, message = FALSE}
+```{r capacity investment}
 
 # Read REMIND data
 dataPreInvCapREMIND <- readREMINDgdx(
-    paths = rm2pyFiles,
+    paths = rmFulldataFiles,
     gdxVar = "p32_preInvCap",
     columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_preInvCap"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
@@ -790,15 +814,13 @@ dataCapInvestREMIND <- full_join(dataPreInvCapREMIND, dataCapREMIND) %>%
 
 # Read PyPSA-Eur data
 dataPreInvCapPyPSA <- readPyPSAcsv(
-  paths = file.path(pyResultsDirs, "installed_capacities.csv")) %>%
+  paths = file.path(pyValidationDirs, "preinstalled_capacities.csv")) %>%
   mutate(value = value / 1e3) %>%   # Convert capacities to GW
   rename(preInvCap = value) %>%
-  revalue.levels(carrier = rm2genTech) %>%
-  group_by(year, carrier, iteration) %>%
-  summarise(preInvCap = unique(preInvCap))  # ToDo: Technology mapping in PyPSA?
+  revalue.levels(carrier = pygen2genTech)
 
 dataCapPyPSA <- readPyPSAcsv(
-  paths = file.path(pyResultsDirs, "optimal_capacities.csv")) %>%
+  paths = file.path(pyValidationDirs, "optimal_capacities.csv")) %>%
   filter(type == "Generator",
          carrier != "Load shedding") %>%
   mutate(value = value / 1e3) %>%   # Convert capacities to GW
@@ -807,8 +829,11 @@ dataCapPyPSA <- readPyPSAcsv(
   revalue.levels(carrier = pygen2genTech)
 
 dataCapInvestPyPSA <- full_join(dataPreInvCapPyPSA, dataCapPyPSA) %>%
-  mutate(deltaCap = cap - preInvCap) %>% 
-  rename(technology = carrier) %>% 
+  # TODO! Fill NA values with 0
+  mutate(preInvCap = ifelse(is.na(preInvCap), 0, preInvCap),
+         cap = ifelse(is.na(cap), 0, cap)) %>%
+  mutate(deltaCap = cap - preInvCap) %>%
+  rename(technology = carrier) %>%
   order.levels(technology = names(colorsTech))
 
 # Throw warning if any deltaCap in dataCapInvestPyPSA is negative and say for which carrier
@@ -819,13 +844,13 @@ if (any(dataCapInvestPyPSA$deltaCap < 0)) {
 
 for (i in rmIterations){
   dataCapInvestREMINDiStack <- dataCapInvestREMIND %>%
-    filter(iteration == i) %>% 
+    filter(iteration == i) %>%
     pivot_longer(cols = c("deltaCap", "preInvCap"),
                 names_to = "variable",
                 values_to = "value")
 
   dataCapInvestPyPSAiStack <- dataCapInvestPyPSA %>%
-    filter(iteration == i) %>% 
+    filter(iteration == i) %>%
     pivot_longer(cols = c("deltaCap", "preInvCap"),
                 names_to = "variable",
                 values_to = "value")
@@ -869,7 +894,7 @@ for (i in rmIterations){
 }
 ```
 
-```{r capacity comparison, echo = FALSE, message = FALSE}
+```{r capacity comparison}
 
 # REMIND
 dataCapREMIND <- readREMINDgdx(
@@ -881,13 +906,14 @@ dataCapREMIND <- readREMINDgdx(
   recalcUnit = 1e3)  # TW to GW
 
 dataCapREMINDplot <- dataCapREMIND %>%
-  quitte::revalue.levels(technology = rm2genTech) %>%
+  revalue.levels(technology = rm2genTech) %>%
   group_by(.data$year, .data$region, .data$technology, .data$iteration) %>%
-  summarise(value = sum(.data$value))
+  summarise(value = sum(.data$value)) %>%
+  order.levels(technology = names(colorsTech))
 
 # Read optimal capacities from the CSV files
 dataCapPyPSA <- readPyPSAcsv(
-  paths = file.path(pyResultsDirs, "optimal_capacities.csv")) %>%
+  paths = file.path(pyValidationDirs, "optimal_capacities.csv")) %>%
   mutate(value = value / 1e3) %>%  # Convert capacities to GW
   filter(!is.na(value),
          value > 0.1,
@@ -895,10 +921,11 @@ dataCapPyPSA <- readPyPSAcsv(
 
 dataCapPyPSAplot <- dataCapPyPSA %>%
   filter(type == "Generator") %>%
-  quitte::revalue.levels(carrier = pygen2genTech) %>%
+  revalue.levels(carrier = pygen2genTech) %>%
   group_by(.data$year, .data$carrier, .data$iteration) %>%
   summarise(value = sum(.data$value)) %>%
-  mutate(technology = as.factor(carrier))
+  mutate(technology = as.factor(carrier)) %>%
+  order.levels(technology = names(colorsTech))
 
 # Loop over iterations
 for (i in rmIterations){
@@ -966,13 +993,138 @@ for (i in rmIterations){
 
 ## Generation
 
-```{r generation comparison, echo = FALSE, message = FALSE}
+```{r generation comparison}
 
+# REMIND
+dataGenREMIND <- readREMINDgdx(
+    paths = rmFulldataFiles,
+    gdxVar = "vm_prodSe",
+    columns = c("tall" = "year", "all_regi" = "region", "all_enty1" = "secarrier", "all_te" = "technology", "value" = "vm_prodSe"),
+    colFilter = list("year" = years, "region" = regions, "secarrier" = "seel", "technology" = names(rm2genTech)),
+    restoreZeros = FALSE,
+    recalcUnit = twa2twh) %>%  # TWa to TWh
+  select(-secarrier) %>%
+  revalue.levels(technology = rm2genTech) %>%
+  group_by(.data$year, .data$region, .data$technology, .data$iteration) %>%
+  summarise(vm_prodSe = sum(.data$vm_prodSe)) %>%
+  order.levels(technology = names(colorsTech))
 
+# PyPSA-Eur
+dataGenPyPSA <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "generations.csv")) %>%
+  mutate(value = value / 1e6) %>%  # MWh to TWh
+  revalue.levels(carrier = pygen2genTech) %>%
+  mutate(technology = as.factor(carrier)) %>%
+  order.levels(technology = names(colorsTech))
+
+# Loop over iterations
+for (i in rmIterations){
+
+  dataGenREMINDploti <- dataGenREMIND %>%
+    ungroup() %>%
+    filter(iteration == i)
+
+  dataGenREMINDplotitot <- dataGenREMINDploti %>%
+    group_by(year) %>%
+    summarise(vm_prodSe = sum(vm_prodSe))
+
+  dataGenPyPSAploti <- dataGenPyPSA %>%
+    ungroup() %>%
+    filter(iteration == i)
+
+  dataGenPyPSAplotitot <- dataGenPyPSAploti %>%
+    group_by(year) %>%
+    summarise(value = sum(value))
+
+  pGenComp <- ggplot() +
+    geom_bar(data = dataGenREMINDploti,
+            mapping = aes(x = year, y = vm_prodSe, fill = technology),
+            stat = "identity",
+            position = position_stacknudge(x = -1.2),
+            width = 2) +
+    geom_bar(data = dataGenREMINDplotitot,
+            mapping = aes(x = year, y = vm_prodSe, linetype = "REMIND"),
+            stat = "identity",
+            position = position_nudge(x = -1.2),
+            width = 2,
+            linewidth = 0.25,
+            color = "black",
+            fill = NA) +
+    geom_bar(data = dataGenPyPSAploti,
+            mapping = aes(x = year, y = value, fill = technology),
+            stat = "identity",
+            position = position_stacknudge(x = 1.2),
+            width = 2) +
+    geom_bar(data = dataGenPyPSAplotitot,
+            mapping = aes(x = year, y = value, linetype = "PyPSA-Eur"),
+            stat = "identity",
+            position = position_nudge(x = 1.2),
+            width = 2,
+            linewidth = 0.25,
+            color = "black",
+            fill = NA) +
+    scale_fill_manual(
+      name = "Technology",
+      values = colorsTech,
+      labels = namesTech,
+    ) +
+    scale_linetype_manual(
+      name = "Model",
+      values = c("REMIND" = "solid", "PyPSA-Eur" = "dashed"),
+    ) +
+    scale_x_continuous(breaks = years) +
+    labs(x = "Year", y = "Generation (TWh)") +
+    ggtitle(paste("Generation over years, model comparison, iteration", i))
+
+  print(pGenComp)
+}
 
 ```
 
 ## Electricity price
+
+```{r electricity price over years}
+
+# REMIND
+dataElecPriceREMIND <- readREMINDgdx(
+    paths = rmFulldataFiles,
+    gdxVar = "pm_SEPrice",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_enty" = "secarrier", "value" = "pm_SEPrice"),
+    colFilter = list("year" = years, "region" = regions, "secarrier" = "seel"),
+    restoreZeros = FALSE,
+    recalcUnit = 1E12 / twa2mwh) %>%  # T$/TWa to $/MWh
+  select(-secarrier)
+
+# PyPSA-Eur
+dataElecPricePyPSA <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "electricity_prices.csv"))
+
+
+pElecPriceYear <- ggplot() +
+  geom_line(data = dataElecPriceREMIND,
+            mapping = aes(x = year, y = pm_SEPrice, color = "REMIND")) +
+  geom_line(data = dataElecPricePyPSA,
+            mapping = aes(x = year, y = value, color = "PyPSA-Eur")) +
+  scale_color_discrete(name = "Model") +
+  labs(x = "Year", y = "Electricity price ($/MWh)") +
+  ggtitle("Electricity price over years, model comparison") +
+  facet_wrap(~ iteration)
+
+print(pElecPriceYear)
+
+pElecPriceIter <- ggplot() +
+  geom_line(data = dataElecPriceREMIND,
+            mapping = aes(x = iteration, y = pm_SEPrice, color = "REMIND")) +
+  geom_line(data = dataElecPricePyPSA,
+            mapping = aes(x = iteration, y = value, color = "PyPSA-Eur")) +
+  scale_color_discrete(name = "Model") +
+  labs(x = "Iteration", y = "Electricity price ($/MWh)") +
+  ggtitle("Electricity price over iterations, model comparison") +
+  facet_wrap(~ year)
+
+print(pElecPriceIter)
+
+```
 
 # Model-specific variables
 
