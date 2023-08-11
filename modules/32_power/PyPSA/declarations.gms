@@ -75,11 +75,13 @@ parameters
     p32_PyPSA_ElecPrice(ttot,all_regi)                  "PyPSA import: Electricity prices [$/MWh]"
     p32_preInvCap(ttot,all_regi,all_te)                 "PyPSA export: Pre-investment capacities [TW]"
 ;
-variables
+
+positive variables
     v32_usableSeDisp(ttot,all_regi,all_enty)            "PyPSA export: Usable SE electricity for dispatch without own consumption [TWa]"
     v32_usableSeTeDisp(ttot,all_regi,all_enty,all_te)   "PyPSA export: Usable SE electricity for dispatch without own consumption by technology [TWa]"
     v32_shSeElDisp(ttot,all_regi,all_te)                "PyPSA export: Share of usable SE electricity for dispatch without own consumption [1]"
 ;
+
 equations
     q32_usableSeDisp(ttot,all_regi,all_enty)            "PyPSA coupling: Equation to calculate v32_usableSeDisp"
     q32_usableSeTeDisp(ttot,all_regi,all_enty,all_te)   "PyPSA coupling: Equation to calculate v32_usableSeTeDisp"
