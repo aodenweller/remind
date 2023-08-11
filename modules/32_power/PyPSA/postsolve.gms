@@ -31,14 +31,12 @@ loop(t,
 *** Execute PyPSA-Eur only every x-th iteration after iteration c32_startIter_PyPSA
 if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIter_PyPSA, 1) eq 0),
   
-  !! Initialise at zero
-   p32_preInvCap(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te)) = 0;
-
-  !! Overwrite with values
+  !! Pre-investment capacities
   p32_preInvCap(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te)) =
+    max(1e-8,  !! Require minimum value
       vm_cap.l(t,regi,te,"1")$(tPy32(t) AND regPy32(regi) AND tePy32(te))
     - vm_deltaCap.l(t,regi,te,"1")$(tPy32(t) AND regPy32(regi) AND tePy32(te))
-    * (1 - vm_capEarlyReti.l(t,regi,te))$(tPy32(t) AND regPy32(regi) AND tePy32(te));
+    * (1 - vm_capEarlyReti.l(t,regi,te))$(tPy32(t) AND regPy32(regi) AND tePy32(te)));
 
   !! Export REMIND output data for PyPSA (REMIND2PyPSA.gdx)
   !! Don't use fulldata.gdx so that we keep track of which variables are exported to PyPSA
