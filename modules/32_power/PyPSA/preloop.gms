@@ -17,6 +17,9 @@ Execute_Loadpoint 'input' q32_balSe.m = q32_balSe.m;
 ***                  PyPSA preloop
 ***------------------------------------------------------------
 
+* Initialise cm_PyPSA_eq
+cm_PyPSA_eq = 0;
+
 * Initialise p32_PyPSA_CF
 p32_PyPSA_CF(tPy32,regPy32,tePy32) = 0;
 
