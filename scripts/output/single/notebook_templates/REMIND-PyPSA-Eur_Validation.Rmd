@@ -1,41 +1,52 @@
 ---
 title: "REMIND-PyPSA-Eur Validation"
 author: "Adrian Odenweller, Johannes Hampp"
-date: "`r format(Sys.Date())`"
+date: "`r format(Sys.time())`"
 output:
   pdf_document:
     number_sections: true
-#    fig_width: 10.7  # Full width of A4 paper
-#    fig_height: 7.5  # Full height of A4 paper
-    extra_dependencies: ["float"]
+    toc: true
+    toc_depth: 3
+    fig_width: 16
+    fig_height: 10
+    extra_dependencies: ["xcolor"]
 fontsize: 11pt
 geometry: "a4paper,landscape,left=0.5cm,right=0.5cm,top=0.5cm,bottom=0.5cm,footnotesep=0.0cm,footskip=0.1cm"
 documentclass: article
-classoption: a4paper, landscape
 ---
 
-This RMarkdown file contains various plots for validation of the REIMND-PyPSA-Eur model coupling.
+\newpage
 
 ```{r setup, include=FALSE}
 # Load libraries
 library(gdx)
 library(tidyverse)
 library(stringr)
-library(ggpp)
 library(quitte)
-library(cowplot)
+library(ggpp)
 
+# Set options for all chunks
 knitr::opts_chunk$set(
   dpi = 300,
   echo = FALSE,
   message = FALSE,
-  cache = TRUE,
-  fig.pos = "H",
-  out.extra = "",
-  fig.width = 16,
-  fig.height = 12)
+  fig.align = "center",
+  fig.path = "REMIND-PyPSA_Validation_Figures/")
 
-theme_set(theme_minimal_hgrid(10))
+# Set ggplot2 theme
+theme_set(theme_bw(base_size = 10))
+
+# Print error and warning messages in red
+#color_block = function(color) {
+#  function(x, options) sprintf('{\\color{%s}%s\\color{black}}',
+#                               color, x)
+#}
+color_block = function(color) {
+  function(x, options) paste0('\\color{', color, '}', x, '\\color{black}')
+}
+knitr::knit_hooks$set(
+  warning = color_block('red'),
+  error = color_block('red'))
 
 # Color mapping
 colorsTech <- c(
@@ -148,21 +159,28 @@ regions <- "DEU"
 twa2twh <- 8760
 twa2mwh <- 8760 * 1e6
 tC2tCO2 <- 44 / 12
-
 ```
 
 # Get REMIND and PyPSA-Eur files
 
 ```{r data}
-
 # REMIND directories
 rmOutdir <- getwd()
 scenario <- basename(rmOutdir)  # Scenario name
-# REMIND fulldata.gdx files
+# Print REMIND directory
+cat("REMIND directory:", rmOutdir, "\n")
+# REMIND fulldata_i.gdx files
 rmFulldataFiles <- list.files(
   rmOutdir,
-  pattern = "((fulldata_)|(non_optimal_))\\d{1,}.gdx",
+  pattern = "fulldata_\\d{1,}.gdx",
   full.names = TRUE)
+# REMIND non_optimal_i.gdx files
+rmNonOptimalFiles <- list.files(
+  rmOutdir,
+  pattern = "non_optimal_\\d{1,}.gdx",
+  full.names = TRUE)
+# REMIND fulldata_i.gdx and non_optimal_i.gdx files
+rmFiles <- c(rmFulldataFiles, rmNonOptimalFiles)
 # REMIND2PyPSAEUR.gdx files
 rm2pyFiles <- list.files(
   rmOutdir,
@@ -175,12 +193,15 @@ py2rmFiles <- list.files(
   full.names = TRUE
 )
 
-# Get iterations from rmFullDataFiles
-rmIterations <- as.numeric(gsub(".*_([0-9]+)\\.gdx", "\\1", rmFulldataFiles))
+# Get iterations from rmFiles
+rmIterations <- as.numeric(gsub(".*_([0-9]+)\\.gdx", "\\1", rmFiles))
 
 # PyPSA directories
 load("config.Rdata")
 pyDir <- cfg$gms$c32_pypsa_dir  # Get PyPSA-Eur directory from config.Rdata
+# Print PyPSA-Eur directory
+cat("PyPSA-Eur directory:", pyDir, "\n")
+# PyPSA-Eur resources and results directories
 pyResourcesDir <- file.path(pyDir, "resources", scenario)
 pyResultsDir <- file.path(pyDir, "results", scenario)
 # Get subdirectories labeled "i" for iteration followed by an integer number
@@ -199,27 +220,23 @@ pyResourcesDirs <- list.dirs(pyResourcesDir,
 pyResourcesDirs <- paste0(pyResourcesDirs, "/")
 
 # Some logging
-cat(paste("Found", length(rmFulldataFiles), "REMIND fulldata_i.gdx or non_optimal_i.gdx files.\n"))
-cat(paste("Found", length(rm2pyFiles), "REMIND2PyPSAEUR_i.gdx files.\n"))
-cat(paste("Found", length(pyResultsDirs), "PyPSA-EUR results directories.\n"))
-cat(paste("Found", length(pyValidationDirs), "PyPSA-EUR validation directories.\n"))
-cat(paste("Found", length(pyResourcesDirs), "PyPSA-EUR resources directories.\n"))
-cat(paste("Found", length(py2rmFiles), "PyPSAEUR2REMIND_i.gdx files.\n"))
+cat("Found", length(rmFulldataFiles), "REMIND fulldata_i.gdx files.\n")
+warning((paste("Found", length(rmNonOptimalFiles), "REMIND non_optimal_i.gdx files.\n")))
+cat("Found", length(rm2pyFiles), "REMIND2PyPSAEUR_i.gdx files.\n")
+cat("Found", length(pyResultsDirs), "PyPSA-EUR results directories.\n")
+cat("Found", length(pyValidationDirs), "PyPSA-EUR validation directories.\n")
+cat("Found", length(pyResourcesDirs), "PyPSA-EUR resources directories.\n")
+cat("Found", length(py2rmFiles), "PyPSAEUR2REMIND_i.gdx files.\n")
 
 # Throw warning if number of files does not match
 if (length(unique(c(
-  length(rmFulldataFiles),
+  length(rmFiles),
   length(rm2pyFiles),
   length(pyResultsDirs),
   length(pyValidationDirs),
   length(pyResourcesDirs),
   length(py2rmFiles)))) != 1) {
   warning("Number of REMIND files and PyPSA-Eur directories does not match.\n")
-}
-
-# Throw warning if rmFullDataFiles contains at least one "non_optimal_i.gdx" file and give number of files
-if (length(grep("non_optimal", rmFulldataFiles)) > 0) {
-  warning(paste("Found", length(grep("non_optimal", rmFulldataFiles)), "non_optimal_i.gdx REMIND output files.\n"))
 }
 
 ```
@@ -287,39 +304,6 @@ readREMINDgdx <- function(paths, gdxVar, columns, colFilter,
 
 ```
 
-# General model information
-
-## Runtime PyPSA-EUR
-
-Runtime for PyPSA-EUR required for each iteration from start of first job to end of last job, based on the change time of the "co2_price_scenarios.csv" and "PyPSAEUR2REMIND.gdx" files.
-
-```{r runtime}
-
-# Get last change time and creation time of "co2_price_scenarios.csv" and "PyPSAEUR2REMIND.gdx" in each directory
-fileTimes <- lapply(pyResultsDirs, function(dir) {
-  co2PriceFile <- file.path(dir, "co2_price_scenarios.csv")
-  couplingFile <- file.path(dir, "PyPSAEUR2REMIND.gdx")
-  co2PriceCtime <- file.info(co2PriceFile)$ctime
-  couplingCtime <- file.info(couplingFile)$ctime
-  timeDiff <- difftime(couplingCtime, co2PriceCtime, units = "mins")
-  iteration <- gsub("i", "", basename(dir))
-  return(list(directory = dir, iteration = iteration, co2_price_last_change_time = co2PriceCtime, coupling_creation_time = couplingCtime, time_diff = timeDiff))
-})
-
-# Combine results into a data frame
-fileTimes <- do.call(rbind.data.frame, fileTimes)
-
-# Plot the time difference for each iteration as a bar plot
-pTimeDiff <- ggplot() +
-  geom_bar(data = fileTimes, aes(x = iteration, y = time_diff), stat = "identity") +
-  labs(x = "Iteration", y = "Runtime [minutes]") +
-  ggtitle("Runtime for PyPSA-EUR") + 
-  ylim(0, NA)
-
-print(pTimeDiff)
-    
-```
-
 # Coupled variables
 
 This section includes plots of all variables that are exchanged between REMIND
@@ -332,8 +316,7 @@ Values used by PyPSA-EUR are also retrieved to cross-check (displayed as points)
 
 ### Electricity load
 
-```{r load}
-
+```{r electricity load}
 # Read REMIND data
 dataLoadREMIND <- readREMINDgdx(
   paths = rm2pyFiles,
@@ -352,6 +335,7 @@ dataLoadPyPSA <- readPyPSAcsv(
 pYear <- ggplot() +
   geom_line(data = dataLoadREMIND, aes(x = year, y = value, color = region)) +
   geom_point(data = dataLoadPyPSA, aes(x = year, y = value, color = region)) +
+  scale_color_discrete(name = "Region") +
   labs(x = "Year", y = "Electricity load (TWh)") +
   ggtitle("Electricity load by year") +
   facet_wrap(~ iteration)
@@ -360,6 +344,7 @@ pYear <- ggplot() +
 pIter <- ggplot() +
   geom_line(data = dataLoadREMIND, aes(x = iteration, y = value, color = region)) +
   geom_point(data = dataLoadPyPSA, aes(x = iteration, y = value, color = region)) +
+  scale_color_discrete(name = "Region") +
   labs(x = "Iteration", y = "Electricity load (TWh)") +
   ggtitle("Electricity load by iteration") +
   facet_wrap(~ year)
@@ -367,40 +352,48 @@ pIter <- ggplot() +
 print(pYear)
 
 print(pIter)
-
 ```
 
 ### Pre-investment capacities
 
+Pre-investment capacities are used to initialize the PyPSA-Eur model. They are modelled as "free capacity" that PyPSA-Eur can build without incurring any CAPEX.
+
 ```{r pre-investment capacities, echo = FALSE, message = FALSE}
-# Deactivate for now
-if (FALSE){
 # Read REMIND data
-dataPreInvestREMIND <- readREMINDgdx(
-  paths = rm2pyFiles,
-  gdxVar = "p32_preInvCap",
-  columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "value"),
-  colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
-  restoreZeros = TRUE,
-  recalcUnit = 1e3)  # TW to GW
+dataPreInvCapREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "p32_preInvCap",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_preInvCap"),
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+    restoreZeros = TRUE,
+    recalcUnit = 1e3) %>%   # TW to GW
+  revalue.levels(technology = rm2genTech) %>%
+  group_by(year, region, technology, iteration) %>%
+  summarise(preInvCap = sum(p32_preInvCap)) %>%
+  order.levels(technology = names(colorsTech))
 
 # Read PyPSA-Eur data
-dataPreInvestPyPSA <- readPyPSAcsv(
-  paths = file.path(pyValidationDirs, "preinstalled_capacities.csv")) %>% 
-  mutate(value = value / 1e3)  # Convert capacities to GW
+dataPreInvCapPyPSA <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "preinstalled_capacities.csv")) %>%
+  mutate(value = value / 1e3) %>%   # Convert capacities to GW
+  rename(preInvCap = value) %>%
+  revalue.levels(carrier = pygen2genTech) %>%
+  order.levels(carrier = names(colorsTech))
 
 # Plot by year
 pYear <- ggplot() +
-  geom_line(data = dataPreInvestREMIND, aes(x = year, y = value, color = technology)) +
-  geom_point(data = dataPreInvestPyPSA, aes(x = year, y = value, color = carrier)) +
+   geom_line(data = dataPreInvCapREMIND, aes(x = year, y = preInvCap, color = technology)) +
+  geom_point(data = dataPreInvCapPyPSA, aes(x = year, y = preInvCap, color = carrier)) +
+  scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
   labs(x = "Year", y = "Capacity (GW)") +
   ggtitle("Pre-investment capacity by year") +
   facet_wrap(~ iteration, scales = "free")
 
 # Plot by iteration
 pIter <- ggplot() +
-  geom_line(data = dataPreInvestREMIND, aes(x = iteration, y = value, color = technology)) +
-  geom_point(data = dataPreInvestPyPSA, aes(x = iteration, y = value, color = carrier)) +
+  geom_line(data = dataPreInvCapREMIND, aes(x = iteration, y = preInvCap, color = technology)) +
+  geom_point(data = dataPreInvCapPyPSA, aes(x = iteration, y = preInvCap, color = carrier)) +
+  scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
   labs(x = "Iteration", y = "Capacity (GW)") +
   ggtitle("Pre-investment capacity by iteration") +
   facet_wrap(~ year, scales = "free")
@@ -408,10 +401,10 @@ pIter <- ggplot() +
 print(pYear)
 
 print(pIter)
-}
 ```
 
 ### Specific capital costs (investment costs)
+
 ```{r specific capital costs}
 
 # Loop over iteration directories and years to read costs.csv files
@@ -458,8 +451,8 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 ```
 
 ### Fixed O&M costs
-```{r fixed o&m costs}
 
+```{r fixed o&m costs}
 plot_data <- subset(costs_df, parameter == "FOM")
 label <- "Fixed O&M Costs"
 ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
@@ -472,6 +465,7 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 ```
 
 ### Lifetimes
+
 ```{r lifetimes}
 plot_data <- subset(costs_df, parameter == "lifetime")
 label <- "Lifetime"
@@ -485,8 +479,13 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 ```
 
 ### Discount rates
+
 ```{r discount rates}
 plot_data <- subset(costs_df, parameter == "discount_rate")
+# Throw warning if discount rate negative
+if (any(plot_data$value < 0)) {
+  warning("Negative discount rates found")
+}
 label <- "Discount Rate"
 ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
     geom_point(position = position_dodge(width = 0.3)) +
@@ -498,6 +497,7 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 ```
 
 ### Variable O&M costs
+
 ```{r variable o&m costs}
 plot_data <- subset(costs_df, parameter == "VOM")
 label <- "Variable O&M Costs"
@@ -511,6 +511,7 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 ```
 
 ### Fuel costs
+
 ```{r fuel costs}
 plot_data <- subset(costs_df, parameter == "fuel")
 label <- "Fuel Costs"
@@ -524,8 +525,16 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 ```
 
 ### Efficiencies
+
 ```{r efficiencies}
 plot_data <- subset(costs_df, parameter == "efficiency")
+# Throw warning if efficiency negative or above 1
+if (any(plot_data$value < 0)) {
+  warning("Negative efficiencies found")
+}
+if (any(plot_data$value > 1)) {
+  warning("Efficiencies above 1 found")
+}
 label <- "Efficiency"
 ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
     geom_point(position = position_dodge(width = 0.3)) +
@@ -537,6 +546,7 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 ```
 
 ### CO2 intensity
+
 ```{r co2 intensity}
 plot_data <- subset(costs_df, parameter == "CO2 intensity")
 label <- "CO2 intensity"
@@ -550,8 +560,8 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 ```
 
 ### CO2 prices
-```{r co2 price}
 
+```{r co2 price}
 # REMIND data
 dataCO2PriceREMIND <- readREMINDgdx(
   paths = rm2pyFiles,
@@ -587,7 +597,6 @@ pIter <- ggplot() +
 print(pYear)
 
 print(pIter)
-
 ```
 
 ## PyPSA-Eur to REMIND
@@ -604,7 +613,7 @@ Values used by REMIND are also retrieved to cross-check (displayed as lines).
 
 # Read vm_capFac (for dispatchable technologies)
 vmCapFac <- readREMINDgdx(
-  paths = rmFulldataFiles,
+  paths = rmFiles,
   gdxVar = "vm_capFac",
   columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "vmCapFac"),
   colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
@@ -612,7 +621,7 @@ vmCapFac <- readREMINDgdx(
 
 # Read vm_capDistr (for VRE technologies)
 vmCapDistr <- readREMINDgdx(
-  paths = rmFulldataFiles,
+  paths = rmFiles,
   gdxVar = "vm_capDistr",
   columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "rlf" = "rlf", "value" = "vmCapDistr"),
   colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
@@ -620,14 +629,14 @@ vmCapDistr <- readREMINDgdx(
 
 # Read pm_dataren (for VRE technologies)
 pmDataren <- readREMINDgdx(
-  paths = rmFulldataFiles,
+  paths = rmFiles,
   gdxVar = "pm_dataren",
   columns = c("all_regi" = "region", "all_te" = "technology", "char" = "char", "rlf" = "rlf", "value" = "pmDataren"),
   colFilter = list("region" = "DEU", "char" = "nur", "technology" = names(rm2genTech)),
   restoreZeros = FALSE)
 
 # Read teReNoBio set (for VRE technologies)
-teReNoBio <- gdx::readGDX(rmFulldataFiles[1], "teReNoBio", restore_zeros = FALSE)
+teReNoBio <- gdx::readGDX(rmFiles[1], "teReNoBio", restore_zeros = FALSE)
 
 # Calculate capacity factor for VRE technologies
 capfacRlf <- vmCapFac %>%
@@ -775,18 +784,23 @@ Markups and markdowns are read into REMIND from PYPSA-Eur.
 
 Markup = Average market value - Average electricity price
 
-# Non-coupled variables
+# Convergence indicators
 
-This section includes plots of several key variables that are not coupled
-between REMIND and PyPSA-Eur, but that should get harmonised.
+This section includes variables that are not exchanged directly between REMIND and PyPSA-Eur, but that should converge.
 
 ## Capacities
 
-```{r capacity investment}
+### Pre-investment capacities and capacity expansion
+
+The following plots contain the pre-investment capacities and each model's capacity expansion decision.
+Pre-investment capacities are determined in REMIND and passed to PyPSA-Eur as "free capacity", i.e. capacity for which PyPSA-Eur does not have to pay any CAPEX.
+PyPSA-Eur should therefore only start investing into new capacity once the free pre-investment capacity has been fully used. PyPSA-Eur does not have to use all of the pre-investment capacity.
+
+```{r capacity expansion}
 
 # Read REMIND data
 dataPreInvCapREMIND <- readREMINDgdx(
-    paths = rmFulldataFiles,
+    paths = rmFiles,
     gdxVar = "p32_preInvCap",
     columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_preInvCap"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
@@ -797,7 +811,7 @@ dataPreInvCapREMIND <- readREMINDgdx(
   summarise(preInvCap = sum(p32_preInvCap))
 
 dataCapREMIND <- readREMINDgdx(
-    paths = rmFulldataFiles,
+    paths = rmFiles,
     gdxVar = "vm_cap",
     columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "rlf" = "grade", "value" = "vm_cap"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech), "grade" = 1),
@@ -894,11 +908,13 @@ for (i in rmIterations){
 }
 ```
 
+### Optimal capacity comparison
+
 ```{r capacity comparison}
 
 # REMIND
 dataCapREMIND <- readREMINDgdx(
-  paths = rmFulldataFiles,
+  paths = rmFiles,
   gdxVar = "vm_cap",
   columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "rlf" = "grade", "value" = "value"),
   colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech), "grade" = 1),
@@ -997,7 +1013,7 @@ for (i in rmIterations){
 
 # REMIND
 dataGenREMIND <- readREMINDgdx(
-    paths = rmFulldataFiles,
+    paths = rmFiles,
     gdxVar = "vm_prodSe",
     columns = c("tall" = "year", "all_regi" = "region", "all_enty1" = "secarrier", "all_te" = "technology", "value" = "vm_prodSe"),
     colFilter = list("year" = years, "region" = regions, "secarrier" = "seel", "technology" = names(rm2genTech)),
@@ -1087,7 +1103,7 @@ for (i in rmIterations){
 
 # REMIND
 dataElecPriceREMIND <- readREMINDgdx(
-    paths = rmFulldataFiles,
+    paths = rmFiles,
     gdxVar = "pm_SEPrice",
     columns = c("ttot" = "year", "all_regi" = "region", "all_enty" = "secarrier", "value" = "pm_SEPrice"),
     colFilter = list("year" = years, "region" = regions, "secarrier" = "seel"),
@@ -1108,7 +1124,7 @@ pElecPriceYear <- ggplot() +
   scale_color_discrete(name = "Model") +
   labs(x = "Year", y = "Electricity price ($/MWh)") +
   ggtitle("Electricity price over years, model comparison") +
-  facet_wrap(~ iteration)
+  facet_wrap(~ iteration, scales = "free")
 
 print(pElecPriceYear)
 
@@ -1120,15 +1136,22 @@ pElecPriceIter <- ggplot() +
   scale_color_discrete(name = "Model") +
   labs(x = "Iteration", y = "Electricity price ($/MWh)") +
   ggtitle("Electricity price over iterations, model comparison") +
-  facet_wrap(~ year)
+  facet_wrap(~ year, scales = "free")
 
 print(pElecPriceIter)
-
 ```
+
+## LCOEs
+
+In the long-term equilibrium the levelised cost of electricity (LCOE) should be the same as the market value for each technology.
 
 # Model-specific variables
 
 ## REMIND
+
+### Sectoral electricity demand
+
+### Experience curves for learning technologies
 
 ## PyPSA-Eur
 
@@ -1138,3 +1161,33 @@ print(pElecPriceIter)
 
 ### Residual load duration curves (RLDCs)
 
+# Other plots
+
+## Runtime PyPSA-EUR
+
+Runtime for PyPSA-EUR required for each iteration from start of first job to end of last job, based on the change time of the "co2_price_scenarios.csv" and "PyPSAEUR2REMIND.gdx" files.
+
+```{r runtime}
+# Get last change time and creation time of "co2_price_scenarios.csv" and "PyPSAEUR2REMIND.gdx" in each directory
+fileTimes <- lapply(pyResultsDirs, function(dir) {
+  co2PriceFile <- file.path(dir, "co2_price_scenarios.csv")
+  couplingFile <- file.path(dir, "PyPSAEUR2REMIND.gdx")
+  co2PriceCtime <- file.info(co2PriceFile)$ctime
+  couplingCtime <- file.info(couplingFile)$ctime
+  timeDiff <- difftime(couplingCtime, co2PriceCtime, units = "mins")
+  iteration <- gsub("i", "", basename(dir))
+  return(list(directory = dir, iteration = iteration, co2_price_last_change_time = co2PriceCtime, coupling_creation_time = couplingCtime, time_diff = timeDiff))
+})
+
+# Combine results into a data frame
+fileTimes <- do.call(rbind.data.frame, fileTimes)
+
+# Plot the time difference for each iteration as a bar plot
+pTimeDiff <- ggplot() +
+  geom_bar(data = fileTimes, aes(x = iteration, y = time_diff), stat = "identity") +
+  labs(x = "Iteration", y = "Runtime [minutes]") +
+  ggtitle("Runtime for PyPSA-EUR") + 
+  ylim(0, NA)
+
+print(pTimeDiff)
+```
