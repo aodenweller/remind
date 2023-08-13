@@ -82,6 +82,9 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
 
   !! Capacity factor for VRE technologies (with grades)
   !! Moved to q32_capFacVRE (equations.gms), using vm_capFac as a correction factor (bounds.gms)
+
+  !! Calculate markup
+  pm_Markup(tPy32,regPy32,tePy32) = ( p32_PyPSA_MV(tPy32,regPy32,tePy32) - p32_PyPSA_ElecPrice(tPy32,regPy32) ) * sm_TWa_2_MWh / 1e12;
 );
 
 *** EOF ./modules/32_power/PyPSA/postsolve.gms

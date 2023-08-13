@@ -74,6 +74,7 @@ parameters
     p32_PyPSA_MV(ttot,all_regi,all_te)                  "PyPSA import: Market values [$/MWh]"
     p32_PyPSA_ElecPrice(ttot,all_regi)                  "PyPSA import: Electricity prices [$/MWh]"
     p32_preInvCap(ttot,all_regi,all_te)                 "PyPSA export: Pre-investment capacities [TW]"
+    pm_Markup(ttot,all_regi,all_te)                     "PyPSA calculation: Markup = Market value - electricity price [T$/TWa]"
 ;
 
 positive variables
@@ -86,11 +87,13 @@ equations
     q32_usableSeDisp(ttot,all_regi,all_enty)            "PyPSA coupling: Equation to calculate v32_usableSeDisp"
     q32_usableSeTeDisp(ttot,all_regi,all_enty,all_te)   "PyPSA coupling: Equation to calculate v32_usableSeTeDisp"
     q32_shSeElDisp(ttot,all_regi,all_te)                "PyPSA coupling: Equation to calculate v32_shSeElDisp"
-    q32_capFacVRE(ttot,all_regi,all_te)                 "PyPSA coupling: Pre-factor equation to import the capacity factor for VRE technologies"
+    q32_capFacVRE(ttot,all_regi,all_te)                 "PyPSA coupling: Equation to set the capacity factor for VRE technologies to p32_PyPSA_CF"
+$ontext
 *    q32_capFacDisp(ttot,all_regi,all_te)                "PyPSA coupling: Pre-factor equation to import the capacity factor for dispatchable technologies"
 $ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
     q32_MarkUp(ttot,all_regi,all_te)                    "PyPSA coupling: Equation to calculate the markup vm_MarkUp"
 $endif.cm_pypsa_markup
+$offtext
 ;
 
 *** EOF ./modules/32_power/PyPSA/declarations.gms

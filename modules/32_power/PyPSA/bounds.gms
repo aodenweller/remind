@@ -89,7 +89,7 @@ if ((cm_PyPSA_eq eq 1),
 );
 
 * v32_shSeElDisp must be between 0 and 1
-v32_shSeElDisp.lo(tPy32,regPy32,tePy32) = 0;
+*v32_shSeElDisp.lo(tPy32,regPy32,tePy32) = 0;
 v32_shSeElDisp.up(tPy32,regPy32,tePy32) = 1;
 
 *** EOF ./modules/32_power/PyPSA/bounds.gms

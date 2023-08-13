@@ -323,7 +323,7 @@ q32_shSeElDisp(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te))..
 ;
 
 *** Equation to set the average capacity factor for VRE technologies
-* For VRE technologies the average capacity factor depends on the endogenous split-up into grades in vm_capDistr.
+* For VRE technologies the average capacity factor depends on the distribution into grades in vm_capDistr.
 * This equation ensures the capacity factor for VRE technologies matches that in p32_PyPSA_CF.
 q32_capFacVRE(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePyVRE32(te) AND (cm_PyPSA_eq eq 1))..
   (vm_capFac(t,regi,te)) * 1$(cm_PyPSA_eq eq 1)
@@ -347,23 +347,19 @@ q32_capFac(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) and (cm_PyPSA_e
   * (1 - 0.5 * ((v32_shSeElDisp(t,regi,te)) - p32_PyPSA_shSeEl(t,regi,te)))
   * 1$(pm_cf(t,regi,te) lt 0.5)
 ;
-
-
-q32_capFac(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) and (cm_PyPSA_eq ne 0))..
-  vm_capFac(t,regi,te) * 1$(tPy32(t) AND regPy32(regi) AND tePy32(te))
-  =e=
-    pm_cf(t,regi,te)
-;
 $offtext
 
-*** Equation to set the market value (from PyPSA)
+$ontext
+*** Pre-factor Equation to set the market value (from PyPSA) (pre factor not yet implemented)
 $ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
-q32_MarkUp(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (cm_PyPSA_eq ne 0))..
-	vm_Markup(t,regi,te)
+q32_MarkUp(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (cm_PyPSA_eq eq 1))..
+	(vm_Markup(t,regi,te)) * 1$(cm_PyPSA_eq eq 1)
 	=e=
-    ( p32_PyPSA_MV(t,regi,te) - p32_PyPSA_ElecPrice(t,regi) ) 
-  / 1E12 * sm_TWa_2_MWh
+  ( ( p32_PyPSA_MV(t,regi,te) - p32_PyPSA_ElecPrice(t,regi) ) 
+  * sm_TWa_2_MWh / 1e12
+  ) * 1$(cm_PyPSA_eq eq 1)
 ;
 $endif.cm_pypsa_markup
+$offtext
 
 *** EOF ./modules/32_power/PyPSA/equations.gms
