@@ -42,7 +42,7 @@ theme_set(theme_bw(base_size = 10))
 #                               color, x)
 #}
 color_block = function(color) {
-  function(x, options) paste0('\\color{', color, '}', x, '\\color{black}')
+  function(x, options) paste0('\\color{', color, '}\\begin{verbatim}', x, '\\end{verbatim}\\color{black}')
 }
 knitr::knit_hooks$set(
   warning = color_block('red'),
@@ -159,6 +159,7 @@ regions <- "DEU"
 twa2twh <- 8760
 twa2mwh <- 8760 * 1e6
 tC2tCO2 <- 44 / 12
+trUSDpTWa2USDpMWh <- 1E12 / twa2mwh
 ```
 
 # Get REMIND and PyPSA-Eur files
@@ -221,7 +222,9 @@ pyResourcesDirs <- paste0(pyResourcesDirs, "/")
 
 # Some logging
 cat("Found", length(rmFulldataFiles), "REMIND fulldata_i.gdx files.\n")
-warning((paste("Found", length(rmNonOptimalFiles), "REMIND non_optimal_i.gdx files.\n")))
+if (length(rmNonOptimalFiles) > 0) {
+  warning((paste("Found", length(rmNonOptimalFiles), "REMIND non_optimal_i.gdx files.\n")))
+}
 cat("Found", length(rm2pyFiles), "REMIND2PyPSAEUR_i.gdx files.\n")
 cat("Found", length(pyResultsDirs), "PyPSA-EUR results directories.\n")
 cat("Found", length(pyValidationDirs), "PyPSA-EUR validation directories.\n")
@@ -361,7 +364,7 @@ Pre-investment capacities are used to initialize the PyPSA-Eur model. They are m
 ```{r pre-investment capacities, echo = FALSE, message = FALSE}
 # Read REMIND data
 dataPreInvCapREMIND <- readREMINDgdx(
-    paths = rmFiles,
+    paths = rm2pyFiles,
     gdxVar = "p32_preInvCap",
     columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_preInvCap"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
@@ -514,6 +517,10 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 
 ```{r fuel costs}
 plot_data <- subset(costs_df, parameter == "fuel")
+# Throw warning if fuel cost negative
+if (any(plot_data$value < 0)) {
+  warning("Negative fuel costs found")
+}
 label <- "Fuel Costs"
 ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
     geom_point(position = position_dodge(width = 0.3)) +
@@ -728,20 +735,18 @@ print(pCapfacIter)
 
 ### Market values
 
-Work in progress...
-
 ```{r market values}
 
 # REMIND data
 #dataMarketValueREMIND <- ...
 
 dataMarketValuePyPSA <- readPyPSAcsv(
-  paths = file.path(pyValidationDirs, "market_values.csv")) %>% 
+  paths = file.path(pyValidationDirs, "market_values.csv")) %>%
   # Increment iteration by 1 to match REMIND
-  mutate(iteration = iteration + 1) %>% 
+  mutate(iteration = iteration + 1) %>%
   quitte::revalue.levels(carrier = rm2genTech) %>%
   group_by(.data$year, .data$region, .data$carrier, .data$iteration) %>%
-  summarise(value = unique(.data$value)) %>% 
+  summarise(value = unique(.data$value)) %>%
   quitte::order.levels(carrier = names(namesTech))
 
 pMarketValueYear <- ggplot() +
@@ -778,11 +783,104 @@ print(pMarketValueIter)
 
 ```
 
-## Markups / Markdowns
+## Markups
 
-Markups and markdowns are read into REMIND from PYPSA-Eur.
+Markups and markdowns are read into REMIND from PYPSA-Eur. Markup = Average market value - Average electricity price
 
-Markup = Average market value - Average electricity price
+```{r markup}
+# REMIND
+dataMarkupREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "pm_Markup",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "value"),
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+    restoreZeros = FALSE,
+    recalcUnit = trUSDpTWa2USDpMWh) %>%
+  revalue.levels(technology = rm2genTech) %>%
+  group_by(.data$year, .data$region, .data$technology, .data$iteration) %>%
+  summarise(value = unique(.data$value)) %>%
+  order.levels(technology = names(namesTech)) %>%
+  # Markups are read at the end of iteration 1 after the first PyPSA-Eur run,
+  # but only take effect in the next iteration
+  mutate(iteration = iteration + 1)
+
+# PyPSA-Eur
+dataMarketValuePyPSA <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "market_values.csv")) %>%
+  # Increment iteration by 1 to match REMIND
+  mutate(iteration = iteration + 1) %>%
+  quitte::revalue.levels(carrier = rm2genTech) %>%
+  group_by(.data$year, .data$region, .data$carrier, .data$iteration) %>%
+  summarise(value = unique(.data$value)) %>% 
+  quitte::order.levels(carrier = names(namesTech))
+
+dataElecPricePYPSA <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "electricity_prices.csv")) %>%
+  # Increment iteration by 1 to match REMIND
+  mutate(iteration = iteration + 1)
+
+dataMarkupPyPSA <- dataMarketValuePyPSA %>%
+  left_join(dataElecPricePYPSA, by = c("year", "region", "iteration")) %>%
+  mutate(value = value.x - value.y) %>%
+  select(year, region, carrier, iteration, value) %>%
+  revalue.levels(carrier = rm2genTech) %>%
+  group_by(.data$year, .data$region, .data$carrier, .data$iteration) %>%
+  summarise(value = unique(.data$value)) %>%
+  order.levels(carrier = names(namesTech))
+
+pMarkupYear <- ggplot() +
+  geom_line(data = dataMarkupREMIND, aes(x = year, y = value, color = technology)) +
+  geom_point(data = dataMarkupPyPSA, aes(x = year, y = value, color = carrier)) +
+  scale_color_manual(
+    name = "Technology",
+    values = colorsTech,
+    labels = namesTech,
+  ) +
+  labs(x = "Year", y = "Markup ($/MWh)") +
+  ggtitle("Markup by year") +
+  facet_wrap(~ iteration)
+
+print(pMarkupYear)
+
+pMarkupIter <- ggplot() +
+  geom_line(data = dataMarkupREMIND, aes(x = iteration, y = value, color = technology)) +
+  scale_color_manual(
+    name = "Technology",
+    values = colorsTech,
+    labels = namesTech,
+  ) +
+  labs(x = "Iteration", y = "Markup ($/MWh)") +
+  ggtitle("Markup by iteration") +
+  facet_wrap(~ year)
+
+print(pMarkupIter)
+```
+
+### Markup tax revenue
+
+Markups are implemented as a tax/subsidy in REMIND in order to manipulate a variable that is usually an outcome (Lagrangian multiplier of the optimisation) and not an input.
+
+Here we look at the tax revenue from markups, which should approach zero over iterations.
+
+```{r markup tax revenue}
+# REMIND
+dataMarkUpRevenue <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "v21_taxrevMarkup",
+    columns = c("ttot" = "year", "all_regi" = "region", "value" = "value"),
+    colFilter = list("year" = years, "region" = regions),
+    restoreZeros = FALSE,
+    recalcUnit = -1E-6)  # T$/yr to Million $/yr
+
+pMarkUpRevenue <- ggplot() +
+  geom_line(data = dataMarkUpRevenue, aes(x = year, y = value)) +
+  labs(x = "Year", y = "Markup revenue (Million $/yr)") +
+  ggtitle("Markup revenue by year") +
+  facet_wrap(~ iteration)
+
+print(pMarkUpRevenue)
+
+```
 
 # Convergence indicators
 
@@ -1108,7 +1206,7 @@ dataElecPriceREMIND <- readREMINDgdx(
     columns = c("ttot" = "year", "all_regi" = "region", "all_enty" = "secarrier", "value" = "pm_SEPrice"),
     colFilter = list("year" = years, "region" = regions, "secarrier" = "seel"),
     restoreZeros = FALSE,
-    recalcUnit = 1E12 / twa2mwh) %>%  # T$/TWa to $/MWh
+    recalcUnit = trUSDpTWa2USDpMWh) %>%  # T$/TWa to $/MWh
   select(-secarrier)
 
 # PyPSA-Eur
