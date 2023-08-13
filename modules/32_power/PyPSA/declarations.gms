@@ -77,7 +77,7 @@ parameters
     pm_Markup(ttot,all_regi,all_te)                     "PyPSA calculation: Markup = Market value - electricity price [T$/TWa]"
 ;
 
-positive variables
+variables
     v32_usableSeDisp(ttot,all_regi,all_enty)            "PyPSA export: Usable SE electricity for dispatch without own consumption [TWa]"
     v32_usableSeTeDisp(ttot,all_regi,all_enty,all_te)   "PyPSA export: Usable SE electricity for dispatch without own consumption by technology [TWa]"
     v32_shSeElDisp(ttot,all_regi,all_te)                "PyPSA export: Share of usable SE electricity for dispatch without own consumption [1]"
