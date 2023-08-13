@@ -58,6 +58,8 @@ $ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
 p21_taxrevMarkup0(t,regi) = sum(en2en(enty,enty2,te)$(tePy32(te)),
                                         -pm_Markup(t,regi,te) *
                                         (vm_prodSe.l(t,regi,enty,enty2,te) - v32_storloss.l(t,regi,te)));
+display "p21_taxrevMarkup0 in presolve.gms";
+display p21_taxrevMarkup0;
 $endif.cm_pypsa_markup
 
 *** EOF ./modules/21_tax/on/presolve.gms
