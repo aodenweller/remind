@@ -66,25 +66,16 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
   Put_utility logfile, "Exec" /
   "./RunPyPSA-Eur.sh %c32_pypsa_dir% " iteration.val:0:0;
 
+  !! Reset round format and number of decimals
+  logfile.nr = sm_tmp;
+  logfile.nd = sm_tmp2;
+
   !! Import PyPSA data for REMIND (PyPSA2REMIND.gdx)
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_CF=capacity_factor;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_shSeEl=generation_share;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_MV=market_value;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_ElecPrice=electricity_price;
 
-  !! Reset round format and number of decimals
-  logfile.nr = sm_tmp;
-  logfile.nd = sm_tmp2;
-
-  !! Capacity factor for dispatchable technologies (without grades)
-  !! Subsequently, vm_capFac is fixed to pm_cf (bounds.gms)
-  pm_cf(tPy32,regPy32,tePyDisp32) = p32_PyPSA_CF(tPy32,regPy32,tePyDisp32);
-
-  !! Capacity factor for VRE technologies (with grades)
-  !! Moved to q32_capFacVRE (equations.gms), using vm_capFac as a correction factor (bounds.gms)
-
-  !! Calculate markup
-  pm_Markup(tPy32,regPy32,tePy32) = ( p32_PyPSA_MV(tPy32,regPy32,tePy32) - p32_PyPSA_ElecPrice(tPy32,regPy32) ) * sm_TWa_2_MWh / 1e12;
 );
 
 *** EOF ./modules/32_power/PyPSA/postsolve.gms

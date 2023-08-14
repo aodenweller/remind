@@ -7,6 +7,21 @@
 *** SOF ./modules/32_power/PyPSA/bounds.gms
 
 ***------------------------------------------------------------
+***                  PyPSA-Eur coupling (part 1/2)
+***------------------------------------------------------------
+
+*** Capacity factor for coupled dispatchable technologies without grades (tePyDisp32)
+pm_cf(tPy32,regPy32,tePyDisp32) = p32_PyPSA_CF(tPy32,regPy32,tePyDisp32);
+
+*** Capacity factor for VRE technologies (with grades) is moved to q32_capFacVRE (equations.gms)
+*** Bounds for vm_capFac for VRE technologies are set and described below in part 2/2.
+
+*** Calculate markup and convert to T$/TWa
+pm_Markup(tPy32,regPy32,tePy32) = ( p32_PyPSA_MV(tPy32,regPy32,tePy32)
+                                  - p32_PyPSA_ElecPrice(tPy32,regPy32) )
+                                  * sm_TWa_2_MWh / 1e12;
+
+***------------------------------------------------------------
 ***                  Bounds copied from IntC
 ***------------------------------------------------------------
 
@@ -70,7 +85,7 @@ loop(regi$(p32_factorStorage(regi,"csp") < 1),
 vm_cap.fx(t,regi,"elh2VRE",rlf) = 0;
 
 ***------------------------------------------------------------
-***                  PyPSA-Eur coupling
+***                  PyPSA-Eur coupling (part 2/2)
 ***------------------------------------------------------------
 
 * Set cm_PyPSA_eq to 1 after the starting iteration of PyPSA
@@ -79,7 +94,7 @@ if ((iteration.val gt c32_startIter_PyPSA),
 );
 
 * All capacity factors come from PyPSA-Eur.
-* For dispatchable technologies, vm_capFac is fixed to pm_cf (see above), which is overwritten with p32_PyPSA_CF in postsolve.gms
+* For dispatchable technologies, vm_capFac is fixed to pm_cf (see above), which is overwritten with p32_PyPSA_CF in part 1/2.
 * (ToDo: Include a pre-factor equation that includes a gradient/slope.)
 * For VRE technologies, here we set vm_capFac free so that REMIND can adjust it using equation q32_capFacVRE.
 * vm_capFac can be larger than 1 since it is used as a "correction factor" so that the VRE capacity factor equals p32_PyPSA_CF.
