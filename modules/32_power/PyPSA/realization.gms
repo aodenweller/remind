@@ -23,6 +23,7 @@ $Ifi "%phase%" == "preloop" $include "./modules/32_power/PyPSA/preloop.gms"
 $Ifi "%phase%" == "bounds" $include "./modules/32_power/PyPSA/bounds.gms"
 $Ifi "%phase%" == "presolve" $include "./modules/32_power/PyPSA/presolve.gms"
 $Ifi "%phase%" == "postsolve" $include "./modules/32_power/PyPSA/postsolve.gms"
+$Ifi "%phase%" == "output" $include "./modules/32_power/PyPSA/output.gms"
 *######################## R SECTION END (PHASES) ###############################
 
 *** EOF ./modules/32_power/PyPSA/realization.gms
