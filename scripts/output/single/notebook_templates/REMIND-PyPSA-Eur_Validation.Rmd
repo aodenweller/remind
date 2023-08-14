@@ -37,10 +37,6 @@ knitr::opts_chunk$set(
 theme_set(theme_bw(base_size = 10))
 
 # Print error and warning messages in red
-#color_block = function(color) {
-#  function(x, options) sprintf('{\\color{%s}%s\\color{black}}',
-#                               color, x)
-#}
 color_block = function(color) {
   function(x, options) paste0('\\color{', color, '}\\begin{verbatim}', x, '\\end{verbatim}\\color{black}')
 }
@@ -241,11 +237,9 @@ if (length(unique(c(
   length(py2rmFiles)))) != 1) {
   warning("Number of REMIND files and PyPSA-Eur directories does not match.\n")
 }
-
 ```
 
 ```{r helpers, include = FALSE, echo = FALSE}
-
 # This function reads in csv files in the PyPSA-Eur directory
 # Expected path: <PyPSA-Eur results folder>/i<iteration>/<some file>.csv
 readPyPSAcsv <- function(paths) {
@@ -276,18 +270,18 @@ readGDX <- function(rmFile, gdxVar, columns, colFilter,
                     restoreZeros = TRUE, field = "l", recalcUnit = 1) {
   # Read gdx file
   data <- gdx::readGDX(rmFile, gdxVar, restore_zeros = restoreZeros, field = field) %>%
-    as_tibble(.name_repair = "unique")
+    tibble::as_tibble(.name_repair = "unique")
   # If data is empty create tibble with columns from colFilter and column "value" filled with 0
   if (nrow(data) == 0) {
-    data <- tibble(expand.grid(colFilter), value = 0)
+    data <- tibble::tibble(expand.grid(colFilter), value = 0)
   } else {
-     data <- data %>% 
+     data <- data %>%
       # Select desired columns and rename
-      select_at(names(columns), ~ columns) %>%
+      dplyr::select_at(names(columns), ~ columns) %>%
       # Filter columns according to colFilter
-      filter(if_all(names(colFilter), ~ . %in% colFilter$.)) %>% 
+      dplyr::filter(dplyr::if_all(names(colFilter), ~ . %in% colFilter$.)) %>%
       # Multiply by recalcUnit
-      mutate(across(columns["value"][[1]], ~ . * recalcUnit))
+      dplyr::mutate(dplyr::across(columns["value"][[1]], ~ . * recalcUnit))
   }
   return(data)
 }
@@ -331,7 +325,7 @@ dataLoadREMIND <- readREMINDgdx(
 
 # Load PyPSAEUR electricity loads for cross-checking
 dataLoadPyPSA <- readPyPSAcsv(
-  paths = file.path(pyValidationDirs, "electricity_loads.csv")) %>% 
+  paths = file.path(pyValidationDirs, "electricity_loads.csv")) %>%
   mutate(value = value / 1e6)  # Convert MWh to TWh
 
 # Plot by year
@@ -736,7 +730,8 @@ print(pCapfacIter)
 ### Market values
 
 ```{r market values}
-
+# Deactivate for now
+if (FALSE) {
 # REMIND data
 #dataMarketValueREMIND <- ...
 
@@ -780,7 +775,7 @@ pMarketValueIter <- ggplot() +
 print(pMarketValueYear)
 
 print(pMarketValueIter)
-
+}
 ```
 
 ## Markups
@@ -870,7 +865,7 @@ dataMarkUpRevenue <- readREMINDgdx(
     columns = c("ttot" = "year", "all_regi" = "region", "value" = "value"),
     colFilter = list("year" = years, "region" = regions),
     restoreZeros = FALSE,
-    recalcUnit = -1E-6)  # T$/yr to Million $/yr
+    recalcUnit = -1E6)  # T$/yr to Million $/yr
 
 pMarkUpRevenue <- ggplot() +
   geom_line(data = dataMarkUpRevenue, aes(x = year, y = value)) +
@@ -879,7 +874,6 @@ pMarkUpRevenue <- ggplot() +
   facet_wrap(~ iteration)
 
 print(pMarkUpRevenue)
-
 ```
 
 # Convergence indicators
@@ -1274,7 +1268,12 @@ fileTimes <- lapply(pyResultsDirs, function(dir) {
   couplingCtime <- file.info(couplingFile)$ctime
   timeDiff <- difftime(couplingCtime, co2PriceCtime, units = "mins")
   iteration <- gsub("i", "", basename(dir))
-  return(list(directory = dir, iteration = iteration, co2_price_last_change_time = co2PriceCtime, coupling_creation_time = couplingCtime, time_diff = timeDiff))
+  return(list(
+    directory = dir,
+    iteration = iteration,
+    co2_price_last_change_time = co2PriceCtime,
+    coupling_creation_time = couplingCtime,
+    time_diff = timeDiff))
 })
 
 # Combine results into a data frame
