@@ -87,13 +87,15 @@ equations
     q32_usableSeDisp(ttot,all_regi,all_enty)            "PyPSA coupling: Equation to calculate v32_usableSeDisp"
     q32_usableSeTeDisp(ttot,all_regi,all_enty,all_te)   "PyPSA coupling: Equation to calculate v32_usableSeTeDisp"
     q32_shSeElDisp(ttot,all_regi,all_te)                "PyPSA coupling: Equation to calculate v32_shSeElDisp"
+$ifthen.c32_pypsa_capfac "%c32_pypsa_capfac%" == "on"
     q32_capFacVRE(ttot,all_regi,all_te)                 "PyPSA coupling: Equation to set the capacity factor for VRE technologies to p32_PyPSA_CF"
+$endif.c32_pypsa_capfac
+;
 $ontext
 *    q32_capFacDisp(ttot,all_regi,all_te)                "PyPSA coupling: Pre-factor equation to import the capacity factor for dispatchable technologies"
 $ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
     q32_MarkUp(ttot,all_regi,all_te)                    "PyPSA coupling: Equation to calculate the markup vm_MarkUp"
 $endif.cm_pypsa_markup
 $offtext
-;
 
 *** EOF ./modules/32_power/PyPSA/declarations.gms

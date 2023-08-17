@@ -1630,8 +1630,11 @@ $setglobal c_CO2priceDependent_AdjCosts    on   !! def = on
 *** c32_pypsa_dir
 *** Directory of PyPSA-Eur
 $setglobal c32_pypsa_dir /p/tmp/adrianod/pypsa-eur
+*** c32_pypsa_capfac
+*** Switch to enable capacity factor import from PyPSA-Eur
+$setglobal c32_pypsa_capfac on !! def = on !! regexp = off|on
 *** cm_pypsa_markup
-*** enable markups via tax module
+*** Switch to enable markups/markdowns from PyPSA-Eur via tax module 
 $setglobal cm_pypsa_markup off !! def = off !! regexp = off|on
 *** set conopt version. Warning: conopt4 is in beta
 $setGlobal cm_conoptv  conopt3    !! def = conopt3

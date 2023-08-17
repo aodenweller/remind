@@ -7,19 +7,32 @@
 *** SOF ./modules/32_power/PyPSA/bounds.gms
 
 ***------------------------------------------------------------
-***                  PyPSA-Eur coupling (part 1/2)
+***                  PyPSA-Eur coupling (data import))
 ***------------------------------------------------------------
 
-*** Capacity factor for coupled dispatchable technologies without grades (tePyDisp32)
+* Set cm_PyPSA_eq to 1 after the starting iteration of PyPSA
+* This is used to switch equations on, among others
+if ((iteration.val gt c32_startIter_PyPSA),
+  cm_PyPSA_eq = 1;
+);
+
+* Read in capacity factors and markups after first PyPSA run in previous iteration
+if ((cm_pypsa_eq eq 1),
+* Capacity factor for coupled dispatchable technologies without grades (tePyDisp32)
+$ifthen.c32_pypsa_capfac "%c32_pypsa_capfac%" == "on"
 pm_cf(tPy32,regPy32,tePyDisp32) = p32_PyPSA_CF(tPy32,regPy32,tePyDisp32);
+$endif.c32_pypsa_capfac
 
-*** Capacity factor for VRE technologies (with grades) is moved to q32_capFacVRE (equations.gms)
-*** Bounds for vm_capFac for VRE technologies are set and described below in part 2/2.
+* Capacity factor for VRE technologies (with grades) are set via q32_capFacVRE (equations.gms)
+* Bounds for vm_capFac for VRE technologies are set and described below
 
-*** Calculate markup and convert to T$/TWa
+* Calculate markup and convert to T$/TWa
+$ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
 pm_Markup(tPy32,regPy32,tePy32) = ( p32_PyPSA_MV(tPy32,regPy32,tePy32)
                                   - p32_PyPSA_ElecPrice(tPy32,regPy32) )
                                   * sm_TWa_2_MWh / 1e12;
+$endif.cm_pypsa_markup
+);
 
 ***------------------------------------------------------------
 ***                  Bounds copied from IntC
@@ -85,13 +98,8 @@ loop(regi$(p32_factorStorage(regi,"csp") < 1),
 vm_cap.fx(t,regi,"elh2VRE",rlf) = 0;
 
 ***------------------------------------------------------------
-***                  PyPSA-Eur coupling (part 2/2)
+***                  PyPSA-Eur coupling (bounds)
 ***------------------------------------------------------------
-
-* Set cm_PyPSA_eq to 1 after the starting iteration of PyPSA
-if ((iteration.val gt c32_startIter_PyPSA),
-  cm_PyPSA_eq = 1;
-);
 
 * All capacity factors come from PyPSA-Eur.
 * For dispatchable technologies, vm_capFac is fixed to pm_cf (see above), which is overwritten with p32_PyPSA_CF in part 1/2.
