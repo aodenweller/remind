@@ -19,19 +19,17 @@ sets
     tePy32(all_te)              "REMIND SE electricity technologies coupled to PyPSA"
         /biochp, bioigcc, bioigccc, ngcc, ngccc, gaschp, igcc, igccc, pc, coalchp, tnrs, fnrs, ngt, windoff, dot, wind, hydro, spv/  !! TODO: What about CSP and geohdr?
 
-    tePyDisp32(all_te)          "REMIND dispatchable SE electricity technologies (no grades)"
+    tePyDisp32(all_te)          "REMIND dispatchable SE electricity technologies (no grades)"  !! ToDo: Read in hydro as well
         /biochp, bioigcc, bioigccc, ngcc, ngccc, gaschp, igcc, igccc, pc, coalchp, tnrs, fnrs, ngt, dot/
 
     tePyVRE32(all_te)       "REMIND non-dispatchable SE electricity technologies (with grades)"
         /windoff, wind, spv/
-
 ;
 
 ***------------------------------------------------------------
 ***                  PyPSA-Eur mappings
 ***------------------------------------------------------------
 
-*** Most mappings have been shifted to  the PyPSA snakemake workflow
-
+*** All mappings have been shifted to the PyPSA-Eur snakemake workflow
 
 *** EOF ./modules/32_power/PyPSA/sets.gms

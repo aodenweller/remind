@@ -57,8 +57,8 @@ p21_taxrevImport0(ttot,regi,tradePe) = p21_tau_Import(ttot,regi,tradePe) * pm_pv
 p21_taxrevChProdStartYear0(t,regi) = sum(en2en(enty,enty2,te), vm_changeProdStartyearCost.l(t,regi,te)$( (t.val gt 2005) AND (t.val eq cm_startyear ) ) );
 $ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
 p21_taxrevMarkup0(ttot,regi) = sum(en2en(enty,enty2,te)$(tePy32(te)),
-                                 - pm_Markup(ttot,regi,te) * ( vm_prodSe.l(ttot,regi,enty,enty2,te) - v32_storloss.l(ttot,regi,te) )
-                                 );
+                                   - pm_Markup(ttot,regi,te) * ( vm_prodSe.l(ttot,regi,enty,enty2,te) - v32_storloss.l(ttot,regi,te) )
+                                  );
 p21_taxrevMarkup_iter(iteration+1,ttot,regi) = v21_taxrevMarkup.l(ttot,regi);
 display "p21_taxrevMarkup0 in postsolve.gms";
 display iteration;
