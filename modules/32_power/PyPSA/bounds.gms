@@ -106,10 +106,19 @@ vm_cap.fx(t,regi,"elh2VRE",rlf) = 0;
 * (ToDo: Include a pre-factor equation that includes a gradient/slope.)
 * For VRE technologies, here we set vm_capFac free so that REMIND can adjust it using equation q32_capFacVRE.
 * vm_capFac can be larger than 1 since it is used as a "correction factor" so that the VRE capacity factor equals p32_PyPSA_CF.
+$ifthen.c32_pypsa_capfac "%c32_pypsa_capfac%" == "on"
 if ((cm_PyPSA_eq eq 1),
   vm_capFac.lo(tPy32,regPy32,tePyVRE32) = 0;
   vm_capFac.up(tPy32,regPy32,tePyVRE32) = 2;
 );
+$endif.c32_pypsa_capfac
+
+$ifthen.c32_pypsa_capfac_v2 "%c32_pypsa_capfac_v2%" == "on"
+if ((cm_PyPSA_eq eq 1),
+  vm_capFac.lo(tPy32,regPy32,tePy32) = 0;
+  vm_capFac.up(tPy32,regPy32,tePy32) = 2;
+);
+$endif.c32_pypsa_capfac_v2
 
 * v32_shSeElDisp must be between 0 and 1
 v32_shSeElDisp.lo(tPy32,regPy32,tePy32) = 0;

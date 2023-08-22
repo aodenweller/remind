@@ -336,6 +336,14 @@ q32_capFacVRE(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePyVRE32(te) AND (cm_P
 ;
 $endif.c32_pypsa_capfac
 
+$ifthen.c32_pypsa_capfac_v2 "%c32_pypsa_capfac_v2%" == "on"
+q32_capFac_v2(t,regi,te)$(tPy32(t) and regPy32(regi) AND tePy32(te) AND (cm_PyPSA_eq eq 1) and NOT sameas(te, "hydro"))..
+  p32_PyPSA_CF(t,regi,te) * vm_cap(t,regi,te,"1")
+  =e=
+  v32_usableSeTeDisp(t,regi,"seel",te)
+;
+$endif.c32_pypsa_capfac_v2
+
 $ontext
 *** Pre-factor equation to set the capacity factor (from PyPSA)
 q32_capFac(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) and (cm_PyPSA_eq ne 0))..

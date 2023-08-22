@@ -90,9 +90,13 @@ equations
 $ifthen.c32_pypsa_capfac "%c32_pypsa_capfac%" == "on"
     q32_capFacVRE(ttot,all_regi,all_te)                 "PyPSA coupling: Equation to set the capacity factor for VRE technologies to p32_PyPSA_CF"
 $endif.c32_pypsa_capfac
+
+$ifthen.c32_pypsa_capfac_v2 "%c32_pypsa_capfac_v2%" == "on"
+    q32_capFac_v2(ttot,all_regi,all_te)
+$endif.c32_pypsa_capfac_v2
+
 ;
 $ontext
-*    q32_capFacDisp(ttot,all_regi,all_te)                "PyPSA coupling: Pre-factor equation to import the capacity factor for dispatchable technologies"
 $ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
     q32_MarkUp(ttot,all_regi,all_te)                    "PyPSA coupling: Equation to calculate the markup vm_MarkUp"
 $endif.cm_pypsa_markup
