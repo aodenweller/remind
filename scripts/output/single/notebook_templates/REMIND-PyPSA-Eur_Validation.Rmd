@@ -261,7 +261,6 @@ py2rmFiles <- list.files(
   pattern = "PyPSAEUR2REMIND_\\d{1,}.gdx",
   full.names = TRUE
 )
-
 # Get iterations from rmFiles
 rmIterations <- as.numeric(gsub(".*_([0-9]+)\\.gdx", "\\1", rmFiles))
 
@@ -287,8 +286,8 @@ pyResourcesDirs <- list.dirs(pyResourcesDir,
                              recursive = TRUE,
                              full.names = TRUE) %>%
   keep(str_detect(., "y\\d{4}$"))
-# Add "/" to end of directory names
-#pyResourcesDirs <- paste0(pyResourcesDirs, "/")
+# Get iteration from PyPSA-Eur validation directories
+pyIterations <- as.numeric(gsub(".*i([0-9]+).*", "\\1", pyValidationDirs))
 
 # Some logging
 cat("Found", length(rmFulldataFiles), "REMIND fulldata_i.gdx files.\n")
@@ -1626,7 +1625,7 @@ dataHourlyElecPricesPyPSA <- readPyPSAcsv(
   arrange(-value) %>%
   mutate(hour.sorted = 1:8760)
 
-for (i in rmIterations) {
+for (i in pyIterations) {
   dataHourlyElecPricesPyPSAplot <- dataHourlyElecPricesPyPSA %>%
     filter(iteration == i)
 
