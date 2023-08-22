@@ -563,12 +563,18 @@ print(pCapexIter)
 
 ```{r specific capital costs}
 
+pyResourcesDirsOld <- list.dirs(pyResourcesDir,
+                            recursive = FALSE,
+                            full.names = TRUE)
+# Add "/" to end of directory names
+pyResourcesDirsOld <- paste0(pyResourcesDirsOld, "/")
+
 # Loop over iteration directories and years to read costs.csv files
 # for each (iteration, year) combination
 costs_list <- list()
-for (i in seq_along(pyResourcesDirs)) {
+for (i in seq_along(pyResourcesDirsOld)) {
   # Get subdirectories labeled "y" for year followed by a year number
-  pyYearDirs <- list.dirs(pyResourcesDirs[i],
+  pyYearDirs <- list.dirs(pyResourcesDirsOld[i],
                            recursive = FALSE,
                            full.names = TRUE)
   # Loop over year directories to read costs.csv files
@@ -578,7 +584,7 @@ for (i in seq_along(pyResourcesDirs)) {
     # Read costs.csv file into data frame
     costs_df <- read.csv(costs_file)
     # Add iteration and year columns to data frame
-    iteration <- gsub("i", "", basename(pyResourcesDirs[i]))
+    iteration <- gsub("i", "", basename(pyResourcesDirsOld[i]))
     year <- gsub("y", "", basename(pyYearDirs[j]))
     costs_df$iteration <- iteration
     costs_df$year <- year
@@ -607,6 +613,89 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 ```
 
 ### Fixed O&M costs
+
+```{r fixed o&m costs new}
+if (FALSE) {
+# REMIND
+dataFOMREMIND <- readREMINDgdx(
+    paths = rm2pyFiles,
+    gdxVar = "pm_data",
+    columns = c("all_regi" = "region", "char" = "variable", "all_te" = "technology", "value" = "value"),
+    colFilter = list("region" = regions, "variable" = "omf", "technology" = names(rm2genTech))) %>%
+  mutate(value = 100 * value) %>%
+  group_by(region, variable, technology) %>%
+  mutate(unique_value_count = n_distinct(value))
+
+# Throw warning if there are more than one unique values for a combination of region, variable and technology
+if (any(dataFOMREMIND$unique_value_count > 1)) {
+  warning("There are more than one unique values for a combination of region, variable and technology.\n")
+}
+
+# Remove unique_value_count and iteration column
+dataFOMREMIND <- dataFOMREMIND %>%
+  filter(iteration == 1) %>%
+  select(-unique_value_count, -iteration)
+
+# TODO: Weighting by generation share?
+
+# PyPSA-Eur
+dataFOMPyPSA <- readPyPSAcsv(
+  paths = file.path(pyResourcesDirs, "costs.csv")) %>%
+  filter(parameter == "FOM",
+         source == "REMIND-EU") %>%
+  group_by(technology) %>%
+  summarise(value = unique(value))
+
+# Throw warning if there are more than one unique values for a combination of region and technology
+if (any(dataFOMPyPSA$unique_value_count > 1)) {
+  warning("There are more than one unique values for a combination of region and technology.\n")
+}
+
+# Remove unique_value_count and iteration column
+dataFOMPyPSA <- dataFOMPyPSA %>%
+  filter(iteration == 1) %>%
+  select(-unique_value_count, -iteration)
+
+# Filter if further.description starts with "Extracted from REMIND-EU"
+dataFOMPyPSAextracted <- dataFOMPyPSA %>%
+  filter(str_detect(further.description, "^Extracted from REMIND-EU")) %>%
+  order.levels(technology = names(pyTechColor))
+
+# Filter if further.description starts with "Scaled value from REMIND-EU"
+dataFOMPyPSAscaled <- dataFOMPyPSA %>%
+  filter(str_detect(further.description, "^Scaled value from REMIND-EU"))
+
+pFOMYear <- ggplot() +
+  geom_line(data = dataFOMREMIND, aes(x = year, y = value, color = technology)) +
+  geom_point(data = dataFOMPyPSAextracted, aes(x = year, y = value, color = technology)) +
+  scale_color_manual(name = "Extracted technology", values = pyTechColor) +
+  new_scale_color() +
+  geom_point(data = dataFOMPyPSAscaled, aes(x = year, y = value, color = technology, shape = technology),
+             alpha = 0.5) +
+  scale_color_manual(name = "Scaled technology", values = pyTechScaledColor) +
+  scale_shape_manual(name = "Scaled technology", values = pyTechScaledShape) +
+  labs(x = "Year", y = "Fixed O&M costs (%)") +
+  ggtitle("Fixed O&M costs by year") +
+  facet_wrap(~ iteration, scales = "free")
+
+print(pFOMYear)
+
+pFOMIter <- ggplot() +
+  geom_line(data = dataFOMREMIND, aes(x = iteration, y = value, color = technology)) +
+  geom_point(data = dataFOMPyPSAextracted, aes(x = iteration, y = value, color = technology)) +
+  scale_color_manual(name = "Extracted technology", values = pyTechColor) +
+  new_scale_color() +
+  geom_point(data = dataFOMPyPSAscaled, aes(x = iteration, y = value, color = technology, shape = technology),
+             alpha = 0.5) +
+  scale_color_manual(name = "Scaled technology", values = pyTechScaledColor) +
+  scale_shape_manual(name = "Scaled technology", values = pyTechScaledShape) +
+  labs(x = "Iteration", y = "Fixed O&M costs (%)") +
+  ggtitle("Fixed O&M costs by iteration") +
+  facet_wrap(~ year, scales = "free")
+
+print(pFOMIter)
+}
+```
 
 ```{r fixed o&m costs}
 plot_data <- subset(costs_df, parameter == "FOM")
