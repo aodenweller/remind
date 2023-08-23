@@ -532,12 +532,12 @@ dataCapexPyPSAscaled <- dataCapexPyPSA %>%
 pCapexYear <- ggplot() +
   geom_line(data = dataCapexWeightedREMIND, aes(x = year, y = capex, color = technology)) +
   geom_point(data = dataCapexPyPSAextracted, aes(x = year, y = value, color = technology)) +
-  scale_color_manual(name = "Extracted technology", values = pyTechColor) +
+  scale_color_manual(name = "Extracted technology\n(directly from REMIND)", values = pyTechColor) +
   new_scale_color() +
   geom_point(data = dataCapexPyPSAscaled, aes(x = year, y = value, color = technology, shape = technology),
              alpha = 0.5) +
-  scale_color_manual(name = "Scaled technology", values = pyTechScaledColor) +
-  scale_shape_manual(name = "Scaled technology", values = pyTechScaledShape) +
+  scale_color_manual(name = "Scaled technology\n(similar REMIND tech)", values = pyTechScaledColor) +
+  scale_shape_manual(name = "Scaled technology\n(similar REMIND tech)", values = pyTechScaledShape) +
   labs(x = "Year", y = "Specific capital costs (USD/kW)") +
   scale_y_continuous(labels = function(x) x / 1000) +
   ggtitle("Specific capital costs by year") +
@@ -548,12 +548,12 @@ print(pCapexYear)
 pCapexIter <- ggplot() +
   geom_line(data = dataCapexWeightedREMIND, aes(x = iteration, y = capex, color = technology)) +
   geom_point(data = dataCapexPyPSAextracted, aes(x = iteration, y = value, color = technology)) +
-  scale_color_manual(name = "Extracted technology", values = pyTechColor) +
+  scale_color_manual(name = "Extracted technology\n(directly from REMIND)", values = pyTechColor) +
   new_scale_color() +
   geom_point(data = dataCapexPyPSAscaled, aes(x = iteration, y = value, color = technology, shape = technology),
              alpha = 0.5) +
-  scale_color_manual(name = "Scaled technology", values = pyTechScaledColor) +
-  scale_shape_manual(name = "Scaled technology", values = pyTechScaledShape) +
+  scale_color_manual(name = "Scaled technology\n(similar REMIND tech)", values = pyTechScaledColor) +
+  scale_shape_manual(name = "Scaled technology\n(similar REMIND tech)", values = pyTechScaledShape) +
   labs(x = "Iteration", y = "Specific capital costs (USD/kW)") +
   scale_y_continuous(labels = function(x) x / 1000) +
   ggtitle("Specific capital costs by iteration") +
@@ -1609,9 +1609,46 @@ This section shows all terms of REMIND's secondary energy electricity (`seel`) e
 
 ### Sectoral electricity demand
 
-### Experience curves for learning technologies
-
 ## PyPSA-Eur
+
+### Market values
+
+```{r market values}
+dataMarketValuePyPSA <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "market_values.csv")) %>%
+  # Increment iteration by 1 to match REMIND
+  mutate(iteration = iteration + 1) %>%
+  quitte::revalue.levels(carrier = rm2genTech) %>%
+  group_by(.data$year, .data$region, .data$carrier, .data$iteration) %>%
+  summarise(value = unique(.data$value)) %>%
+  quitte::order.levels(carrier = names(namesTech))
+
+pMarketValueYear <- ggplot() +
+  geom_line(data = dataMarketValuePyPSA, aes(x = year, y = value, color = carrier)) +
+  scale_color_manual(
+    name = "Technology",
+    values = colorsTech,
+    labels = namesTech,
+  ) +
+  labs(x = "Year", y = "Market value ($/MWh)") +
+  ggtitle("Market values by year") +
+  facet_wrap(~ iteration)
+
+print(pMarketValueYear)
+
+pMarketValueIter <- ggplot() +
+  geom_line(data = dataMarketValuePyPSA, aes(x = iteration, y = value, color = carrier)) +
+  scale_color_manual(
+    name = "Technology",
+    values = colorsTech,
+    labels = namesTech,
+  ) +
+  labs(x = "Iteration", y = "Market value ($/MWh)") +
+  ggtitle("Market values by iteration") +
+  facet_wrap(~ year)
+
+print(pMarketValueIter)
+```
 
 ### Price duration curves
 
@@ -1888,54 +1925,5 @@ pCapfacIter <- ggplot() +
 print(pCapfacYear)
 
 print(pCapfacIter)
-}
-```
-
-```{r market values}
-# Deactivate for now
-if (FALSE) {
-# REMIND data
-#dataMarketValueREMIND <- ...
-
-dataMarketValuePyPSA <- readPyPSAcsv(
-  paths = file.path(pyValidationDirs, "market_values.csv")) %>%
-  # Increment iteration by 1 to match REMIND
-  mutate(iteration = iteration + 1) %>%
-  quitte::revalue.levels(carrier = rm2genTech) %>%
-  group_by(.data$year, .data$region, .data$carrier, .data$iteration) %>%
-  summarise(value = unique(.data$value)) %>%
-  quitte::order.levels(carrier = names(namesTech))
-
-pMarketValueYear <- ggplot() +
-  # Layer 1: REMIND
-  #geom_line(data = dataMarketValueREMIND, aes(x = year, y = value, color = technology)) +
-  # Layer 2: PyPSA-Eur
-  geom_point(data = dataMarketValuePyPSA, aes(x = year, y = value, color = carrier)) +
-  scale_color_manual(
-    name = "Technology",
-    values = colorsTech,
-    labels = namesTech,
-  ) +
-  labs(x = "Year", y = "Market value ($/MWh)") +
-  ggtitle("Market values by year") +
-  facet_wrap(~ iteration)
-
-pMarketValueIter <- ggplot() +
-  # Layer 1: REMIND
-  #geom_line(data = dataMarketValueREMIND, aes(x = iteration, y = value, color = technology)) +
-  # Layer 2: PyPSA-Eur
-  geom_point(data = dataMarketValuePyPSA, aes(x = iteration, y = value, color = carrier)) +
-  scale_color_manual(
-    name = "Technology",
-    values = colorsTech,
-    labels = namesTech,
-  ) +
-  labs(x = "Iteration", y = "Market value ($/MWh)") +
-  ggtitle("Market values by iteration") +
-  facet_wrap(~ year)
-
-print(pMarketValueYear)
-
-print(pMarketValueIter)
 }
 ```
