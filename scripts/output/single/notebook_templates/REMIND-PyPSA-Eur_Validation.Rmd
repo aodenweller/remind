@@ -49,6 +49,8 @@ knitr::knit_hooks$set(
   warning = color_block('red'),
   error = color_block('red'))
 
+# TODO: Redo the mappings and adjust to the mappings in the PyPSA-Eur config table
+
 # Color mapping
 colorsTech <- c(
   "solar" = "#ffcc00",
@@ -1649,6 +1651,85 @@ for (i in pyIterations) {
 ### Residual load duration curves (RLDCs)
 
 # Other plots
+
+## VRE potentials
+
+VRE potentials are constrained in terms of generation (TWa) in REMIND and in terms of capacity (GW) in PyPSA-Eur. REMIND VRE potentials in capacity terms therefore depend on the capacity factor as well, making them non-constant.
+
+```{r vre potentials}
+
+# Read vm_capFac (for dispatchable technologies)
+vmCapFac <- readREMINDgdx(
+  paths = rmFiles,
+  gdxVar = "vm_capFac",
+  columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "vmCapFac"),
+  colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+  restoreZeros = FALSE)
+
+# Read vm_capDistr (for VRE technologies)
+vmCapDistr <- readREMINDgdx(
+  paths = rmFiles,
+  gdxVar = "vm_capDistr",
+  columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "rlf" = "rlf", "value" = "vmCapDistr"),
+  colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+  restoreZeros = FALSE)
+
+# Read pm_dataren (nur)
+pmDatarenNur <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "pm_dataren",
+    columns = c("all_regi" = "region", "all_te" = "technology", "char" = "char", "rlf" = "rlf", "value" = "pmDatarenNur"),
+    colFilter = list("region" = "DEU", "char" = "nur", "technology" = names(rm2genTech)),
+    restoreZeros = FALSE) %>%
+  select(-char)
+
+# Read pm_dataren (maxprod)
+pmDatarenMaxprod <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "pm_dataren",
+    columns = c("all_regi" = "region", "all_te" = "technology", "char" = "char", "rlf" = "rlf", "value" = "pmDatarenMaxprod"),
+    colFilter = list("region" = "DEU", "char" = "maxprod", "technology" = names(rm2genTech)),
+    restoreZeros = FALSE) %>%
+  select(-char) %>%
+  replace_na(list(pmDatarenMaxprod = 0))
+
+# Calculate VRE potential in GW in REMIND
+dataVREpotREMIND <- pmDatarenMaxprod %>%
+  left_join(pmDatarenNur) %>%
+  left_join(vmCapFac, relationship = "many-to-many") %>%
+  group_by(region, technology, year, iteration) %>%
+  # Calculate according to q_limitProd and transform TW to GW
+  summarise(value = 1E3 * sum(pmDatarenMaxprod / (pmDatarenNur * vmCapFac))) %>%
+  ungroup() %>%
+  revalue.levels(technology = rm2genTech) %>%
+  order.levels(technology = names(colorsTech))
+
+# PyPSA-Eur
+dataVREpotPyPSA <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "potentials.csv")) %>%
+  mutate(value = value / 1e3) %>%   # Convert capacities to GW
+  filter(!is.na(value),
+         !is.infinite(value)) %>%
+  revalue.levels(carrier = pygen2genTech) %>%
+  rename(technology = carrier) %>%
+  order.levels(technology = names(colorsTech))
+
+pVREpot <- ggplot() +
+  geom_line(data = dataVREpotREMIND,
+            mapping = aes(x = year, y = value, color = technology)) +
+  geom_point(data = dataVREpotPyPSA,
+            mapping = aes(x = year, y = value, color = technology)) +
+  scale_color_manual(name = "Technology",
+                     values = colorsTech,
+                     labels = namesTech) +
+  labs(x = "Year", y = "VRE potential (GW)") +
+  scale_y_continuous(limits = c(0, NA)) +
+  ggtitle("VRE potential over years, model comparison") +
+  facet_grid(technology ~ iteration, scales = "free", labeller = labeller(technology = namesTech))
+
+print(pVREpot)
+
+```
 
 ## Runtime PyPSA-EUR
 
