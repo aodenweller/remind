@@ -73,6 +73,7 @@ parameters
     p32_PyPSA_shSeEl(ttot,all_regi,all_te)              "PyPSA import: Electricity generation share by technology [1]"
     p32_PyPSA_MV(ttot,all_regi,all_te)                  "PyPSA import: Market values [$/MWh]"
     p32_PyPSA_ElecPrice(ttot,all_regi)                  "PyPSA import: Electricity prices [$/MWh]"
+    p32_PyPSA_Curtailment(ttot,all_regi,all_te)         "PyPSA import: Curtailment by technology [MWh]"
     p32_preInvCap(ttot,all_regi,all_te)                 "PyPSA export: Pre-investment capacities [TW]"
     pm_Markup(ttot,all_regi,all_te)                     "PyPSA calculation: Markup = Market value - electricity price [T$/TWa]"
 ;
@@ -84,18 +85,23 @@ variables
 ;
 
 equations
-    q32_usableSeDisp(ttot,all_regi,all_enty)            "PyPSA coupling: Equation to calculate v32_usableSeDisp"
-    q32_usableSeTeDisp(ttot,all_regi,all_enty,all_te)   "PyPSA coupling: Equation to calculate v32_usableSeTeDisp"
-    q32_shSeElDisp(ttot,all_regi,all_te)                "PyPSA coupling: Equation to calculate v32_shSeElDisp"
+    q32_usableSeDisp(ttot,all_regi,all_enty)            "PyPSA coupling: Calculate v32_usableSeDisp"
+    q32_usableSeTeDisp(ttot,all_regi,all_enty,all_te)   "PyPSA coupling: Calculate v32_usableSeTeDisp"
+    q32_shSeElDisp(ttot,all_regi,all_te)                "PyPSA coupling: Calculate v32_shSeElDisp"
 $ifthen.c32_pypsa_capfac "%c32_pypsa_capfac%" == "on"
-    q32_capFacVRE(ttot,all_regi,all_te)                 "PyPSA coupling: Equation to set the capacity factor for VRE technologies to p32_PyPSA_CF"
+    q32_capFacVRE(ttot,all_regi,all_te)                 "PyPSA coupling: Set the capacity factor for VRE technologies to p32_PyPSA_CF"
 $endif.c32_pypsa_capfac
 
 $ifthen.c32_pypsa_capfac_v2 "%c32_pypsa_capfac_v2%" == "on"
-    q32_capFac_v2(ttot,all_regi,all_te)
+    q32_capFac_v2(ttot,all_regi,all_te)                 "PyPSA coupling: Set the capacity factor to p32_PyPSA_CF"
 $endif.c32_pypsa_capfac_v2
 
+$ifthen.c32_pypsa_peakcap "%c32_pypsa_peakcap%" == "on"
+    q32_peakCap(ttot,all_regi)                          "PyPSA coupling: Enforce minimum dispatchable technology to cover peak load"
+$endif.c32_pypsa_peakcap
+
 ;
+
 $ontext
 $ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
     q32_MarkUp(ttot,all_regi,all_te)                    "PyPSA coupling: Equation to calculate the markup vm_MarkUp"

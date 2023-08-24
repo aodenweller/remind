@@ -11,12 +11,12 @@
 ***------------------------------------------------------------
 
 * Set cm_PyPSA_eq to 1 after the starting iteration of PyPSA
-* This is used to switch equations on, among others
+* This is used to activate equations and bounds
 if ((iteration.val gt c32_startIter_PyPSA),
   cm_PyPSA_eq = 1;
 );
 
-* Read in capacity factors and markups after first PyPSA run in previous iteration
+* Read in values after first PyPSA run in previous iteration
 if ((cm_pypsa_eq eq 1),
 * Capacity factor for coupled dispatchable technologies without grades (tePyDisp32)
 $ifthen.c32_pypsa_capfac "%c32_pypsa_capfac%" == "on"
@@ -32,6 +32,11 @@ pm_Markup(tPy32,regPy32,tePy32) = ( p32_PyPSA_MV(tPy32,regPy32,tePy32)
                                   - p32_PyPSA_ElecPrice(tPy32,regPy32) )
                                   * sm_TWa_2_MWh / 1e12;
 $endif.cm_pypsa_markup
+
+$ifthen.c32_pypsa_curtailment "%c32_pypsa_curtailment%" == "on"
+v32_storloss.fx(tPy32,regPy32,tePyVRE32) = p32_PyPSA_Curtailment / sm_TWa_2_MWh;
+$endif.c32_pypsa_curtailment
+
 );
 
 ***------------------------------------------------------------
@@ -119,6 +124,10 @@ if ((cm_PyPSA_eq eq 1),
   vm_capFac.up(tPy32,regPy32,tePy32) = 2;
 );
 $endif.c32_pypsa_capfac_v2
+
+if ((cm_PyPSA_eq eq 1),
+  v32_storloss.fx(tPy32,regPy32,tePy32) = 0;
+);
 
 * v32_shSeElDisp must be between 0 and 1
 v32_shSeElDisp.lo(tPy32,regPy32,tePy32) = 0;

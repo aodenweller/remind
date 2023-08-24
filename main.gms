@@ -1636,6 +1636,12 @@ $setglobal c32_pypsa_capfac on !! def = on !! regexp = off|on
 *** c32_pypsa_capfac_v2
 *** Switch to enable capacity factor import from PyPSA-Eur fully via equations
 $setglobal c32_pypsa_capfac_v2 off !! def = off !!regexp = off|on
+*** c32_pypsa_curtailment
+*** Switch to enable curtailment import from PyPSA-Eur
+$setglobal c32_pypsa_curtailment off !! def = off !!regexp = off|on
+*** c32_pypsa_peakcap
+*** Switch to enable peak capacity constraint
+$setglobal c32_pypsa_peakcap off !! def = off !!regexp = off|on
 *** cm_pypsa_markup
 *** Switch to enable markups/markdowns from PyPSA-Eur via tax module 
 $setglobal cm_pypsa_markup off !! def = off !! regexp = off|on
