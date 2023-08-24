@@ -4,7 +4,7 @@
 #SBATCH --job-name=REMIND-PyPSA-Eur_Validation
 #SBATCH --output=%x-%j.out
 #SBATCH --nodes=1
-#SBATCH --time=00:05:00
+#SBATCH --time=00:15:00
 
 # Logging info
 echo "Rendering REMIND-PyPSA-Eur Validation"
