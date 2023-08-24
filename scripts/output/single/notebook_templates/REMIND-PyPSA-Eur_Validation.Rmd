@@ -468,26 +468,46 @@ dataPreInvCapPyPSA <- readPyPSAcsv(
   order.levels(carrier = names(colorsTech))
 
 # Plot by year
-pYear <- ggplot() +
+pYearFix <- ggplot() +
    geom_line(data = dataPreInvCapREMIND, aes(x = year, y = preInvCap, color = technology)) +
   geom_point(data = dataPreInvCapPyPSA, aes(x = year, y = preInvCap, color = carrier)) +
   scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
   labs(x = "Year", y = "Capacity (GW)") +
-  ggtitle("Pre-investment capacity by year") +
+  ggtitle("Pre-investment capacity by year, y scale fix") +
+  facet_wrap(~ iteration)
+
+print(pYearFix)
+
+pYearFree <- ggplot() +
+  geom_line(data = dataPreInvCapREMIND, aes(x = year, y = preInvCap, color = technology)) +
+  geom_point(data = dataPreInvCapPyPSA, aes(x = year, y = preInvCap, color = carrier)) +
+  scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
+  labs(x = "Year", y = "Capacity (GW)") +
+  ggtitle("Pre-investment capacity by year, y scale free") +
   facet_wrap(~ iteration, scales = "free")
 
+print(pYearFree)
+
 # Plot by iteration
-pIter <- ggplot() +
+pIterFix <- ggplot() +
   geom_line(data = dataPreInvCapREMIND, aes(x = iteration, y = preInvCap, color = technology)) +
   geom_point(data = dataPreInvCapPyPSA, aes(x = iteration, y = preInvCap, color = carrier)) +
   scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
   labs(x = "Iteration", y = "Capacity (GW)") +
-  ggtitle("Pre-investment capacity by iteration") +
+  ggtitle("Pre-investment capacity by iteration, y scale fix") +
+  facet_wrap(~ year)
+
+print(pIterFix)
+
+pIterFree <- ggplot() +
+  geom_line(data = dataPreInvCapREMIND, aes(x = iteration, y = preInvCap, color = technology)) +
+  geom_point(data = dataPreInvCapPyPSA, aes(x = iteration, y = preInvCap, color = carrier)) +
+  scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
+  labs(x = "Iteration", y = "Capacity (GW)") +
+  ggtitle("Pre-investment capacity by iteration, y scale free") +
   facet_wrap(~ year, scales = "free")
 
-print(pYear)
-
-print(pIter)
+print(pIterFree)
 ```
 
 ### Specific capital costs (investment costs)
@@ -964,7 +984,7 @@ dataCurtailmentPyPSA <- readPyPSAcsv(
   mutate(value = value / 1e6) %>%  # Convert MWh to TWh
   rename(technology = carrier)
 
-pCurtailment <- ggplot() +
+pCurtailmentYearFix <- ggplot() +
   geom_point(data = dataCurtailmentPyPSA, aes(x = year, y = value, color = technology)) +
   geom_line(data = dataCurtailmentREMIND, aes(x = year, y = v32_storloss, color = technology)) +
   scale_color_manual(
@@ -973,10 +993,52 @@ pCurtailment <- ggplot() +
     labels = namesTech,
   ) +
   labs(x = "Year", y = "Curtailment (TWh)") +
-  ggtitle("Curtailment by year") +
+  ggtitle("Curtailment by year, y scale fixed") +
+  facet_wrap(~ iteration)
+
+print(pCurtailmentYearFix)
+
+pCurtailmentYearFree <- ggplot() +
+  geom_point(data = dataCurtailmentPyPSA, aes(x = year, y = value, color = technology)) +
+  geom_line(data = dataCurtailmentREMIND, aes(x = year, y = v32_storloss, color = technology)) +
+  scale_color_manual(
+    name = "Technology",
+    values = colorsTech,
+    labels = namesTech,
+  ) +
+  labs(x = "Year", y = "Curtailment (TWh)") +
+  ggtitle("Curtailment by year, y scale free") +
   facet_wrap(~ iteration, scales = "free")
 
-print(pCurtailment)
+print(pCurtailmentYearFree)
+
+pCurtailmentIterFix <- ggplot() +
+  geom_point(data = dataCurtailmentPyPSA, aes(x = iteration, y = value, color = technology)) +
+  geom_line(data = dataCurtailmentREMIND, aes(x = iteration, y = v32_storloss, color = technology)) +
+  scale_color_manual(
+    name = "Technology",
+    values = colorsTech,
+    labels = namesTech,
+  ) +
+  labs(x = "Iteration", y = "Curtailment (TWh)") +
+  ggtitle("Curtailment by iteration") +
+  facet_wrap(~ year)
+
+print(pCurtailmentIterFix)
+
+pCurtailmentIterFree <- ggplot() +
+  geom_point(data = dataCurtailmentPyPSA, aes(x = iteration, y = value, color = technology)) +
+  geom_line(data = dataCurtailmentREMIND, aes(x = iteration, y = v32_storloss, color = technology)) +
+  scale_color_manual(
+    name = "Technology",
+    values = colorsTech,
+    labels = namesTech,
+  ) +
+  labs(x = "Iteration", y = "Curtailment (TWh)") +
+  ggtitle("Curtailment by iteration") +
+  facet_wrap(~ year, scales = "free")
+
+print(pCurtailmentIterFree)
 ```
 
 ### Markups
@@ -1021,7 +1083,7 @@ dataMarkupPyPSA <- dataMarketValuePyPSA %>%
   summarise(value = unique(.data$value)) %>%
   order.levels(carrier = names(namesTech))
 
-pMarkupYear <- ggplot() +
+pMarkupYearFix <- ggplot() +
   geom_line(data = dataMarkupREMIND, aes(x = year, y = value, color = technology)) +
   geom_point(data = dataMarkupPyPSA, aes(x = year, y = value, color = carrier)) +
   scale_color_manual(
@@ -1030,12 +1092,26 @@ pMarkupYear <- ggplot() +
     labels = namesTech,
   ) +
   labs(x = "Year", y = "Markup ($/MWh)") +
-  ggtitle("Markup by year") +
+  ggtitle("Markup by year, y scale fixed") +
   facet_wrap(~ iteration)
 
-print(pMarkupYear)
+print(pMarkupYearFix)
 
-pMarkupIter <- ggplot() +
+pMarkupYearFree <- ggplot() +
+  geom_line(data = dataMarkupREMIND, aes(x = year, y = value, color = technology)) +
+  geom_point(data = dataMarkupPyPSA, aes(x = year, y = value, color = carrier)) +
+  scale_color_manual(
+    name = "Technology",
+    values = colorsTech,
+    labels = namesTech,
+  ) +
+  labs(x = "Year", y = "Markup ($/MWh)") +
+  ggtitle("Markup by year, y scale free") +
+  facet_wrap(~ iteration, scales = "free")
+
+print(pMarkupYearFree)
+
+pMarkupIterFix <- ggplot() +
   geom_line(data = dataMarkupREMIND, aes(x = iteration, y = value, color = technology)) +
   scale_color_manual(
     name = "Technology",
@@ -1046,7 +1122,20 @@ pMarkupIter <- ggplot() +
   ggtitle("Markup by iteration") +
   facet_wrap(~ year)
 
-print(pMarkupIter)
+print(pMarkupIterFix)
+
+pMarkupIterFree <- ggplot() +
+  geom_line(data = dataMarkupREMIND, aes(x = iteration, y = value, color = technology)) +
+  scale_color_manual(
+    name = "Technology",
+    values = colorsTech,
+    labels = namesTech,
+  ) +
+  labs(x = "Iteration", y = "Markup ($/MWh)") +
+  ggtitle("Markup by iteration") +
+  facet_wrap(~ year, scales = "free")
+
+print(pMarkupIterFree)
 ```
 
 ### Markup tax revenue
@@ -1097,24 +1186,42 @@ dataCapREMIND <- readREMINDgdx(
   summarise(cap = sum(vm_cap))
 
 # Plot by year
-pYear <- ggplot() +
+pYearFix <- ggplot() +
   geom_line(data = dataCapREMIND, aes(x = year, y = cap, color = technology)) +
   scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
   labs(x = "Year", y = "Capacity (GW)") +
-  ggtitle("Optimal capacities in REMIND by year") +
+  ggtitle("Optimal capacities in REMIND by year, y scale fixed") +
+  facet_wrap(~ iteration)
+
+print(pYearFix)
+
+pYearFree <- ggplot() +
+  geom_line(data = dataCapREMIND, aes(x = year, y = cap, color = technology)) +
+  scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
+  labs(x = "Year", y = "Capacity (GW)") +
+  ggtitle("Optimal capacities in REMIND by year, y scale free") +
   facet_wrap(~ iteration, scales = "free")
 
+print(pYearFree)
+
 # Plot by iteration
-pIter <- ggplot() +
+pIterFix <- ggplot() +
   geom_line(data = dataCapREMIND, aes(x = iteration, y = cap, color = technology)) +
   scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
   labs(x = "Iteration", y = "Capacity (GW)") +
-  ggtitle("Optimal capacities in REMIND by iteration") +
+  ggtitle("Optimal capacities in REMIND by iteration, y scale fixed") +
+  facet_wrap(~ year)
+
+print(pIterFix)
+
+pIterFree <- ggplot() +
+  geom_line(data = dataCapREMIND, aes(x = iteration, y = cap, color = technology)) +
+  scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
+  labs(x = "Iteration", y = "Capacity (GW)") +
+  ggtitle("Optimal capacities in REMIND by iteration, y scale free") +
   facet_wrap(~ year, scales = "free")
 
-print(pYear)
-
-print(pIter)
+print(pIterFree)
 
 ```
 
@@ -1460,23 +1567,42 @@ dataGenREMIND <- readREMINDgdx(
   summarise(value = sum(.data$value)) %>%
   order.levels(technology = names(colorsTech))
 
-pGenYear <- ggplot() +
+pGenYearFix <- ggplot() +
   geom_line(data = dataGenREMIND, aes(x = year, y = value, color = technology)) +
   scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
   labs(x = "Year", y = "Generation (TWh)") +
-  ggtitle("Generation in REMIND by year") +
+  ggtitle("Generation in REMIND by year, y scale fixed") +
+  facet_wrap(~ iteration)
+
+print(pGenYearFix)
+
+pGenYearFree <- ggplot() +
+  geom_line(data = dataGenREMIND, aes(x = year, y = value, color = technology)) +
+  scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
+  labs(x = "Year", y = "Generation (TWh)") +
+  ggtitle("Generation in REMIND by year, y scale free") +
   facet_wrap(~ iteration, scales = "free")
 
-print(pGenYear)
+print(pGenYearFree)
 
-pGenIter <- ggplot() +
+pGenIterFix <- ggplot() +
   geom_line(data = dataGenREMIND, aes(x = iteration, y = value, color = technology)) +
   scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
   labs(x = "Iteration", y = "Generation (TWh)") +
-  ggtitle("Generation in REMIND by iteration") +
+  ggtitle("Generation in REMIND by iteration, y scale fixed") +
+  facet_wrap(~ year)
+
+print(pGenIterFix)
+
+pGenIterFree <- ggplot() +
+  geom_line(data = dataGenREMIND, aes(x = iteration, y = value, color = technology)) +
+  scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
+  labs(x = "Iteration", y = "Generation (TWh)") +
+  ggtitle("Generation in REMIND by iteration, y scale free") +
   facet_wrap(~ year, scales = "free")
 
-print(pGenIter)
+print(pGenIterFree)
+
 ```
 
 
