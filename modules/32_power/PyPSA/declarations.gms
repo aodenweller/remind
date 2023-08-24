@@ -89,12 +89,8 @@ equations
     q32_usableSeTeDisp(ttot,all_regi,all_enty,all_te)   "PyPSA coupling: Calculate v32_usableSeTeDisp"
     q32_shSeElDisp(ttot,all_regi,all_te)                "PyPSA coupling: Calculate v32_shSeElDisp"
 $ifthen.c32_pypsa_capfac "%c32_pypsa_capfac%" == "on"
-    q32_capFacVRE(ttot,all_regi,all_te)                 "PyPSA coupling: Set the capacity factor for VRE technologies to p32_PyPSA_CF"
+    q32_capFac(ttot,all_regi,all_te)                 "PyPSA coupling: Set the capacity factor for VRE technologies to p32_PyPSA_CF"
 $endif.c32_pypsa_capfac
-
-$ifthen.c32_pypsa_capfac_v2 "%c32_pypsa_capfac_v2%" == "on"
-    q32_capFac_v2(ttot,all_regi,all_te)                 "PyPSA coupling: Set the capacity factor to p32_PyPSA_CF"
-$endif.c32_pypsa_capfac_v2
 
 $ifthen.c32_pypsa_peakcap "%c32_pypsa_peakcap%" == "on"
     q32_peakCap(ttot,all_regi)                          "PyPSA coupling: Enforce minimum dispatchable technology to cover peak load"

@@ -322,28 +322,17 @@ q32_shSeElDisp(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te))..
   v32_usableSeTeDisp(t,regi,"seel",te)
 ;
 
-*** Equation to set the average capacity factor for VRE technologies
-* For VRE technologies the average capacity factor depends on the distribution into grades in vm_capDistr.
-* This equation ensures the capacity factor for VRE technologies matches that in p32_PyPSA_CF.
+*** Fix capacity factors to values from PyPSA-Eur
+* TODO: Hydro
 $ifthen.c32_pypsa_capfac "%c32_pypsa_capfac%" == "on"
-q32_capFacVRE(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePyVRE32(te) AND (cm_PyPSA_eq eq 1))..
-  vm_capFac(t,regi,te)
-  =e=
-    p32_PyPSA_CF(t,regi,te)
-  * vm_cap(t,regi,te,"1")
-  / sum(teRe2rlfDetail(te,rlf),
-        vm_capDistr(t,regi,te,rlf) * pm_dataren(regi,"nur",rlf,te))
-;
-$endif.c32_pypsa_capfac
-
-$ifthen.c32_pypsa_capfac_v2 "%c32_pypsa_capfac_v2%" == "on"
-q32_capFac_v2(t,regi,te)$(tPy32(t) and regPy32(regi) AND tePy32(te) AND (cm_PyPSA_eq eq 1) and NOT sameas(te, "hydro"))..
+q32_capFac(t,regi,te)$(tPy32(t) and regPy32(regi) AND tePy32(te) AND (cm_PyPSA_eq eq 1) and NOT sameas(te, "hydro"))..
   p32_PyPSA_CF(t,regi,te) * vm_cap(t,regi,te,"1")
   =e=
   v32_usableSeTeDisp(t,regi,"seel",te)
 ;
-$endif.c32_pypsa_capfac_v2
+$endif.c32_pypsa_capfac
 
+*** Require enough dispatchable capacities to always cover peak load (factor 1.43 extracted from load.csv)
 $ifthen.c32_pypsa_peakcap "%c32_pypsa_peakcap%" == "on"
 q32_peakCap(t,regi)$(tPy32(t) AND regPy32(regi) AND (cm_PyPSA_eq eq 1))..
   sum(tePyDisp32, vm_cap(t,regi,tePyDisp32, "1"))
