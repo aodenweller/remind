@@ -263,8 +263,9 @@ py2rmFiles <- list.files(
   pattern = "PyPSAEUR2REMIND_\\d{1,}.gdx",
   full.names = TRUE
 )
-# Get iterations from rmFiles
-rmIterations <- as.numeric(gsub(".*_([0-9]+)\\.gdx", "\\1", rmFiles))
+# Get iterations from rmFiles and sort
+rmIterations <- as.numeric(gsub(".*_([0-9]+)\\.gdx", "\\1", rmFiles)) %>%
+  sort()
 
 # PyPSA directories
 load("config.Rdata")
@@ -289,7 +290,8 @@ pyResourcesDirs <- list.dirs(pyResourcesDir,
                              full.names = TRUE) %>%
   keep(str_detect(., "y\\d{4}$"))
 # Get iteration from PyPSA-Eur validation directories
-pyIterations <- as.numeric(gsub(".*i([0-9]+).*", "\\1", pyValidationDirs))
+pyIterations <- as.numeric(gsub(".*i([0-9]+).*", "\\1", pyValidationDirs)) %>%
+  sort()
 
 # Some logging
 cat("Found", length(rmFulldataFiles), "REMIND fulldata_i.gdx files.\n")
@@ -308,7 +310,7 @@ if (length(unique(c(
   length(rm2pyFiles),
   length(pyResultsDirs),
   length(pyValidationDirs),
-  length(pyResourcesDirs),
+  length(pyResourcesDirs) / length(years),
   length(py2rmFiles)))) != 1) {
   warning("Number of REMIND files and PyPSA-Eur directories does not match.\n")
 }
@@ -1078,6 +1080,45 @@ This section includes variables that are not exchanged directly between REMIND a
 
 ## Capacities
 
+### Optimal capacities in REMIND
+
+```{r optimal capacities in REMIND}
+# REMIND data
+dataCapREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "vm_cap",
+    columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "rlf" = "grade", "value" = "vm_cap"),
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech), "grade" = 1),
+    restoreZeros = FALSE,
+    recalcUnit = 1e3) %>%   # TW to GW
+  select(-grade) %>%   # Remove grade column
+  revalue.levels(technology = rm2genTech) %>%
+  group_by(year, region, technology, iteration) %>%
+  summarise(cap = sum(vm_cap))
+
+# Plot by year
+pYear <- ggplot() +
+  geom_line(data = dataCapREMIND, aes(x = year, y = cap, color = technology)) +
+  scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
+  labs(x = "Year", y = "Capacity (GW)") +
+  ggtitle("Optimal capacities in REMIND by year") +
+  facet_wrap(~ iteration, scales = "free")
+
+# Plot by iteration
+pIter <- ggplot() +
+  geom_line(data = dataCapREMIND, aes(x = iteration, y = cap, color = technology)) +
+  scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
+  labs(x = "Iteration", y = "Capacity (GW)") +
+  ggtitle("Optimal capacities in REMIND by iteration") +
+  facet_wrap(~ year, scales = "free")
+
+print(pYear)
+
+print(pIter)
+
+```
+
+
 ### Pre-investment capacities and capacity expansion over years
 
 The following plots contain the pre-investment capacities and each model's capacity expansion decision.
@@ -1401,6 +1442,44 @@ for (y in years) {
 
 ## Generation
 
+### Generation in REMIND
+
+The following plots are mostly useful to identify oscillations in generation.
+
+```{r generation in remind}
+# REMIND
+dataGenREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "v32_usableSeTeDisp",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "value"),
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+    restoreZeros = FALSE,
+    recalcUnit = twa2twh) %>%  # TWa to TWh
+  revalue.levels(technology = rm2genTech) %>%
+  group_by(.data$year, .data$region, .data$technology, .data$iteration) %>%
+  summarise(value = sum(.data$value)) %>%
+  order.levels(technology = names(colorsTech))
+
+pGenYear <- ggplot() +
+  geom_line(data = dataGenREMIND, aes(x = year, y = value, color = technology)) +
+  scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
+  labs(x = "Year", y = "Generation (TWh)") +
+  ggtitle("Generation in REMIND by year") +
+  facet_wrap(~ iteration, scales = "free")
+
+print(pGenYear)
+
+pGenIter <- ggplot() +
+  geom_line(data = dataGenREMIND, aes(x = iteration, y = value, color = technology)) +
+  scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
+  labs(x = "Iteration", y = "Generation (TWh)") +
+  ggtitle("Generation in REMIND by iteration") +
+  facet_wrap(~ year, scales = "free")
+
+print(pGenIter)
+```
+
+
 ### Generation over years
 
 ```{r generation over years, fig.show = "hold", fig.height = 3.5}
@@ -1616,8 +1695,6 @@ This section shows all terms of REMIND's secondary energy electricity (`seel`) e
 ```{r market values}
 dataMarketValuePyPSA <- readPyPSAcsv(
   paths = file.path(pyValidationDirs, "market_values.csv")) %>%
-  # Increment iteration by 1 to match REMIND
-  mutate(iteration = iteration + 1) %>%
   quitte::revalue.levels(carrier = rm2genTech) %>%
   group_by(.data$year, .data$region, .data$carrier, .data$iteration) %>%
   summarise(value = unique(.data$value)) %>%
