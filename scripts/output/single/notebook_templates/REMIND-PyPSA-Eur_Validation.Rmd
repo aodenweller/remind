@@ -49,184 +49,18 @@ knitr::knit_hooks$set(
   warning = color_block('red'),
   error = color_block('red'))
 
-# TODO: Redo the mappings and adjust to the mappings in the PyPSA-Eur config table
-
-# Color mapping
-colorsTech <- c(
-  "solar" = "#ffcc00",
-  "onwind" = "#337fff",
-  "all_offwind" = "#334cff",
-  "offwind" = "#334cff",
-  "biomass" = "#005900",
-  "ror" = "#191999",
-  "CCGT" = "#999959",
-  "OCGT" = "#e5e5b2",
-  "oil" = "#663a00",
-  "all_coal" = "#0c0c0c",
-  "coal" = "#0c0c0c",
-  "lignite" = "#392306",
-  "nuclear" = "#ff33ff"
-  )
-
-# Pretty names
-namesTech <- c(
-  "solar" = "Solar",
-  "onwind" = "Wind Onshore",
-  "all_offwind" = "Wind Offshore",
-  "offwind" = "Wind Offshore",
-  "biomass" = "Biomass",
-  "ror" = "Run of river",
-  "CCGT" = "CCGT",
-  "OCGT" = "OCGT",
-  "oil" = "Oil",
-  "all_coal" = "Coal+Lignite",
-  "coal" = "Coal",
-  "lignite" = "Lignite",
-  "nuclear" = "Nuclear")
-
-# Technology mapping: REMIND to General
-rm2genTech <- c(
-  "biochp" = "biomass",
-  "bioigcc" = "biomass",
-  "bioigccc" = "biomass",
-  "ngcc" = "CCGT",
-  "ngccc" = "CCGT",
-  "gaschp" = "CCGT",
-  "igcc" = "all_coal",
-  "igccc" = "all_coal",
-  "pc" = "all_coal",
-  "coalchp" = "all_coal",
-  "tnrs" = "nuclear",
-  "fnrs" = "nuclear",
-  "ngt" =  "OCGT",
-  "windoff" = "all_offwind",  # Or just offwind?
-  "dot" = "oil",
-  "wind" = "onwind",
-  "hydro" = "ror",
-  "spv" = "solar"
-  )
-
-# Technology mapping: General to REMIND
-gen2rmTech <- c(
-  "biomass" = "biomass",
-  "CCGT" = "CCGT",
-  "coal" = "all_coal",  # Aggregate coal
-  "lignite" = "all_coal",  # Aggregate coal
-  "nuclear" = "nuclear",
-  "OCGT" = "OCGT",
-  "offwind-ac" = "all_offwind",  # Aggregate offshore wind
-  "offwind-dc" = "all_offwind",  # Aggregate offshore wind
-  "oil" = "oil",
-  "onwind" = "onwind",
-  "ror" = "ror",
-  "solar" = "solar"
-)
-
-# PyPSA-Eur pretty names to generalised names
-py2genTech <- c(
-  "Biomass" = "biomass",
-  "Coal" = "all_coal",
-  "Combined-Cycle Gas" = "CCGT",
-  "Lignite" = "all_coal",
-  "Nuclear" = "nuclear",
-  "Offshore Wind (DC)" = "all_offwind",
-  "Offshore Wind (AC)" = "all_offwind",
-  "Oil" = "oil",
-  "Onshore Wind" = "onwind",
-  "Open-Cycle Gas" = "OCGT",
-  "Run of River" = "ror",
-  "Solar" = "solar"
-)
-
-# ToDo: Get rid of this and switch to the PyPSA general mapping
-pygen2genTech <- c(
-  "biomass" = "biomass",
-  "all_coal" = "all_coal",
-  "CCGT" = "CCGT",
-  "OCGT" = "OCGT",
-  "nuclear" = "nuclear",
-  "wind_offshore" = "all_offwind",
-  "wind_onshore" = "onwind",
-  "oil" = "oil",
-  "hydro" = "ror",
-  "solar_pv" = "solar"
-)
-
-# Mapping for cost components
-rm2pyTech <- c(
-  "biochp" = "biomass",
-  "bioigcc" = "biomass",
-  "bioigccc" = "biomass",
-  "ngcc" = "CCGT",
-  "ngccc" = "CCGT",
-  "gaschp" = "CCGT",
-  "igcc" = "coal",
-  "igccc" = "coal",
-  "pc" = "coal",
-  "coalchp" = "coal",
-  "tnrs" = "nuclear",
-  "fnrs" = "nuclear",
-  "ngt" =  "OCGT",
-  "windoff" = "offwind",
-  "dot" = "oil",
-  "wind" = "onwind",
-  "hydro" = "hydro",
-  "spv" = "solar"
-)
-
-# PyPSA-Eur colors
-pyTechColor <- c(
-  "solar" = "#ffcc00",
-  "onwind" = "#337fff",
-  "offwind" = "#334cff",
-  "biomass" = "#005900",
-  "hydro" = "#191999",
-  "CCGT" = "#999959",
-  "OCGT" = "#e5e5b2",
-  "oil" = "#663a00",
-  "coal" = "#0c0c0c",
-  "nuclear" = "#ff33ff"
-)
-
-# PyPSA-Eur scaled technologies
-pyTechScaledColor <- c(
-  "solar-rooftop" = "#ffcc00",
-  "solar-utility" = "#ffcc00",
-  "offwind-ac-connection-submarine" = "#334cff",
-  "offwind-ac-connection-underground" = "#334cff",
-  "offwind-ac-station" = "#334cff",
-  "offwind-dc-connection-submarine" = "#334cff",
-  "offwind-dc-connection-underground" = "#334cff",
-  "offwind-dc-station" = "#334cff",
-  "lignite" = "#0c0c0c",
-  "ror" = "#191999",
-  "PHS" = "#191999"
-)
-
-pyTechScaledShape <- c(
-  "solar-rooftop" = 1,
-  "solar-utility" = 2,
-  "offwind-ac-connection-submarine" = 3,
-  "offwind-ac-connection-underground" = 4,
-  "offwind-ac-station" = 5,
-  "offwind-dc-connection-submarine" = 6,
-  "offwind-dc-connection-underground" = 7,
-  "offwind-dc-station" = 8,
-  "lignite" = 9,
-  "ror" = 10,
-  "PHS" = 11
-)
-
-# Years to plot
-years <- c(seq(2025, 2060, 5), seq(2070, 2110, 10), 2130, 2150)
-
-# Regions to plot
-regions <- "DEU"
+# Helper function to format the ggplot subtitle
+regSubtitle <- function(r) {
+  region <- gsub('[c()"]| \\[\\]', "", r)
+  region <- gsub(',', " +", region)
+  paste("Region(s):", gsub('[c()"]| \\[\\]', "", r))
+}
 
 # Unit conversions
 twa2twh <- 8760
 twa2mwh <- 8760 * 1e6
 tC2tCO2 <- 44 / 12
+#GtCpTWa2GtCO2pMWh <- 1E12 / twa2mwh * tC2tCO2
 trUSDpTWa2USDpMWh <- 1E12 / twa2mwh
 trUSDpTW2USDpMW <- 1E6
 
@@ -305,14 +139,45 @@ cat("Found", length(pyResourcesDirs), "PyPSA-EUR resources directories.\n")
 cat("Found", length(py2rmFiles), "PyPSAEUR2REMIND_i.gdx files.\n")
 
 # Throw warning if number of files does not match
-if (length(unique(c(
+if (
+  length(unique(c(
   length(rmFiles),
   length(rm2pyFiles),
   length(pyResultsDirs),
   length(pyValidationDirs),
   length(pyResourcesDirs) / length(years),
   length(py2rmFiles)))) != 1) {
-  warning("Number of REMIND files and PyPSA-Eur directories does not match.\n")
+    warning("Number of REMIND files and PyPSA-Eur directories does not match.\n")
+}
+
+# Read coupled years from REMIND
+years <- gdx::readGDX(rmFiles[1], "tPy32", restore_zeros = FALSE) %>%
+  as.numeric()
+# Remove attributes
+attr(years, "gdxdata") <- NULL
+attr(years, "description") <- NULL
+
+# Read coupled regions from REMIND
+regOrder <- c("DEU", "FRA", "EWN")
+regions <- gdx::readGDX(rmFiles[1], "regPy32", restore_zeros = FALSE)
+# Remove attributes
+attr(regions, "gdxdata") <- NULL
+attr(regions, "description") <- NULL
+# Order regions
+regions <- regions[match(regOrder, regions)]
+# Remove NAs
+regions <- regions[!is.na(regions)]
+
+# Create region list (including all regions as a first entry)
+if (length(regions) > 1) {
+  regList <- list(
+    all_regions = regions
+  )
+  for (region in regions) {
+    regList[[region]] <- region
+  }
+} else {
+  regList <- list(regions)
 }
 ```
 
@@ -320,7 +185,120 @@ if (length(unique(c(
 subtitle: "Run name: `r scenario`"
 ---
 
-```{r helpers, include = FALSE, echo = FALSE}
+```{r mappings, include = FALSE}
+techMapping <- read.csv(file.path(pyDir, "config", "technology_mapping.csv"))
+
+# Create mapping from REMIND to General
+rm2genTech <- setNames(techMapping$general, techMapping$remind.eu)
+rm2genTech <- rm2genTech[!duplicated(names(rm2genTech))]
+
+# Create mapping from PyPSA-Eur to General
+py2genTech <- setNames(techMapping$general, techMapping$pypsa.eur)
+py2genTech <- py2genTech[!duplicated(names(py2genTech))]
+
+# Create mapping from REMIND to PyPSA-Eur (for cost components)
+# TODO: Read in from techMapping
+rm2pyTech <- c(
+  "biochp" = "biomass",
+  "bioigcc" = "biomass",
+  "bioigccc" = "biomass",
+  "ngcc" = "CCGT",
+  "ngccc" = "CCGT",
+  "gaschp" = "CCGT",
+  "igcc" = "coal",
+  "igccc" = "coal",
+  "pc" = "coal",
+  "coalchp" = "coal",
+  "tnrs" = "nuclear",
+  "fnrs" = "nuclear",
+  "ngt" =  "OCGT",
+  "windoff" = "offwind",
+  "dot" = "oil",
+  "wind" = "onwind",
+  "hydro" = "hydro",
+  "spv" = "solar"
+)
+
+# Color mapping
+colorsTech <- c(
+  "solar_pv" = "#ffcc00",
+  "wind_onshore" = "#337fff",
+  "wind_offshore" = "#334cff",
+  "offwind" = "#334cff",  # Remove later
+  "biomass" = "#005900",
+  "hydro" = "#191999",
+  "CCGT" = "#999959",
+  "OCGT" = "#e5e5b2",
+  "oil" = "#663a00",
+  "all_coal" = "#0c0c0c",
+  "coal" = "#0c0c0c",  # Remove later
+  "lignite" = "#392306",  # Remove later
+  "nuclear" = "#ff33ff"
+  )
+
+# Pretty names
+namesTech <- c(
+  "solar_pv" = "Solar",
+  "wind_onshore" = "Wind Onshore",
+  "wind_offshore" = "Wind Offshore",
+  "offwind" = "Wind Offshore",  # Remove later?
+  "biomass" = "Biomass",
+  "hydro" = "Hydro (dams, ror, PHS?)",  # TODO: Clarify
+  "CCGT" = "CCGT",
+  "OCGT" = "OCGT",
+  "oil" = "Oil",
+  "all_coal" = "Coal+Lignite",
+  "coal" = "Coal",  # Remove later?
+  "lignite" = "Lignite",  # Remove later?
+  "nuclear" = "Nuclear")
+
+# PyPSA-Eur colors (for costs)
+pyTechColor <- c(
+  "solar" = "#ffcc00",
+  "onwind" = "#337fff",
+  "offwind" = "#334cff",
+  "biomass" = "#005900",
+  "hydro" = "#191999",
+  "CCGT" = "#999959",
+  "OCGT" = "#e5e5b2",
+  "oil" = "#663a00",
+  "coal" = "#0c0c0c",
+  "nuclear" = "#ff33ff"
+)
+
+# PyPSA-Eur scaled technologies (for costs)
+pyTechScaledColor <- c(
+  "solar-rooftop" = "#ffcc00",
+  "solar-utility" = "#ffcc00",
+  "offwind-ac-connection-submarine" = "#334cff",
+  "offwind-ac-connection-underground" = "#334cff",
+  "offwind-ac-station" = "#334cff",
+  "offwind-dc-connection-submarine" = "#334cff",
+  "offwind-dc-connection-underground" = "#334cff",
+  "offwind-dc-station" = "#334cff",
+  "ror" = "#191999",
+  "PHS" = "#191999",
+  "lignite" = "#0c0c0c"
+)
+
+# PyPSA-Eur scaled shapes (for costs)
+pyTechScaledShape <- c(
+  "solar-rooftop" = 1,
+  "solar-utility" = 2,
+  "offwind-ac-connection-submarine" = 3,
+  "offwind-ac-connection-underground" = 4,
+  "offwind-ac-station" = 5,
+  "offwind-dc-connection-submarine" = 6,
+  "offwind-dc-connection-underground" = 7,
+  "offwind-dc-station" = 8,
+  "ror" = 9,
+  "PHS" = 10,
+  "lignite" = 11
+)
+
+```
+
+```{r helpers, include = FALSE}
 # This function reads in csv files in the PyPSA-Eur directory
 # Expected path: <PyPSA-Eur folder>/i<iteration>/<some file>.csv
 # (optionally also containing a y<year> folder)
@@ -389,6 +367,11 @@ readREMINDgdx <- function(paths, gdxVar, columns, colFilter,
   })
 }
 
+# Function to extract unique values with a given tolerance
+unique_tolerance <- function(x, tolerance = 1e-8) {
+  x[!duplicated(round(x / tolerance))]
+}
+
 ```
 
 # Coupled variables
@@ -427,6 +410,8 @@ pYear <- ggplot() +
   ggtitle("Electricity load by year") +
   facet_wrap(~ iteration)
 
+print(pYear)
+
 # Plot by iteration
 pIter <- ggplot() +
   geom_line(data = dataLoadREMIND, aes(x = iteration, y = value, color = region)) +
@@ -435,8 +420,6 @@ pIter <- ggplot() +
   labs(x = "Iteration", y = "Electricity load (TWh)") +
   ggtitle("Electricity load by iteration") +
   facet_wrap(~ year)
-
-print(pYear)
 
 print(pIter)
 ```
@@ -464,53 +447,46 @@ dataPreInvCapPyPSA <- readPyPSAcsv(
   paths = file.path(pyValidationDirs, "preinstalled_capacities.csv")) %>%
   mutate(value = value / 1e3) %>%   # Convert capacities to GW
   rename(preInvCap = value) %>%
-  revalue.levels(carrier = pygen2genTech) %>%
   order.levels(carrier = names(colorsTech))
 
-# Plot by year
-pYearFix <- ggplot() +
-   geom_line(data = dataPreInvCapREMIND, aes(x = year, y = preInvCap, color = technology)) +
-  geom_point(data = dataPreInvCapPyPSA, aes(x = year, y = preInvCap, color = carrier)) +
-  scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
-  labs(x = "Year", y = "Capacity (GW)") +
-  ggtitle("Pre-investment capacity by year, y scale fix") +
-  facet_wrap(~ iteration)
+# Loop over regions
+for (r in regList){
 
-print(pYearFix)
+  dataPreInvCapREMINDplot <- dataPreInvCapREMIND %>%
+    filter(region %in% r[[1]]) %>%
+    group_by(.data$year, .data$technology, .data$iteration) %>%
+    summarise(preInvCap = sum(preInvCap))
 
-pYearFree <- ggplot() +
-  geom_line(data = dataPreInvCapREMIND, aes(x = year, y = preInvCap, color = technology)) +
-  geom_point(data = dataPreInvCapPyPSA, aes(x = year, y = preInvCap, color = carrier)) +
-  scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
-  labs(x = "Year", y = "Capacity (GW)") +
-  ggtitle("Pre-investment capacity by year, y scale free") +
-  facet_wrap(~ iteration, scales = "free")
+  dataPreInvCapPyPSAplot <- dataPreInvCapPyPSA %>%
+    filter(region %in% r[[1]]) %>%
+    group_by(.data$year, .data$carrier, .data$iteration) %>%
+    summarise(preInvCap = sum(preInvCap))
 
-print(pYearFree)
+  pYearFix <- ggplot() +
+    geom_line(data = dataPreInvCapREMINDplot, aes(x = year, y = preInvCap, color = technology)) +
+    geom_point(data = dataPreInvCapPyPSAplot, aes(x = year, y = preInvCap, color = carrier)) +
+    scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
+    labs(x = "Year", y = "Capacity (GW)") +
+    ggtitle("Pre-investment capacities over years", regSubtitle(r)) +
+    facet_wrap(~ iteration)
+  
+  print(pYearFix)
 
-# Plot by iteration
-pIterFix <- ggplot() +
-  geom_line(data = dataPreInvCapREMIND, aes(x = iteration, y = preInvCap, color = technology)) +
-  geom_point(data = dataPreInvCapPyPSA, aes(x = iteration, y = preInvCap, color = carrier)) +
-  scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
-  labs(x = "Iteration", y = "Capacity (GW)") +
-  ggtitle("Pre-investment capacity by iteration, y scale fix") +
-  facet_wrap(~ year)
+  pIterationFix <- ggplot() +
+    geom_line(data = dataPreInvCapREMINDplot, aes(x = iteration, y = preInvCap, color = technology)) +
+    geom_point(data = dataPreInvCapPyPSAplot, aes(x = iteration, y = preInvCap, color = carrier)) +
+    scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
+    labs(x = "Iteration", y = "Capacity (GW)") +
+    ggtitle("Pre-investment capacities over iterations", regSubtitle(r)) +
+    facet_wrap(~ year)
 
-print(pIterFix)
-
-pIterFree <- ggplot() +
-  geom_line(data = dataPreInvCapREMIND, aes(x = iteration, y = preInvCap, color = technology)) +
-  geom_point(data = dataPreInvCapPyPSA, aes(x = iteration, y = preInvCap, color = carrier)) +
-  scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
-  labs(x = "Iteration", y = "Capacity (GW)") +
-  ggtitle("Pre-investment capacity by iteration, y scale free") +
-  facet_wrap(~ year, scales = "free")
-
-print(pIterFree)
+  print(pIterationFix)
+}
 ```
 
 ### Specific capital costs (investment costs)
+
+Costs are the same across all regions as PyPSA-Eur doesn't have regionalised costs (yet). Costs from REMIND are hence aggregated.
 
 ```{r specific capital costs new}
 # REMIND
@@ -522,18 +498,18 @@ dataCapexREMIND <- readREMINDgdx(
     restoreZeros = TRUE,
     recalcUnit = trUSDpTW2USDpMW)
 
-dataGenShareREMIND <- readREMINDgdx(
+dataGenTechREMIND <- readREMINDgdx(
     paths = rm2pyFiles,
-    gdxVar = "v32_shSeElDisp",
-    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "v32_shSeElDisp"),
+    gdxVar = "v32_usableSeTeDisp",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "v32_usableSeTeDisp"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = TRUE)
 
 dataCapexWeightedREMIND <- dataCapexREMIND %>%
-  left_join(dataGenShareREMIND, by = c("year", "region", "technology", "iteration")) %>%
+  left_join(dataGenTechREMIND, by = c("year", "region", "technology", "iteration")) %>%
   revalue.levels(technology = rm2pyTech) %>%
-  group_by(year, region, technology, iteration) %>%
-  summarise(capex = sum(vm_costTeCapital * v32_shSeElDisp) / sum(v32_shSeElDisp)) %>%
+  group_by(year, technology, iteration) %>%
+  summarise(capex = sum(vm_costTeCapital * v32_usableSeTeDisp) / sum(v32_usableSeTeDisp)) %>%
   order.levels(technology = names(pyTechColor))
 
 # PyPSA-Eur
@@ -549,20 +525,27 @@ dataCapexPyPSAextracted <- dataCapexPyPSA %>%
 
 # Filter if further.description starts with "Scaled value from REMIND-EU"
 dataCapexPyPSAscaled <- dataCapexPyPSA %>%
-  filter(str_detect(further.description, "^Scaled value from REMIND-EU"))
+  filter(str_detect(further.description, "^Scaled value from REMIND-EU")) %>%
+  order.levels(technology = names(pyTechScaledColor))
 
 pCapexYear <- ggplot() +
   geom_line(data = dataCapexWeightedREMIND, aes(x = year, y = capex, color = technology)) +
   geom_point(data = dataCapexPyPSAextracted, aes(x = year, y = value, color = technology)) +
-  scale_color_manual(name = "Extracted technology\n(directly from REMIND)", values = pyTechColor) +
+  scale_color_manual(name = "Extracted technology\n(directly from REMIND)",
+                     values = pyTechColor,
+                     guide = guide_legend(order = 1)) +
   new_scale_color() +
   geom_point(data = dataCapexPyPSAscaled, aes(x = year, y = value, color = technology, shape = technology),
              alpha = 0.5) +
-  scale_color_manual(name = "Scaled technology\n(similar REMIND tech)", values = pyTechScaledColor) +
-  scale_shape_manual(name = "Scaled technology\n(similar REMIND tech)", values = pyTechScaledShape) +
+  scale_color_manual(name = "Scaled technology\n(similar REMIND tech)",
+                     values = pyTechScaledColor,
+                     guide = guide_legend(order = 2)) +
+  scale_shape_manual(name = "Scaled technology\n(similar REMIND tech)",
+                     values = pyTechScaledShape,
+                     guide = guide_legend(order = 2)) +
   labs(x = "Year", y = "Specific capital costs (USD/kW)") +
   scale_y_continuous(labels = function(x) x / 1000) +
-  ggtitle("Specific capital costs by year") +
+  ggtitle("Specific capital costs over years") +
   facet_wrap(~ iteration, scales = "free")
 
 print(pCapexYear)
@@ -578,7 +561,7 @@ pCapexIter <- ggplot() +
   scale_shape_manual(name = "Scaled technology\n(similar REMIND tech)", values = pyTechScaledShape) +
   labs(x = "Iteration", y = "Specific capital costs (USD/kW)") +
   scale_y_continuous(labels = function(x) x / 1000) +
-  ggtitle("Specific capital costs by iteration") +
+  ggtitle("Specific capital costs over iterations") +
   facet_wrap(~ year, scales = "free")
 
 print(pCapexIter)
@@ -638,7 +621,6 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 ### Fixed O&M costs
 
 ```{r fixed o&m costs new}
-if (FALSE) {
 # REMIND
 dataFOMREMIND <- readREMINDgdx(
     paths = rm2pyFiles,
@@ -646,78 +628,54 @@ dataFOMREMIND <- readREMINDgdx(
     columns = c("all_regi" = "region", "char" = "variable", "all_te" = "technology", "value" = "value"),
     colFilter = list("region" = regions, "variable" = "omf", "technology" = names(rm2genTech))) %>%
   mutate(value = 100 * value) %>%
-  group_by(region, variable, technology) %>%
-  mutate(unique_value_count = n_distinct(value))
-
-# Throw warning if there are more than one unique values for a combination of region, variable and technology
-if (any(dataFOMREMIND$unique_value_count > 1)) {
-  warning("There are more than one unique values for a combination of region, variable and technology.\n")
-}
-
-# Remove unique_value_count and iteration column
-dataFOMREMIND <- dataFOMREMIND %>%
-  filter(iteration == 1) %>%
-  select(-unique_value_count, -iteration)
-
-# TODO: Weighting by generation share?
+  revalue.levels(technology = rm2pyTech) %>%
+  group_by(variable, technology) %>%
+  # Values should be the same across years and iterations
+  summarise(value = unique(value)) %>%
+  # Add column for year
+  tidyr::crossing(year = years) %>%
+  order.levels(technology = names(pyTechColor))
 
 # PyPSA-Eur
 dataFOMPyPSA <- readPyPSAcsv(
   paths = file.path(pyResourcesDirs, "costs.csv")) %>%
   filter(parameter == "FOM",
          source == "REMIND-EU") %>%
-  group_by(technology) %>%
+  group_by(technology, parameter, further.description, year) %>%
+  # Values should be the same across iterations
   summarise(value = unique(value))
 
-# Throw warning if there are more than one unique values for a combination of region and technology
-if (any(dataFOMPyPSA$unique_value_count > 1)) {
-  warning("There are more than one unique values for a combination of region and technology.\n")
-}
-
-# Remove unique_value_count and iteration column
-dataFOMPyPSA <- dataFOMPyPSA %>%
-  filter(iteration == 1) %>%
-  select(-unique_value_count, -iteration)
-
 # Filter if further.description starts with "Extracted from REMIND-EU"
+# Values in this tibble should be the same across years
 dataFOMPyPSAextracted <- dataFOMPyPSA %>%
   filter(str_detect(further.description, "^Extracted from REMIND-EU")) %>%
   order.levels(technology = names(pyTechColor))
 
 # Filter if further.description starts with "Scaled value from REMIND-EU"
+# Values in this tibble might vary across years
 dataFOMPyPSAscaled <- dataFOMPyPSA %>%
-  filter(str_detect(further.description, "^Scaled value from REMIND-EU"))
+  filter(str_detect(further.description, "^Scaled value from REMIND-EU")) %>%
+  order.levels(technology = names(pyTechScaledColor))
 
 pFOMYear <- ggplot() +
   geom_line(data = dataFOMREMIND, aes(x = year, y = value, color = technology)) +
   geom_point(data = dataFOMPyPSAextracted, aes(x = year, y = value, color = technology)) +
-  scale_color_manual(name = "Extracted technology", values = pyTechColor) +
+  scale_color_manual(name = "Extracted technology\n(directly from REMIND)",
+                     values = pyTechColor,
+                     guide = guide_legend(order = 1)) + 
   new_scale_color() +
   geom_point(data = dataFOMPyPSAscaled, aes(x = year, y = value, color = technology, shape = technology),
              alpha = 0.5) +
-  scale_color_manual(name = "Scaled technology", values = pyTechScaledColor) +
-  scale_shape_manual(name = "Scaled technology", values = pyTechScaledShape) +
+  scale_color_manual(name = "Scaled technology\n(similar REMIND tech)",
+                     values = pyTechScaledColor,
+                     guide = guide_legend(order = 2)) +
+  scale_shape_manual(name = "Scaled technology\n(similar REMIND tech)",
+                     values = pyTechScaledShape,
+                     guide = guide_legend(order = 2)) +
   labs(x = "Year", y = "Fixed O&M costs (%)") +
-  ggtitle("Fixed O&M costs by year") +
-  facet_wrap(~ iteration, scales = "free")
+  ggtitle("Fixed O&M costs over years")
 
 print(pFOMYear)
-
-pFOMIter <- ggplot() +
-  geom_line(data = dataFOMREMIND, aes(x = iteration, y = value, color = technology)) +
-  geom_point(data = dataFOMPyPSAextracted, aes(x = iteration, y = value, color = technology)) +
-  scale_color_manual(name = "Extracted technology", values = pyTechColor) +
-  new_scale_color() +
-  geom_point(data = dataFOMPyPSAscaled, aes(x = iteration, y = value, color = technology, shape = technology),
-             alpha = 0.5) +
-  scale_color_manual(name = "Scaled technology", values = pyTechScaledColor) +
-  scale_shape_manual(name = "Scaled technology", values = pyTechScaledShape) +
-  labs(x = "Iteration", y = "Fixed O&M costs (%)") +
-  ggtitle("Fixed O&M costs by iteration") +
-  facet_wrap(~ year, scales = "free")
-
-print(pFOMIter)
-}
 ```
 
 ```{r fixed o&m costs}
@@ -734,6 +692,57 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 
 ### Lifetimes
 
+```{r lifetimes new}
+dataLifetimesREMIND <- readREMINDgdx(
+    paths = rm2pyFiles,
+    gdxVar = "pm_data",
+    columns = c("all_regi" = "region", "char" = "variable", "all_te" = "technology", "value" = "value"),
+    colFilter = list("region" = regions, "variable" = "lifetime", "technology" = names(rm2genTech))) %>%
+  revalue.levels(technology = rm2pyTech) %>%
+  group_by(variable, technology) %>%
+  # Values should be the same across years and iterations
+  summarise(value = unique(value)) %>%
+  # Add column for year
+  tidyr::crossing(year = years) %>%
+  order.levels(technology = names(pyTechColor))
+
+dataLifetimesPyPSA <- readPyPSAcsv(
+  paths = file.path(pyResourcesDirs, "costs.csv")) %>%
+  filter(parameter == "lifetime",
+         source == "REMIND-EU") %>%
+  group_by(technology, parameter, further.description, year) %>%
+  # Check for uniqueness with a given tolerance across iterations
+  summarise(value = unique_tolerance(value))
+
+dataLifetimesPyPSAextracted <- dataLifetimesPyPSA %>%
+  filter(str_detect(further.description, "^Extracted from REMIND-EU")) %>%
+  order.levels(technology = names(pyTechColor))
+
+dataLifetimesPyPSAscaled <- dataLifetimesPyPSA %>%
+  filter(str_detect(further.description, "^Scaled value from REMIND-EU")) %>%
+  order.levels(technology = names(pyTechScaledColor))
+
+pLifetimes <- ggplot() +
+  geom_line(data = dataLifetimesREMIND, aes(x = year, y = value, color = technology)) +
+  geom_point(data = dataLifetimesPyPSAextracted, aes(x = year, y = value, color = technology)) +
+  scale_color_manual(name = "Extracted technology\n(directly from REMIND)",
+                     values = pyTechColor,
+                     guide = guide_legend(order = 1)) +
+  new_scale_color() +
+  geom_point(data = dataLifetimesPyPSAscaled, aes(x = year, y = value, color = technology, shape = technology),
+             alpha = 0.5) +
+  scale_color_manual(name = "Scaled technology\n(similar REMIND tech)",
+                     values = pyTechScaledColor,
+                     guide = guide_legend(order = 2)) +
+  scale_shape_manual(name = "Scaled technology\n(similar REMIND tech)",
+                     values = pyTechScaledShape,
+                     guide = guide_legend(order = 2)) +
+  labs(x = "Year", y = "Lifetime (years)") +
+  ggtitle("Lifetimes over years")
+
+print(pLifetimes)
+```
+
 ```{r lifetimes}
 plot_data <- subset(costs_df, parameter == "lifetime")
 label <- "Lifetime"
@@ -747,6 +756,13 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 ```
 
 ### Discount rates
+
+Work in progress...
+```{r discount rates new}
+
+#TODO: Change to p32_discountRate
+
+```
 
 ```{r discount rates}
 plot_data <- subset(costs_df, parameter == "discount_rate")
@@ -766,6 +782,88 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 
 ### Variable O&M costs
 
+```{r variable o&m costs new}
+
+dataVOMREMIND <- readREMINDgdx(
+  paths = rm2pyFiles,
+  gdxVar = "pm_data",
+  columns = c("all_regi" = "region", "char" = "variable", "all_te" = "technology", "value" = "vom"),
+  colFilter = list("region" = regions, "variable" = "omv", "technology" = names(rm2genTech)),
+  recalcUnit = trUSDpTWa2USDpMWh)
+
+dataGenTechREMIND <- readREMINDgdx(
+    paths = rm2pyFiles,
+    gdxVar = "v32_usableSeTeDisp",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "v32_usableSeTeDisp"),
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+    restoreZeros = TRUE)
+
+dataVOMWeightedREMIND <- dataVOMREMIND %>%
+  left_join(dataGenTechREMIND, by = c("region", "technology", "iteration")) %>%
+  revalue.levels(technology = rm2pyTech) %>%
+  group_by(year, technology, iteration) %>%
+  summarise(vom = sum(vom * v32_usableSeTeDisp) / sum(v32_usableSeTeDisp)) %>%
+  order.levels(technology = names(pyTechColor))
+
+dataVOMPyPSA <- readPyPSAcsv(
+  paths = file.path(pyResourcesDirs, "costs.csv")) %>%
+  filter(parameter == "VOM",
+         source == "REMIND-EU")
+
+# Filter if further.description starts with "Extracted from REMIND-EU"
+dataVOMPyPSAextracted <- dataVOMPyPSA %>%
+  filter(str_detect(further.description, "^Extracted from REMIND-EU")) %>%
+  order.levels(technology = names(pyTechColor))
+
+# Filter if further.description starts with "Scaled value from REMIND-EU"
+dataVOMPyPSAscaled <- dataVOMPyPSA %>%
+  filter(str_detect(further.description, "^Scaled value from REMIND-EU")) %>%
+  order.levels(technology = names(pyTechScaledColor))
+
+pVOMYear <- ggplot() +
+  geom_line(data = dataVOMWeightedREMIND, aes(x = year, y = vom, color = technology)) +
+  geom_point(data = dataVOMPyPSAextracted, aes(x = year, y = value, color = technology)) +
+  scale_color_manual(name = "Extracted technology\n(directly from REMIND)",
+                     values = pyTechColor,
+                     guide = guide_legend(order = 1)) +
+  new_scale_color() +
+  geom_point(data = dataVOMPyPSAscaled, aes(x = year, y = value, color = technology, shape = technology),
+             alpha = 0.5) +
+  scale_color_manual(name = "Scaled technology\n(similar REMIND tech)",
+                     values = pyTechScaledColor,
+                     guide = guide_legend(order = 2)) +
+  scale_shape_manual(name = "Scaled technology\n(similar REMIND tech)",
+                     values = pyTechScaledShape,
+                     guide = guide_legend(order = 2)) +
+  labs(x = "Year", y = "Variable O&M costs (USD/MWh)") +
+  ggtitle("Variable O&M costs over years") +
+  facet_wrap(~ iteration)
+
+print(pVOMYear)
+
+pVOMIter <- ggplot() +
+  geom_line(data = dataVOMWeightedREMIND, aes(x = iteration, y = vom, color = technology)) +
+  geom_point(data = dataVOMPyPSAextracted, aes(x = iteration, y = value, color = technology)) +
+  scale_color_manual(name = "Extracted technology\n(directly from REMIND)",
+                     values = pyTechColor,
+                     guide = guide_legend(order = 1)) +
+  new_scale_color() +
+  geom_point(data = dataVOMPyPSAscaled, aes(x = iteration, y = value, color = technology, shape = technology),
+             alpha = 0.5) +
+  scale_color_manual(name = "Scaled technology\n(similar REMIND tech)",
+                     values = pyTechScaledColor,
+                     guide = guide_legend(order = 2)) +
+  scale_shape_manual(name = "Scaled technology\n(similar REMIND tech)",
+                     values = pyTechScaledShape,
+                     guide = guide_legend(order = 2)) +
+  labs(x = "Iteration", y = "Variable O&M costs (USD/MWh)") +
+  ggtitle("Variable O&M costs over iterations") +
+  facet_wrap(~ year)
+
+print(pVOMIter)
+
+```
+
 ```{r variable o&m costs}
 plot_data <- subset(costs_df, parameter == "VOM")
 label <- "Variable O&M Costs"
@@ -779,6 +877,101 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 ```
 
 ### Fuel costs
+
+```{r fuel costs new}
+
+# Read pe2se mapping from REMIND
+pe2seTech <- gdx::readGDX(rmFiles[1], "pe2se") %>%
+  rename(pecarrier = all_enty,
+         secarrier = all_enty1,
+         technology = all_te) %>%
+  filter(secarrier == "seel") %>%
+  select(pecarrier, technology)
+
+# Read REMIND data
+dataFuelCostsREMIND <- readREMINDgdx(
+    paths = rm2pyFiles,
+    gdxVar = "pm_PEPrice",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_enty" = "pecarrier", "value" = "pm_PEPrice"),
+    colFilter = list("year" = years, "region" = regions),
+    recalcUnit = trUSDpTWa2USDpMWh) %>%
+  full_join(pe2seTech, by = c("pecarrier"), relationship = "many-to-many")
+
+# Read weights
+dataGenTechREMIND <- readREMINDgdx(
+    paths = rm2pyFiles,
+    gdxVar = "v32_usableSeTeDisp",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "v32_usableSeTeDisp"),
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2pyTech)),
+    restoreZeros = TRUE)
+
+# Calculate weighted fuel costs
+dataFuelCostsWeightedREMIND <- dataFuelCostsREMIND %>%
+  right_join(dataGenTechREMIND, by = c("year", "region", "technology", "iteration")) %>%
+  revalue.levels(technology = rm2pyTech) %>%
+  group_by(year, technology, iteration) %>%
+  summarise(fuelCost = sum(pm_PEPrice * v32_usableSeTeDisp) / sum(v32_usableSeTeDisp)) %>%
+  order.levels(technology = names(pyTechColor))
+
+# Read PyPSA-Eur data
+dataFuelCostsPyPSA <- readPyPSAcsv(
+  paths = file.path(pyResourcesDirs, "costs.csv")) %>%
+  filter(parameter == "fuel",
+         source == "REMIND-EU")
+
+# Filter if further.description starts with "Extracted from REMIND-EU"
+dataFuelCostsPyPSAextracted <- dataFuelCostsPyPSA %>%
+  filter(str_detect(further.description, "^Extracted from REMIND-EU")) %>%
+  order.levels(technology = names(pyTechColor))
+
+# Filter if further.description starts with "Scaled value from REMIND-EU"
+dataFuelCostsPyPSAscaled <- dataFuelCostsPyPSA %>%
+  filter(str_detect(further.description, "^Scaled value from REMIND-EU")) %>%
+  order.levels(technology = names(pyTechScaledColor))
+
+pFuelCostsYear <- ggplot() +
+  geom_line(data = dataFuelCostsWeightedREMIND, aes(x = year, y = fuelCost, color = technology)) +
+  geom_point(data = dataFuelCostsPyPSAextracted, aes(x = year, y = value, color = technology)) +
+  scale_color_manual(name = "Extracted technology\n(directly from REMIND)",
+                     values = pyTechColor,
+                     guide = guide_legend(order = 1)) +
+  new_scale_color() +
+  geom_point(data = dataFuelCostsPyPSAscaled, aes(x = year, y = value, color = technology, shape = technology),
+             alpha = 0.5) +
+  scale_color_manual(name = "Scaled technology\n(similar REMIND tech)",
+                     values = pyTechScaledColor,
+                     guide = guide_legend(order = 2)) +
+  scale_shape_manual(name = "Scaled technology\n(similar REMIND tech)",
+                     values = pyTechScaledShape,
+                     guide = guide_legend(order = 2)) +
+  labs(x = "Year", y = "Fuel costs (USD/MWh)") +
+  ggtitle("Fuel costs over years") +
+  facet_wrap(~ iteration)
+
+print(pFuelCostsYear)
+
+pFuelCostsIter <- ggplot() +
+  geom_line(data = dataFuelCostsWeightedREMIND, aes(x = iteration, y = fuelCost, color = technology)) +
+  geom_point(data = dataFuelCostsPyPSAextracted, aes(x = iteration, y = value, color = technology)) +
+  scale_color_manual(name = "Extracted technology\n(directly from REMIND)",
+                     values = pyTechColor,
+                     guide = guide_legend(order = 1)) +
+  new_scale_color() +
+  geom_point(data = dataFuelCostsPyPSAscaled, aes(x = iteration, y = value, color = technology, shape = technology),
+             alpha = 0.5) +
+  scale_color_manual(name = "Scaled technology\n(similar REMIND tech)",
+                     values = pyTechScaledColor,
+                     guide = guide_legend(order = 2)) +
+  scale_shape_manual(name = "Scaled technology\n(similar REMIND tech)",
+                     values = pyTechScaledShape,
+                     guide = guide_legend(order = 2)) +
+  labs(x = "Iteration", y = "Fuel costs (USD/MWh)") +
+  ggtitle("Fuel costs over iterations") +
+  facet_wrap(~ year)
+
+print(pFuelCostsIter)
+
+```
 
 ```{r fuel costs}
 plot_data <- subset(costs_df, parameter == "fuel")
@@ -797,6 +990,97 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 ```
 
 ### Efficiencies
+
+```{r efficiencies new}
+# Technologies for which eta is constant
+dataEtaConvREMIND <- readREMINDgdx(
+    paths = rm2pyFiles,
+    gdxVar = "pm_eta_conv",
+    columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "eta"),
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2pyTech)))
+
+# Technologies for which eta varies over time
+dataEtaTimeREMIND <- readREMINDgdx(
+    paths = rm2pyFiles,
+    gdxVar = "pm_dataeta",
+    columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "eta"),
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2pyTech)))
+
+# Read weights
+dataGenTechREMIND <- readREMINDgdx(
+    paths = rm2pyFiles,
+    gdxVar = "v32_usableSeTeDisp",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "v32_usableSeTeDisp"),
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2pyTech)),
+    restoreZeros = TRUE)
+
+# Weighted efficiencies
+dataEtaWeightedREMIND <- dataEtaConvREMIND %>%
+  bind_rows(dataEtaTimeREMIND) %>%
+  left_join(dataGenTechREMIND, by = c("year", "region", "technology", "iteration")) %>%
+  revalue.levels(technology = rm2pyTech) %>%
+  group_by(year, technology, iteration) %>%
+  summarise(eta = sum(eta * v32_usableSeTeDisp) / sum(v32_usableSeTeDisp)) %>%
+  order.levels(technology = names(pyTechColor))
+
+# Read PyPSA-Eur data
+dataEtaPyPSA <- readPyPSAcsv(
+  paths = file.path(pyResourcesDirs, "costs.csv")) %>%
+  filter(parameter == "efficiency",
+         source == "REMIND-EU")
+
+# Filter if further.description starts with "Extracted from REMIND-EU"
+dataEtaPyPSAextracted <- dataEtaPyPSA %>%
+  filter(str_detect(further.description, "^Extracted from REMIND-EU")) %>%
+  order.levels(technology = names(pyTechColor))
+
+# Filter if further.description starts with "Scaled value from REMIND-EU"
+dataEtaPyPSAscaled <- dataEtaPyPSA %>%
+  filter(str_detect(further.description, "^Scaled value from REMIND-EU")) %>%
+  order.levels(technology = names(pyTechScaledColor))
+
+pEtaYear <- ggplot() +
+  geom_line(data = dataEtaWeightedREMIND, aes(x = year, y = eta, color = technology)) +
+  geom_point(data = dataEtaPyPSAextracted, aes(x = year, y = value, color = technology)) +
+  scale_color_manual(name = "Extracted technology\n(directly from REMIND)",
+                     values = pyTechColor,
+                     guide = guide_legend(order = 1)) +
+  new_scale_color() +
+  geom_point(data = dataEtaPyPSAscaled, aes(x = year, y = value, color = technology, shape = technology),
+             alpha = 0.5) +
+  scale_color_manual(name = "Scaled technology\n(similar REMIND tech)",
+                     values = pyTechScaledColor,
+                     guide = guide_legend(order = 2)) +
+  scale_shape_manual(name = "Scaled technology\n(similar REMIND tech)",
+                     values = pyTechScaledShape,
+                     guide = guide_legend(order = 2)) +
+  labs(x = "Year", y = "Efficiency") +
+  ggtitle("Efficiencies over years") +
+  facet_wrap(~ iteration)
+
+print(pEtaYear)
+
+pEtaIter <- ggplot() +
+  geom_line(data = dataEtaWeightedREMIND, aes(x = iteration, y = eta, color = technology)) +
+  geom_point(data = dataEtaPyPSAextracted, aes(x = iteration, y = value, color = technology)) +
+  scale_color_manual(name = "Extracted technology\n(directly from REMIND)",
+                     values = pyTechColor,
+                     guide = guide_legend(order = 1)) +
+  new_scale_color() +
+  geom_point(data = dataEtaPyPSAscaled, aes(x = iteration, y = value, color = technology, shape = technology),
+             alpha = 0.5) +
+  scale_color_manual(name = "Scaled technology\n(similar REMIND tech)",
+                     values = pyTechScaledColor,
+                     guide = guide_legend(order = 2)) +
+  scale_shape_manual(name = "Scaled technology\n(similar REMIND tech)",
+                     values = pyTechScaledShape,
+                     guide = guide_legend(order = 2)) +
+  labs(x = "Iteration", y = "Efficiency") +
+  ggtitle("Efficiencies over iterations") +
+  facet_wrap(~ year)
+
+print(pEtaIter)
+```
 
 ```{r efficiencies}
 plot_data <- subset(costs_df, parameter == "efficiency")
@@ -819,6 +1103,93 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 
 ### CO2 intensity
 
+```{r co2 intensity new}
+
+# Read REMIND data
+dataCO2intREMIND <- readREMINDgdx(
+    paths = rm2pyFiles,
+    gdxVar = "fm_dataemiglob",
+    columns = c("all_enty" = "pecarrier", "all_enty1" = "secarrier", "all_te" = "technology", "all_enty2" = "gas", "value" = "co2int"),
+    colFilter = list("secarrier" = "seel", "gas" = "co2", technology = names(rm2pyTech)),
+    restoreZeros = FALSE,
+    recalcUnit = 1E9 * tC2tCO2 / twa2mwh) %>%
+  group_by(technology) %>%
+  summarise(co2int = unique(co2int))
+
+# Read weights
+dataGenTechREMIND <- readREMINDgdx(
+    paths = rm2pyFiles,
+    gdxVar = "v32_usableSeTeDisp",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "v32_usableSeTeDisp"),
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2pyTech)),
+    restoreZeros = TRUE)
+
+dataCO2intWeightedREMIND <- dataCO2intREMIND %>%
+  left_join(dataGenTechREMIND, by = c("technology")) %>%
+  revalue.levels(technology = rm2pyTech) %>%
+  group_by(year, technology, iteration) %>%
+  summarise(co2int = sum(co2int * v32_usableSeTeDisp) / sum(v32_usableSeTeDisp)) %>%
+  order.levels(technology = names(pyTechColor))
+
+dataCO2intPyPSA <- readPyPSAcsv(
+  paths = file.path(pyResourcesDirs, "costs.csv")) %>%
+  filter(parameter == "CO2 intensity",
+         source == "REMIND-EU")
+
+# Filter if further.description starts with "Extracted from REMIND-EU"
+dataCO2intPyPSAextracted <- dataCO2intPyPSA %>%
+  filter(str_detect(further.description, "^Extracted from REMIND-EU")) %>%
+  order.levels(technology = names(pyTechColor))
+
+# Filter if further.description starts with "Scaled value from REMIND-EU"
+dataCO2intPyPSAscaled <- dataCO2intPyPSA %>%
+  filter(str_detect(further.description, "^Scaled value from REMIND-EU")) %>%
+  order.levels(technology = names(pyTechScaledColor))
+
+pCO2intYear <- ggplot() +
+  geom_line(data = dataCO2intWeightedREMIND, aes(x = year, y = co2int, color = technology)) +
+  geom_point(data = dataCO2intPyPSAextracted, aes(x = year, y = value, color = technology)) +
+  scale_color_manual(name = "Extracted technology\n(directly from REMIND)",
+                     values = pyTechColor,
+                     guide = guide_legend(order = 1)) +
+  new_scale_color() +
+  geom_point(data = dataCO2intPyPSAscaled, aes(x = year, y = value, color = technology, shape = technology),
+             alpha = 0.5) +
+  scale_color_manual(name = "Scaled technology\n(similar REMIND tech)",
+                     values = pyTechScaledColor,
+                     guide = guide_legend(order = 2)) +
+  scale_shape_manual(name = "Scaled technology\n(similar REMIND tech)",
+                     values = pyTechScaledShape,
+                     guide = guide_legend(order = 2)) +
+  labs(x = "CO2 intensity (tCO2/MWh)", y = "technology") +
+  ggtitle("CO2 intensity over years") +
+  facet_wrap(~ iteration)
+
+print(pCO2intYear)
+
+pCO2intIter <- ggplot() +
+  geom_line(data = dataCO2intWeightedREMIND, aes(x = iteration, y = co2int, color = technology)) +
+  geom_point(data = dataCO2intPyPSAextracted, aes(x = iteration, y = value, color = technology)) +
+  scale_color_manual(name = "Extracted technology\n(directly from REMIND)",
+                     values = pyTechColor,
+                     guide = guide_legend(order = 1)) +
+  new_scale_color() +
+  geom_point(data = dataCO2intPyPSAscaled, aes(x = iteration, y = value, color = technology, shape = technology),
+             alpha = 0.5) +
+  scale_color_manual(name = "Scaled technology\n(similar REMIND tech)",
+                     values = pyTechScaledColor,
+                     guide = guide_legend(order = 2)) +
+  scale_shape_manual(name = "Scaled technology\n(similar REMIND tech)",
+                     values = pyTechScaledShape,
+                     guide = guide_legend(order = 2)) +
+  labs(x = "CO2 intensity (tCO2/MWh)", y = "technology") +
+  ggtitle("CO2 intensity over iterations") +
+  facet_wrap(~ year)
+
+print(pCO2intIter)
+
+```
+
 ```{r co2 intensity}
 plot_data <- subset(costs_df, parameter == "CO2 intensity")
 label <- "CO2 intensity"
@@ -833,6 +1204,8 @@ ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration))
 
 ### CO2 prices
 
+TODO: Which weights to use for CO2 prices?
+
 ```{r co2 price}
 # REMIND data
 dataCO2PriceREMIND <- readREMINDgdx(
@@ -841,7 +1214,7 @@ dataCO2PriceREMIND <- readREMINDgdx(
   columns = c("tall" = "year", "all_regi" = "region", "value" = "value"),
   colFilter = list("year" = years, "region" = regions),
   restoreZeros = TRUE,
-  recalcUnit = tC2tCO2
+  recalcUnit = 1E3 / tC2tCO2
 )
 
 # PyPSA data
@@ -854,19 +1227,19 @@ dataCO2PricePyPSA <- readPyPSAcsv(
 pYear <- ggplot() +
   geom_line(data = dataCO2PriceREMIND, aes(x = year, y = value)) +
   geom_point(data = dataCO2PricePyPSA, aes(x = year, y = value)) +
-  labs(x = "Year", y = "CO2 price (EUR/tCO2)") +
+  labs(x = "Year", y = "CO2 price (USD/tCO2)") +
   ggtitle("CO2 price by year") +
   facet_wrap(~ iteration)
+
+print(pYear)
 
 # Plot by iteration
 pIter <- ggplot() +
   geom_line(data = dataCO2PriceREMIND, aes(x = iteration, y = value)) +
   geom_point(data = dataCO2PricePyPSA, aes(x = iteration, y = value)) +
-  labs(x = "Iteration", y = "CO2 price (EUR/tCO2)") +
+  labs(x = "Iteration", y = "CO2 price (USD/tCO2)") +
   ggtitle("CO2 price by iteration") +
   facet_wrap(~ year)
-
-print(pYear)
 
 print(pIter)
 ```
@@ -880,7 +1253,7 @@ Values used by REMIND are also retrieved to cross-check (displayed as lines).
 
 The following plots show the capacity factor.
 
-```{r capacity factors v2}
+```{r capacity factors}
 
 dataCapREMIND <- readREMINDgdx(
     paths = rmFiles,
@@ -932,6 +1305,8 @@ pCapfacYear <- ggplot() +
   ggtitle("Capacity factor, iterations in panels") +
   facet_wrap(~ iteration)
 
+print(pCapfacYear)
+
 # Plot by iteration
 pCapfacIter <- ggplot() +
   # Layer 1: REMIND
@@ -947,8 +1322,6 @@ pCapfacIter <- ggplot() +
   labs(x = "Iteration", y = "Capacity factor") +
   ggtitle("Capacity factor, years in panels") +
   facet_wrap(~ year)
-
-print(pCapfacYear)
 
 print(pCapfacIter)
 
@@ -1970,6 +2343,8 @@ pVREpot <- ggplot() +
 print(pVREpot)
 
 ```
+
+## Original PyPSA-Eur costs vs. REMIND costs
 
 ## Runtime PyPSA-EUR
 
