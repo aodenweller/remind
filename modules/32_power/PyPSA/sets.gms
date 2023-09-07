@@ -13,16 +13,21 @@ sets
     tPy32(ttot)                 "Years coupled to PyPSA"
         /2025, 2030, 2035, 2040, 2045, 2050, 2055, 2060, 2070, 2080, 2090, 2100, 2110, 2130, 2150/
 
+$ifthen "%c32_pypsa_multiregion%" == "on"
+    regPy32(all_regi)           "Regions coupled to PyPSA"
+        /DEU, FRA, EWN/
+$elseif "%c32_pypsa_multiregion%" == "off"
     regPy32(all_regi)           "Regions coupled to PyPSA"
         /DEU/
+$endif
 
     tePy32(all_te)              "REMIND SE electricity technologies coupled to PyPSA"
         /biochp, bioigcc, bioigccc, ngcc, ngccc, gaschp, igcc, igccc, pc, coalchp, tnrs, fnrs, ngt, windoff, dot, wind, hydro, spv/  !! TODO: What about CSP and geohdr?
 
-    tePyDisp32(all_te)          "REMIND dispatchable SE electricity technologies (no grades)"
+    tePyDisp32(all_te)          "REMIND dispatchable SE electricity technologies (without grades)"
         /biochp, bioigcc, bioigccc, ngcc, ngccc, gaschp, igcc, igccc, pc, coalchp, tnrs, fnrs, ngt, dot/
 
-    tePyVRE32(all_te)       "REMIND non-dispatchable SE electricity technologies (with grades)"
+    tePyVRE32(all_te)           "REMIND VRE SE electricity technologies (with grades)"
         /windoff, wind, spv/
 ;
 

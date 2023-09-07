@@ -1643,6 +1643,9 @@ $setglobal c32_pypsa_curtailment off !! def = off !!regexp = off|on
 *** c32_pypsa_peakcap
 *** Switch to enable peak capacity constraint
 $setglobal c32_pypsa_peakcap off !! def = off !!regexp = off|on
+*** c32_pypsa_multiregion
+*** Switch to enable PyPSA in multiple regions (changes PyPSA/sets.gms)
+$setglobal c32_pypsa_multiregion on !! def = off !!regexp = off|on
 *** cm_pypsa_markup
 *** Switch to enable markups/markdowns from PyPSA-Eur via tax module 
 $setglobal cm_pypsa_markup off !! def = off !! regexp = off|on
