@@ -75,6 +75,7 @@ parameters
     p32_PyPSA_ElecPrice(ttot,all_regi)                  "PyPSA import: Electricity prices [$/MWh]"
     p32_PyPSA_Curtailment(ttot,all_regi,all_te)         "PyPSA import: Curtailment by technology [MWh]"
     p32_preInvCap(ttot,all_regi,all_te)                 "PyPSA export: Pre-investment capacities [TW]"
+    p32_discountRate(ttot)                              "PyPSA export: Interest rate / discount rate aggregated across all regions in regPy32 [1]"
     pm_Markup(ttot,all_regi,all_te)                     "PyPSA calculation: Markup = Market value - electricity price [T$/TWa]"
 ;
 

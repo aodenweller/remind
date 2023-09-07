@@ -38,13 +38,26 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
     - vm_deltaCap.l(t,regi,te,"1")$(tPy32(t) AND regPy32(regi) AND tePy32(te))
     * (1 - vm_capEarlyReti.l(t,regi,te))$(tPy32(t) AND regPy32(regi) AND tePy32(te)));
 
+  !! Capital interest rate for aggregated region
+  p32_discountRate(ttot)$(ttot.val gt 2005 and ttot.val le 2130) =
+    ( (  ( sum(regPy32(regi), vm_cons.l(ttot+1,regi)) / sum(regPy32(regi), pm_pop(ttot+1,regi)) )
+       / ( sum(regPy32(regi), vm_cons.l(ttot-1,regi)) / sum(regPy32(regi), pm_pop(ttot-1,regi)) )
+      )
+      ** (1 / ( pm_ttot_val(ttot+1)- pm_ttot_val(ttot-1)))
+      - 1
+    )
+    + sum(regPy32(regi), pm_prtp(regi)) / card(regPy32)
+  ;
+
+  p32_discountRate(ttot)$(ttot.val gt 2100) = 0.05;
+
   !! Export REMIND output data for PyPSA (REMIND2PyPSA.gdx)
   !! Don't use fulldata.gdx so that we keep track of which variables are exported to PyPSA
   Execute_Unload "REMIND2PyPSAEUR.gdx",
     !! REMIND to PyPSA
     tPy32, regPy32, tePy32, !! General info: Coupled time steps, regions and technologies
     v32_usableSeDisp, !! Load
-    vm_costTeCapital, pm_data, p_r, !! Capital cost components
+    vm_costTeCapital, pm_data, p_r, p32_discountRate, !! Capital cost components
     pm_eta_conv, pm_dataeta, pm_PEPrice, pe2se, p_priceCO2, fm_dataemiglob  !! Marginal cost components
     p32_preInvCap, !! Pre-investment capacities
     v32_usableSeTeDisp, !! For weighted averages
