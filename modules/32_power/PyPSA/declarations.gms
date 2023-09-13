@@ -69,13 +69,15 @@ v32_flexPriceShareMin(tall,all_regi,all_te)         "possible minimum of share o
 ***------------------------------------------------------------
 
 parameters
+    p32_preInvCap(ttot,all_regi,all_te)                 "PyPSA export: Pre-investment capacities [TW]"
+    p32_discountRate(ttot)                              "PyPSA export: Interest rate / discount rate aggregated across all regions in regPy32 [1]"
     p32_PyPSA_CF(ttot,all_regi,all_te)                  "PyPSA import: Capacity factors [1]"
     p32_PyPSA_shSeEl(ttot,all_regi,all_te)              "PyPSA import: Electricity generation share by technology [1]"
     p32_PyPSA_MV(ttot,all_regi,all_te)                  "PyPSA import: Market values [$/MWh]"
     p32_PyPSA_ElecPrice(ttot,all_regi)                  "PyPSA import: Electricity prices [$/MWh]"
-    p32_PyPSA_Curtailment(ttot,all_regi,all_te)         "PyPSA import: Curtailment by technology [MWh]"
-    p32_preInvCap(ttot,all_regi,all_te)                 "PyPSA export: Pre-investment capacities [TW]"
-    p32_discountRate(ttot)                              "PyPSA export: Interest rate / discount rate aggregated across all regions in regPy32 [1]"
+    p32_PyPSA_Curtailment(ttot,all_regi,all_te)         "PyPSA import: Curtailment by technology [MWh]"  !! Not yet implemented
+    p32_PyPSA_PeakResLoadRel(ttot,all_regi)             "PyPSA import: Peak residual load in relative terms [1]"  !! Not yet implemented
+    p32_PyPSA_PeakResLoadAbs(ttot,all_regi)             "PyPSA import: Peak residual load in absolute terms [MWh or MW]"  !! Not yet implemented
     pm_Markup(ttot,all_regi,all_te)                     "PyPSA calculation: Markup = Market value - electricity price [T$/TWa]"
 ;
 
@@ -89,13 +91,14 @@ equations
     q32_usableSeDisp(ttot,all_regi,all_enty)            "PyPSA coupling: Calculate v32_usableSeDisp"
     q32_usableSeTeDisp(ttot,all_regi,all_enty,all_te)   "PyPSA coupling: Calculate v32_usableSeTeDisp"
     q32_shSeElDisp(ttot,all_regi,all_te)                "PyPSA coupling: Calculate v32_shSeElDisp"
-$ifthen.c32_pypsa_capfac "%c32_pypsa_capfac%" == "on"
-    q32_capFac(ttot,all_regi,all_te)                 "PyPSA coupling: Set the capacity factor for VRE technologies to p32_PyPSA_CF"
-$endif.c32_pypsa_capfac
 
-$ifthen.c32_pypsa_peakcap "%c32_pypsa_peakcap%" == "on"
-    q32_peakCap(ttot,all_regi)                          "PyPSA coupling: Enforce minimum dispatchable technology to cover peak load"
-$endif.c32_pypsa_peakcap
+$ifthen "%c32_pypsa_capfac%" == "on"
+    q32_capFac(ttot,all_regi,all_te)                    "PyPSA coupling: Set the capacity factor for VRE technologies (p32_PyPSA_CF)"
+$endif
+
+$ifthen "%c32_pypsa_peakcap%" == "on"
+    q32_PeakResCap(ttot,all_regi)                       "PyPSA coupling: Require dispatchable generators to cover peak residual load (p32_PyPSA_PeakResLoadRel)"
+$endif
 
 ;
 

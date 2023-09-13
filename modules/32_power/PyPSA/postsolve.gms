@@ -38,7 +38,7 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
     - vm_deltaCap.l(t,regi,te,"1")$(tPy32(t) AND regPy32(regi) AND tePy32(te))
     * (1 - vm_capEarlyReti.l(t,regi,te))$(tPy32(t) AND regPy32(regi) AND tePy32(te)));
 
-  !! Capital interest rate for aggregated region
+  !! Capital interest rate aggregated for all regions in regPy32
   p32_discountRate(ttot)$(ttot.val gt 2005 and ttot.val le 2130) =
     ( (  ( sum(regPy32(regi), vm_cons.l(ttot+1,regi)) / sum(regPy32(regi), pm_pop(ttot+1,regi)) )
        / ( sum(regPy32(regi), vm_cons.l(ttot-1,regi)) / sum(regPy32(regi), pm_pop(ttot-1,regi)) )
@@ -48,7 +48,7 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
     )
     + sum(regPy32(regi), pm_prtp(regi)) / card(regPy32)
   ;
-
+  !! Set the interest rate to 0.05 after 2100
   p32_discountRate(ttot)$(ttot.val gt 2100) = 0.05;
 
   !! Export REMIND output data for PyPSA (REMIND2PyPSA.gdx)
@@ -64,6 +64,7 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
     !! PyPSA to REMIND
     v32_shSeElDisp  !! To downscale PyPSA generation shares to REMIND technologies
   ;
+
   !! Temporarily store and then set numeric round format and number of decimals
   sm_tmp  = logfile.nr;
   sm_tmp2 = logfile.nd;
@@ -89,6 +90,8 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_MV=market_value;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_ElecPrice=electricity_price;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Curtailment=curtailment;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_PeakResLoadRel=peak_residual_load_relative;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_PeakResLoadAbs=peak_residual_load_absolute;
 
 );
 

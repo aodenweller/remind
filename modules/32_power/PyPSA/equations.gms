@@ -324,6 +324,7 @@ q32_shSeElDisp(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te))..
 
 *** Fix capacity factors to values from PyPSA-Eur
 * TODO: Hydro
+* TODO: Include pre-factors
 $ifthen.c32_pypsa_capfac "%c32_pypsa_capfac%" == "on"
 q32_capFac(t,regi,te)$(tPy32(t) and regPy32(regi) AND tePy32(te) AND (cm_PyPSA_eq eq 1) and NOT sameas(te, "hydro"))..
   p32_PyPSA_CF(t,regi,te) * vm_cap(t,regi,te,"1")
@@ -332,12 +333,13 @@ q32_capFac(t,regi,te)$(tPy32(t) and regPy32(regi) AND tePy32(te) AND (cm_PyPSA_e
 ;
 $endif.c32_pypsa_capfac
 
-*** Require enough dispatchable capacities to always cover peak load (factor 1.43 extracted from load.csv)
+*** Require enough dispatchable capacities to always cover residual peak load
+* This is the equivalent to the operating reserve constraint above, but formulated in capacity terms
 $ifthen.c32_pypsa_peakcap "%c32_pypsa_peakcap%" == "on"
-q32_peakCap(t,regi)$(tPy32(t) AND regPy32(regi) AND (cm_PyPSA_eq eq 1))..
+q32_PeakResCap(t,regi)$(tPy32(t) AND regPy32(regi) AND (cm_PyPSA_eq eq 1))..
   sum(tePyDisp32, vm_cap(t,regi,tePyDisp32, "1"))
   =g=
-  1.43 * v32_usableSeDisp(t,regi,"seel")
+  p32_PyPSA_PeakResLoadRel(t,regi) * v32_usableSeDisp(t,regi,"seel")
 ;
 $endif.c32_pypsa_peakcap
 
