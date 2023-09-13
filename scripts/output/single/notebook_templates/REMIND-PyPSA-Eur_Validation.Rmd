@@ -120,20 +120,8 @@ if (length(rmNonOptimalFiles) > 0) {
 cat("Found", length(rm2pyFiles), "REMIND2PyPSAEUR_i.gdx files.\n")
 cat("Found", length(pyResultsDirs), "PyPSA-EUR results directories.\n")
 cat("Found", length(pyValidationDirs), "PyPSA-EUR validation directories.\n")
-cat("Found", length(pyResourcesDirs), "PyPSA-EUR resources directories.\n")
+cat("Found", length(pyResourcesDirs) / length(years), "PyPSA-EUR resources directories.\n")
 cat("Found", length(py2rmFiles), "PyPSAEUR2REMIND_i.gdx files.\n")
-
-# Throw warning if number of files does not match
-if (
-  length(unique(c(
-  length(rmFiles),
-  length(rm2pyFiles),
-  length(pyResultsDirs),
-  length(pyValidationDirs),
-  length(pyResourcesDirs) / length(years),
-  length(py2rmFiles)))) != 1) {
-    warning("Number of REMIND files and PyPSA-Eur directories does not match.\n")
-}
 
 # Read coupled years from REMIND
 years <- gdx::readGDX(rmFiles[1], "tPy32", restore_zeros = FALSE) %>%
@@ -368,9 +356,7 @@ unique_tolerance <- function(x, tolerance = 1e-8) {
 
 # Helper function to format ggplot subtitles
 regSubtitle <- function(r) {
-  region <- gsub('[c()"]| \\[\\]', "", r)
-  region <- gsub(",", " +", region)
-  paste("Region(s):", region)
+  paste(r, collapse = " + ")
 }
 ```
 
@@ -453,12 +439,12 @@ dataPreInvCapPyPSA <- readPyPSAcsv(
 for (r in regList){
 
   dataPreInvCapREMINDplot <- dataPreInvCapREMIND %>%
-    filter(region %in% r[[1]]) %>%
+    filter(region %in% r) %>%
     group_by(.data$year, .data$technology, .data$iteration) %>%
     summarise(preInvCap = sum(preInvCap))
 
   dataPreInvCapPyPSAplot <- dataPreInvCapPyPSA %>%
-    filter(region %in% r[[1]]) %>%
+    filter(region %in% r) %>%
     group_by(.data$year, .data$carrier, .data$iteration) %>%
     summarise(preInvCap = sum(preInvCap))
 
@@ -488,7 +474,7 @@ for (r in regList){
 
 Costs are the same across all regions as PyPSA-Eur doesn't have regionalised costs (yet). Costs from REMIND are hence aggregated.
 
-```{r specific capital costs new}
+```{r specific capital costs}
 # REMIND
 dataCapexREMIND <- readREMINDgdx(
     paths = rm2pyFiles,
@@ -567,60 +553,9 @@ pCapexIter <- ggplot() +
 print(pCapexIter)
 ```
 
-```{r specific capital costs}
-
-pyResourcesDirsOld <- list.dirs(pyResourcesDir,
-                            recursive = FALSE,
-                            full.names = TRUE)
-# Add "/" to end of directory names
-pyResourcesDirsOld <- paste0(pyResourcesDirsOld, "/")
-
-# Loop over iteration directories and years to read costs.csv files
-# for each (iteration, year) combination
-costs_list <- list()
-for (i in seq_along(pyResourcesDirsOld)) {
-  # Get subdirectories labeled "y" for year followed by a year number
-  pyYearDirs <- list.dirs(pyResourcesDirsOld[i],
-                           recursive = FALSE,
-                           full.names = TRUE)
-  # Loop over year directories to read costs.csv files
-  for (j in seq_along(pyYearDirs)) {
-    # Get path to costs.csv file
-    costs_file <- file.path(pyYearDirs[j], "costs.csv")
-    # Read costs.csv file into data frame
-    costs_df <- read.csv(costs_file)
-    # Add iteration and year columns to data frame
-    iteration <- gsub("i", "", basename(pyResourcesDirsOld[i]))
-    year <- gsub("y", "", basename(pyYearDirs[j]))
-    costs_df$iteration <- iteration
-    costs_df$year <- year
-    # Add data frame to list
-    costs_list[[length(costs_list) + 1]] <- costs_df
-  }
-}
-
-# Combine the data frames into a single data frame.
-costs_df <- do.call(rbind, costs_list)
-# Only select cost data coming from REMIND-EU
-costs_df <- subset(costs_df, source == "REMIND-EU")
-costs_df$technology <- str_replace_all(costs_df$technology, "-", " ")
-
-# Plot investment costs for all technologies with different markers for each year and iterations offset along the y-axis
-# Only investment costs
-label <- "Investment Costs"
-plot_data <- subset(costs_df, parameter == "investment")
-ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
-    geom_point(position = position_dodge(width = 0.3)) +
-    labs(y = "technology", x = paste0(label," [", unique(plot_data$unit), "]")) +
-    scale_color_discrete(name = "Year") + 
-    scale_shape_discrete(name = "Iteration") +
-    scale_y_discrete(labels = function(y) str_wrap(y, width = 15), limits = rev) +
-    ggtitle(label)
-```
-
 ### Fixed O&M costs
 
-```{r fixed o&m costs new}
+```{r fixed o&m costs}
 # REMIND
 dataFOMREMIND <- readREMINDgdx(
     paths = rm2pyFiles,
@@ -678,21 +613,9 @@ pFOMYear <- ggplot() +
 print(pFOMYear)
 ```
 
-```{r fixed o&m costs}
-plot_data <- subset(costs_df, parameter == "FOM")
-label <- "Fixed O&M Costs"
-ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
-    geom_point(position = position_dodge(width = 0.3)) +
-    labs(y = "technology", x = paste0(label," [", unique(plot_data$unit), "]")) +
-    scale_color_discrete(name = "Year") + 
-    scale_shape_discrete(name = "Iteration") +
-    scale_y_discrete(labels = function(y) str_wrap(y, width = 15), limits = rev) +
-    ggtitle(label)
-```
-
 ### Lifetimes
 
-```{r lifetimes new}
+```{r lifetimes}
 dataLifetimesREMIND <- readREMINDgdx(
     paths = rm2pyFiles,
     gdxVar = "pm_data",
@@ -743,46 +666,19 @@ pLifetimes <- ggplot() +
 print(pLifetimes)
 ```
 
-```{r lifetimes}
-plot_data <- subset(costs_df, parameter == "lifetime")
-label <- "Lifetime"
-ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
-    geom_point(position = position_dodge(width = 0.3)) +
-    labs(y = "technology", x = paste0(label," [", unique(plot_data$unit), "]")) +
-    scale_color_discrete(name = "Year") + 
-    scale_shape_discrete(name = "Iteration") +
-    scale_y_discrete(labels = function(y) str_wrap(y, width = 15), limits = rev) +
-    ggtitle(label)
-```
-
 ### Discount rates
 
-Work in progress...
-```{r discount rates new}
+ToDo
+
+```{r discount rates}
 
 #TODO: Change to p32_discountRate
 
 ```
 
-```{r discount rates}
-plot_data <- subset(costs_df, parameter == "discount_rate")
-# Throw warning if discount rate negative
-if (any(plot_data$value < 0)) {
-  warning("Negative discount rates found")
-}
-label <- "Discount Rate"
-ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
-    geom_point(position = position_dodge(width = 0.3)) +
-    labs(y = "technology", x = paste0(label," [", unique(plot_data$unit), "]")) +
-    scale_color_discrete(name = "Year") + 
-    scale_shape_discrete(name = "Iteration") +
-    scale_y_discrete(labels = function(y) str_wrap(y, width = 15), limits = rev) +
-    ggtitle(label)
-```
-
 ### Variable O&M costs
 
-```{r variable o&m costs new}
+```{r variable o&m costs}
 
 dataVOMREMIND <- readREMINDgdx(
   paths = rm2pyFiles,
@@ -864,21 +760,9 @@ print(pVOMIter)
 
 ```
 
-```{r variable o&m costs}
-plot_data <- subset(costs_df, parameter == "VOM")
-label <- "Variable O&M Costs"
-ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
-    geom_point(position = position_dodge(width = 0.3)) +
-    labs(y = "technology", x = paste0(label," [", unique(plot_data$unit), "]")) +
-    scale_color_discrete(name = "Year") + 
-    scale_shape_discrete(name = "Iteration") +
-    scale_y_discrete(labels = function(y) str_wrap(y, width = 15), limits = rev) +
-    ggtitle(label)
-```
-
 ### Fuel costs
 
-```{r fuel costs new}
+```{r fuel costs}
 
 # Read pe2se mapping from REMIND
 pe2seTech <- gdx::readGDX(rmFiles[1], "pe2se") %>%
@@ -973,25 +857,9 @@ print(pFuelCostsIter)
 
 ```
 
-```{r fuel costs}
-plot_data <- subset(costs_df, parameter == "fuel")
-# Throw warning if fuel cost negative
-if (any(plot_data$value < 0)) {
-  warning("Negative fuel costs found")
-}
-label <- "Fuel Costs"
-ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
-    geom_point(position = position_dodge(width = 0.3)) +
-    labs(y = "technology", x = paste0(label," [", unique(plot_data$unit), "]")) +
-    scale_color_discrete(name = "Year") + 
-    scale_shape_discrete(name = "Iteration") +
-    scale_y_discrete(labels = function(y) str_wrap(y, width = 15), limits = rev) +
-    ggtitle(label)
-```
-
 ### Efficiencies
 
-```{r efficiencies new}
+```{r efficiencies}
 # Technologies for which eta is constant
 dataEtaConvREMIND <- readREMINDgdx(
     paths = rm2pyFiles,
@@ -1082,28 +950,9 @@ pEtaIter <- ggplot() +
 print(pEtaIter)
 ```
 
-```{r efficiencies}
-plot_data <- subset(costs_df, parameter == "efficiency")
-# Throw warning if efficiency negative or above 1
-if (any(plot_data$value < 0)) {
-  warning("Negative efficiencies found")
-}
-if (any(plot_data$value > 1)) {
-  warning("Efficiencies above 1 found")
-}
-label <- "Efficiency"
-ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
-    geom_point(position = position_dodge(width = 0.3)) +
-    labs(y = "technology", x = paste0(label," [", unique(plot_data$unit), "]")) +
-    scale_color_discrete(name = "Year") + 
-    scale_shape_discrete(name = "Iteration") +
-    scale_y_discrete(labels = function(y) str_wrap(y, width = 15), limits = rev) +
-    ggtitle(label)
-```
-
 ### CO2 intensity
 
-```{r co2 intensity new}
+```{r co2 intensity}
 
 # Read REMIND data
 dataCO2intREMIND <- readREMINDgdx(
@@ -1190,18 +1039,6 @@ print(pCO2intIter)
 
 ```
 
-```{r co2 intensity}
-plot_data <- subset(costs_df, parameter == "CO2 intensity")
-label <- "CO2 intensity"
-ggplot(plot_data, aes(x = value, y = technology, group = factor(desc(iteration)), shape = factor(iteration), color = year)) +
-    geom_point(position = position_dodge(width = 0.3)) +
-    labs(y = "technology", x = paste0(label," [", unique(plot_data$unit), "]")) +
-    scale_color_discrete(name = "Year") + 
-    scale_shape_discrete(name = "Iteration") +
-    scale_y_discrete(labels = function(y) str_wrap(y, width = 15), limits = rev) +
-    ggtitle(label)
-```
-
 ### CO2 prices
 
 TODO: Which weights to use for CO2 prices?
@@ -1285,7 +1122,7 @@ dataCapfacPyPSA <- readPyPSAcsv(
 for (r in regList){
 
   dataCapfacREMINDplot <- full_join(dataCapREMIND, dataUsableSeTeDispREMIND) %>%
-    filter(region %in% r[[1]],
+    filter(region %in% r,
           vm_cap != 0) %>%
     group_by(year, technology, iteration) %>%
     # First calculate capacity factor for each REMIND technology across all regions
@@ -1299,7 +1136,7 @@ for (r in regList){
     rename(value = capfac)
 
   dataCapfacPyPSAplot <- dataCapfacPyPSA %>%
-    filter(region %in% r[[1]]) %>%
+    filter(region %in% r) %>%
     filter(value != 0) %>%
     group_by(year, carrier, iteration) %>%
     summarise(value = mean(value)) %>%  # ToDO: This is not exactly correct for all regions
@@ -1376,12 +1213,12 @@ dataCurtailmentPyPSA <- readPyPSAcsv(
 for (r in regList) {
 
   dataCurtailmentplotREMIND <- dataCurtailmentREMIND %>%
-    filter(region %in% r[[1]]) %>%
+    filter(region %in% r) %>%
     group_by(year, technology, iteration) %>%
     summarise(v32_storloss = sum(v32_storloss))
 
   dataCurtailmentplotPyPSA <- dataCurtailmentPyPSA %>%
-    filter(region %in% r[[1]]) %>%
+    filter(region %in% r) %>%
     group_by(year, technology, iteration) %>%
     summarise(value = sum(value))
 
@@ -1462,12 +1299,12 @@ dataMarkupPyPSA <- dataMarketValuePyPSA %>%
 for (r in regList) {
 
   dataMarkupPlotREMIND <- dataMarkupREMIND %>%
-    filter(region %in% r[[1]]) %>%
+    filter(region %in% r) %>%
     group_by(year, technology, iteration) %>%
     summarise(value = mean(value))  # ToDo: Incorrect aggregation
 
   dataMarkupPlotPyPSA <- dataMarkupPyPSA %>%
-    filter(region %in% r[[1]]) %>%
+    filter(region %in% r) %>%
     group_by(year, carrier, iteration) %>%
     summarise(value = mean(value))  # ToDo: Incorrect aggregation
 
@@ -1520,7 +1357,7 @@ dataMarkUpRevenue <- readREMINDgdx(
 for (r in regList) {
   
   dataMarkUpRevenuePlot <- dataMarkUpRevenue %>%
-    filter(region %in% r[[1]]) %>%
+    filter(region %in% r) %>%
     group_by(year, iteration) %>%
     summarise(value = sum(value))
 
@@ -1570,7 +1407,7 @@ dataCapREMIND <- readREMINDgdx(
 for (r in regList) {
 
   dataCapREMINDplot <- dataCapREMIND %>%
-    filter(region %in% r[[1]]) %>%
+    filter(region %in% r) %>%
     group_by(year, technology, iteration) %>%
     summarise(cap = sum(cap))
 
@@ -1660,13 +1497,13 @@ dataCapInvestPyPSA <- full_join(dataPreInvCapPyPSA, dataCapPyPSA) %>%
 for (r in regList) {
   for (i in rmIterations){
     dataCapInvestREMINDplot <- dataCapInvestREMIND %>%
-      filter(region %in% r[[1]],
+      filter(region %in% r,
              iteration == i) %>%
       group_by(year, technology, variable) %>%
       summarise(value = sum(value))
 
     dataCapInvestPyPSAplot <- dataCapInvestPyPSA %>%
-      filter(region %in% r[[1]],
+      filter(region %in% r,
              iteration == i) %>%
       group_by(year, technology, variable) %>%
       summarise(value = sum(value))
@@ -1717,13 +1554,13 @@ for (r in regList) {
 for (r in regList){
   for (y in years) {
     dataCapInvestREMINDplot <- dataCapInvestREMIND %>%
-      filter(region %in% r[[1]],
+      filter(region %in% r,
              year == y) %>%
       group_by(iteration, technology, variable) %>%
       summarise(value = sum(value))
 
     dataCapInvestPyPSAplot <- dataCapInvestPyPSA %>%
-      filter(region %in% r[[1]],
+      filter(region %in% r,
              year == y) %>%
       group_by(iteration, technology, variable) %>%
       summarise(value = sum(value))
@@ -1805,7 +1642,7 @@ for (r in regList){
   for (i in rmIterations){
 
     dataCapREMINDploti <- dataCapREMINDplot %>%
-      filter(region %in% r[[1]],
+      filter(region %in% r,
              iteration == i) %>%
       group_by(year, technology) %>%
       summarise(value = sum(value))
@@ -1815,7 +1652,7 @@ for (r in regList){
       summarise(value = sum(value))
 
     dataCapPyPSAploti <- dataCapPyPSAplot %>%
-      filter(region %in% r[[1]],
+      filter(region %in% r,
              iteration == i) %>%
       group_by(year, technology) %>%
       summarise(value = sum(value))
@@ -1875,7 +1712,7 @@ for (r in regList){
 for (r in regList) {
   for (y in years) {
     dataCapREMINDploty <- dataCapREMINDplot %>%
-      filter(region %in% r[[1]],
+      filter(region %in% r,
              year == y) %>%
       group_by(iteration, technology) %>%
       summarise(value = sum(value))
@@ -1885,7 +1722,7 @@ for (r in regList) {
       summarise(value = sum(value))
 
     dataCapPyPSAploty <- dataCapPyPSAplot %>%
-      filter(region %in% r[[1]],
+      filter(region %in% r,
              year == y) %>%
       group_by(iteration, technology) %>%
       summarise(value = sum(value))
@@ -1959,7 +1796,7 @@ dataGenREMIND <- readREMINDgdx(
 
 for (r in regList) {
   dataGenREMINDplot <- dataGenREMIND %>%
-    filter(region %in% r[[1]]) %>%
+    filter(region %in% r) %>%
     group_by(year, technology, iteration) %>%
     summarise(value = sum(value))
 
@@ -2010,7 +1847,7 @@ for (r in regList) {
   for (i in rmIterations){
 
     dataGenREMINDploti <- dataGenREMIND %>%
-      filter(region %in% r[[1]],
+      filter(region %in% r,
              iteration == i) %>%
       group_by(year, technology) %>%
       summarise(value = sum(value))
@@ -2020,7 +1857,7 @@ for (r in regList) {
       summarise(value = sum(value))
 
     dataGenPyPSAploti <- dataGenPyPSA %>%
-      filter(region %in% r[[1]],
+      filter(region %in% r,
              iteration == i) %>%
       group_by(year, technology) %>%
       summarise(value = sum(value))
@@ -2081,7 +1918,7 @@ for (r in regList) {
   for (y in years) {
 
     dataGenREMINDploty <- dataGenREMIND %>%
-      filter(region %in% r[[1]],
+      filter(region %in% r,
              year == y) %>%
       group_by(iteration, technology) %>%
       summarise(value = sum(value))
@@ -2091,7 +1928,7 @@ for (r in regList) {
       summarise(value = sum(value))
 
     dataGenPyPSAploty <- dataGenPyPSA %>%
-      filter(region %in% r[[1]],
+      filter(region %in% r,
              year == y) %>%
       group_by(iteration, technology) %>%
       summarise(value = sum(value))
@@ -2398,7 +2235,7 @@ print(pTimeDiff)
 
 ### Capacity factors
 
-```{r capacity factors}
+```{r capacity factors old}
 if (FALSE){
 # REMIND capacity factors
 # Capacity factors are handled differently for dispatchable and VRE technologies
