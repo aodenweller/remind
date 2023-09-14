@@ -160,9 +160,9 @@ v21_taxrevImport.l(t,regi,tradePe) = 0;
 v21_taxrevChProdStartYear.l(t,regi) = 0;
 
 *** initialise PyPSA electricity price markup/markdown
-$ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
-pm_Markup(ttot,all_regi,all_te) = 0;
-v21_taxrevMarkup.l(ttot,all_regi) = 0;
-$endif.cm_pypsa_markup
+$ifthen "%cm_pypsa_markup%" == "on"
+vm_PyPSAMarkup.l(ttot,all_regi,all_te) = 0;
+v21_taxrevPyPSAMarkup.l(ttot,all_regi) = 0;
+$endif
 
 *** EOF ./modules/21_tax/on/preloop.gms

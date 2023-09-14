@@ -322,52 +322,66 @@ q32_shSeElDisp(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te))..
   v32_usableSeTeDisp(t,regi,"seel",te)
 ;
 
-*** Fix capacity factors to values from PyPSA-Eur
+***------------------------------------------------------------
+***            PyPSA-Eur to REMIND: Capacity factors
+***------------------------------------------------------------
+*** Pre-factor equation to set capacity factors
+*** This equation basically requires that v32_usableSeTeDisp / vm_cap = p32_PyPSA_CF
+*** The pre-factor should depend on the technology:
+*** (1) For baseload technologies: When the share increases, the capacity factor increases.
+*** (2) For peaker technologies and VREs: When the share increases, the capacity factor decreases.
+*** There are two parameters we need to set to define the pre-factor:
+*** (i) What is the cutoff value between (1) and (2) in terms of the capacity factor. Currently set to 0.5.
+*** (ii) What is the slope of the pre-factor. Currently set to 0.5.
 * TODO: Hydro
-* TODO: Include pre-factors
-$ifthen.c32_pypsa_capfac "%c32_pypsa_capfac%" == "on"
+$ifthen "%c32_pypsa_capfac%" == "on"
 q32_capFac(t,regi,te)$(tPy32(t) and regPy32(regi) AND tePy32(te) AND (cm_PyPSA_eq eq 1) and NOT sameas(te, "hydro"))..
-  p32_PyPSA_CF(t,regi,te) * vm_cap(t,regi,te,"1")
-  =e=
   v32_usableSeTeDisp(t,regi,"seel",te)
+  =e=
+    vm_cap(t,regi,te,"1")
+  * (   p32_PyPSA_CF(t,regi,te) * ( 1 + 0.5 * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )$(p32_PyPSA_CF(t,regi,te) ge 0.5)
+      + p32_PyPSA_CF(t,regi,te) * ( 1 - 0.5 * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )$(p32_PyPSA_CF(t,regi,te) lt 0.5)
+    )
 ;
-$endif.c32_pypsa_capfac
+$endif
 
-*** Require enough dispatchable capacities to always cover residual peak load
-* This is the equivalent to the operating reserve constraint above, but formulated in capacity terms
-$ifthen.c32_pypsa_peakcap "%c32_pypsa_peakcap%" == "on"
+***------------------------------------------------------------
+***            PyPSA-Eur to REMIND: Markups / Markdowns
+***------------------------------------------------------------
+*** Pre-factor equation to calculate markups and markdowns of technologies
+*** This equation calculates vm_PyPSAMarkup, which is used in 21_tax/on to subsidise or penalise technologies.
+*** The pre-factor is based on the following intuition.
+*** For all technologies: When the share increases, the market value (and thus the markup) decreases.
+*** The negative slope of this decrease is defined by the negative of the value factor (- p32_PyPSA_ValueFactor).
+*** As an example, this means that:
+*** (1) For peaker technologies (high value factor): When the share increases, market values decrease to a large extent.
+*** (2) For VRE technologies (low value factor): When the share increases, market values decrease to a smaller extent.
+$ifthen "%cm_pypsa_markup%" == "on"
+q32_MarkUp(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (cm_PyPSA_eq eq 1))..
+	vm_PyPSAMarkup(t,regi,te)
+	=e=
+    (   p32_PyPSA_MV(t,regi,te) * ( 1 - p32_PyPSA_ValueFactor(t,regi,te) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
+      - p32_PyPSA_ElecPrice(t,regi)
+    )
+  * sm_TWa_2_MWh / 1e12
+;
+$endif
+
+***------------------------------------------------------------
+***            PyPSA-Eur to REMIND: Peak residual load
+***------------------------------------------------------------
+*** Pre-factor equation to set the minimum dispatchable capacity to always cover peak residual load.
+*** This constraint is formulated relative to the average load, v32_usableSeDisp [TWa/a].
+*** The pre-factor is based on the following intuition:
+*** If the sum of VRE shares increases, peak residual load increases.
+*** Set the slope to 0.5 for now.
+$ifthen "%c32_pypsa_peakcap%" == "on"
 q32_PeakResCap(t,regi)$(tPy32(t) AND regPy32(regi) AND (cm_PyPSA_eq eq 1))..
   sum(tePyDisp32, vm_cap(t,regi,tePyDisp32, "1"))
   =g=
-  p32_PyPSA_PeakResLoadRel(t,regi) * v32_usableSeDisp(t,regi,"seel")
+    p32_PyPSA_PeakResLoadRel(t,regi) * ( 1 + 0.5 * ( sum(tePyVRE32, v32_shSeElDisp(t,regi,tePyVRE32) - p32_PyPSA_shSeEl(t,regi,tePyVRE32)) ) )
+  * v32_usableSeDisp(t,regi,"seel")
 ;
-$endif.c32_pypsa_peakcap
-
-$ontext
-*** Pre-factor equation to set the capacity factor (from PyPSA)
-q32_capFac(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) and (cm_PyPSA_eq ne 0))..
-  vm_capFac(t,regi,te) !! * 1$(tPy32(t) AND regPy32(regi) AND tePy32(te))
-  =e=
-    pm_cf(t,regi,te)
-  * (1 + 0.5 * ((v32_shSeElDisp(t,regi,te)) - p32_PyPSA_shSeEl(t,regi,te)))
-  * 1$(pm_cf(t,regi,te) ge 0.5)
-  + pm_cf(t,regi,te)
-  * (1 - 0.5 * ((v32_shSeElDisp(t,regi,te)) - p32_PyPSA_shSeEl(t,regi,te)))
-  * 1$(pm_cf(t,regi,te) lt 0.5)
-;
-$offtext
-
-$ontext
-*** Pre-factor Equation to set the market value (from PyPSA)
-$ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
-q32_MarkUp(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (cm_PyPSA_eq eq 1))..
-	(vm_Markup(t,regi,te)) * 1$(cm_PyPSA_eq eq 1)
-	=e=
-  ( ( p32_PyPSA_MV(t,regi,te) - p32_PyPSA_ElecPrice(t,regi) ) 
-  * sm_TWa_2_MWh / 1e12
-  ) * 1$(cm_PyPSA_eq eq 1)
-;
-$endif.cm_pypsa_markup
-$offtext
+$endif
 
 *** EOF ./modules/32_power/PyPSA/equations.gms

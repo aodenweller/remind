@@ -55,15 +55,15 @@ p21_taxrevFlex0(ttot,regi)   =  sum(en2en(enty,enty2,te)$(teFlexTax(te)),
                                         -vm_flexAdj.l(ttot,regi,te) * vm_demSe.l(ttot,regi,enty,enty2,te));
 p21_taxrevImport0(ttot,regi,tradePe) = p21_tau_Import(ttot,regi,tradePe) * pm_pvp(ttot,tradePe) / pm_pvp(ttot,"good") * vm_Mport.l(ttot,regi,tradePe);
 p21_taxrevChProdStartYear0(t,regi) = sum(en2en(enty,enty2,te), vm_changeProdStartyearCost.l(t,regi,te)$( (t.val gt 2005) AND (t.val eq cm_startyear ) ) );
-$ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
-p21_taxrevMarkup0(ttot,regi) = sum(en2en(enty,enty2,te)$(tePy32(te)),
-                                   - pm_Markup(ttot,regi,te) * ( vm_prodSe.l(ttot,regi,enty,enty2,te) - v32_storloss.l(ttot,regi,te) )
+$ifthen "%cm_pypsa_markup%" == "on"
+p21_taxrevPyPSAMarkup0(ttot,regi) = sum(en2en(enty,enty2,te)$(tePy32(te)),
+                                   - vm_PyPSAMarkup.l(ttot,regi,te) * ( vm_prodSe.l(ttot,regi,enty,enty2,te) - v32_storloss.l(ttot,regi,te) )
                                   );
-p21_taxrevMarkup_iter(iteration+1,ttot,regi) = v21_taxrevMarkup.l(ttot,regi);
-display "p21_taxrevMarkup0 in postsolve.gms";
+p21_taxrevPyPSAMarkup_iter(iteration+1,ttot,regi) = v21_taxrevPyPSAMarkup.l(ttot,regi);
+display "p21_taxrevPyPSAMarkup0 in postsolve.gms";
 display iteration;
-display p21_taxrevMarkup0;
-$endif.cm_pypsa_markup
+display p21_taxrevPyPSAMarkup0;
+$endif
 
 
 

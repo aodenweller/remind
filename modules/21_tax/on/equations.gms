@@ -60,7 +60,7 @@ $ifthen.cm_implicitPePriceTarget not "%cm_implicitPePriceTarget%" == "off"
   + sum(entyPe,vm_taxrevimplicitPePriceTax(t,regi,entyPe))
 $endIf.cm_implicitPePriceTarget
 $ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
-  + v21_taxrevMarkup(t,regi)$(tPy32(t) AND regPy32(regi) AND (cm_PyPSA_eq eq 1))
+  + v21_taxrevPyPSAMarkup(t,regi)$(tPy32(t) AND regPy32(regi) AND (cm_PyPSA_eq eq 1))
 $endif.cm_pypsa_markup
 ;
 
@@ -311,18 +311,18 @@ q21_taxrevChProdStartYear(t,regi)$(t.val ge max(2010,cm_startyear))..
 ;
 
 ***---------------------------------------------------------------------------
-*'  Markup from PyPSA-Eur
+*'  Electricity technology markup from PyPSA-Eur
 ***---------------------------------------------------------------------------
-*** pm_Markup is the markup/markdown for each generation technology
-$ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
-q21_taxrevMarkup(t,regi)$(tPy32(t) AND regPy32(regi) AND (cm_PyPSA_eq eq 1))..
-  v21_taxrevMarkup(t,regi)
+*** vm_PyPSAMarkup is the markup/markdown for each generation technology
+$ifthen "%cm_pypsa_markup%" == "on"
+q21_taxrevPyPSAMarkup(t,regi)$(tPy32(t) AND regPy32(regi) AND (cm_PyPSA_eq eq 1))..
+  v21_taxrevPyPSAMarkup(t,regi)
   =e=
     sum (en2en(enty,enty2,te)$(tePy32(te)),
-         - pm_Markup(t,regi,te) * ( vm_prodSe(t,regi,enty,enty2,te) - v32_storloss(t,regi,te) )
+         - vm_PyPSAMarkup(t,regi,te) * ( vm_prodSe(t,regi,enty,enty2,te) - v32_storloss(t,regi,te) )
         )
-  - p21_taxrevMarkup0(t,regi) 
+  - p21_taxrevPyPSAMarkup0(t,regi) 
 ;
-$endif.cm_pypsa_markup
+$endif
 
 *** EOF ./modules/21_tax/on/equations.gms

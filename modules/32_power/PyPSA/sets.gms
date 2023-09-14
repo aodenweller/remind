@@ -16,6 +16,7 @@ sets
 $ifthen "%c32_pypsa_multiregion%" == "on"
     regPy32(all_regi)           "Regions coupled to PyPSA"
         /DEU, FRA, EWN/
+
 $elseif "%c32_pypsa_multiregion%" == "off"
     regPy32(all_regi)           "Regions coupled to PyPSA"
         /DEU/

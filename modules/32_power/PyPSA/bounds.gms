@@ -18,33 +18,29 @@ if ((iteration.val gt c32_startIter_PyPSA),
 
 * Read in values after first PyPSA run in previous iteration
 if ((cm_pypsa_eq eq 1),
-* Capacity factor for coupled dispatchable technologies without grades (tePyDisp32)
-$ifthen.c32_pypsa_capfac "%c32_pypsa_capfac%" == "on"
-pm_cf(tPy32,regPy32,tePyDisp32) = p32_PyPSA_CF(tPy32,regPy32,tePyDisp32);
-$endif.c32_pypsa_capfac
 
-* Capacity factor for VRE technologies (with grades) are set via q32_capFacVRE (equations.gms)
-* Bounds for vm_capFac for VRE technologies are set and described below
+* Capacity factors: Overwrite pm_cf for dispatchable technologies
+* This is probably redundant as vm_capfac is not fixed to pm_cf any longer, but free
+* ToDo: Check capacity factor reporting, maybe set pm_cf = vm_capfac.l in postsolve for reporting
+$ifthen "%c32_pypsa_capfac%" == "on"
+  pm_cf(tPy32,regPy32,tePyDisp32) = p32_PyPSA_CF(tPy32,regPy32,tePyDisp32);
+$endif
 
-* Calculate markup and convert to T$/TWa
-$ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
-pm_Markup(tPy32,regPy32,tePy32) = ( p32_PyPSA_MV(tPy32,regPy32,tePy32)
-                                  - p32_PyPSA_ElecPrice(tPy32,regPy32) )
-                                  * sm_TWa_2_MWh / 1e12;
-$endif.cm_pypsa_markup
-
-$ifthen.c32_pypsa_curtailment "%c32_pypsa_curtailment%" == "on"
-if ((cm_PyPSA_eq eq 1),
+* Read in curtailment at some point?
+$ifthen "%c32_pypsa_curtailment%" == "on"
   v32_storloss.fx(tPy32,regPy32,tePyVRE32) = p32_PyPSA_Curtailment / sm_TWa_2_MWh;
-);
-$endif.c32_pypsa_curtailment
+$endif
 
-$ifthen.c32_pypsa_curtailment "%c32_pypsa_curtailment%" == "off"
-if ((cm_PyPSA_eq eq 1),
+* If not, set curtailment to zero
+* ToDO: Rethink how to handle curtailment and storage losses.
+$ifthen "%c32_pypsa_curtailment%" == "off"
   v32_storloss.fx(tPy32,regPy32,tePy32) = 0;
-);
-$endif.c32_pypsa_curtailment
+$endif
 
+* Calculate value factor to parametrise the pre-factor equation for markups
+$ifthen "%cm_pypsa_markup%" == "on"
+  p32_PyPSA_ValueFactor(tPy32,regPy32,tePy32) = p32_PyPSA_MV(tPy32,regPy32,tePy32) / p32_PyPSA_ElecPrice(tPy32,regPy32)
+$endif
 );
 
 ***------------------------------------------------------------
@@ -115,16 +111,14 @@ vm_cap.fx(t,regi,"elh2VRE",rlf) = 0;
 ***------------------------------------------------------------
 
 * All capacity factors come from PyPSA-Eur.
-* For dispatchable technologies, vm_capFac is fixed to pm_cf (see above), which is overwritten with p32_PyPSA_CF in part 1/2.
-* (ToDo: Include a pre-factor equation that includes a gradient/slope.)
-* For VRE technologies, here we set vm_capFac free so that REMIND can adjust it using equation q32_capFacVRE.
-* vm_capFac can be larger than 1 since it is used as a "correction factor" so that the VRE capacity factor equals p32_PyPSA_CF.
-$ifthen.c32_pypsa_capfac "%c32_pypsa_capfac%" == "on"
+* Set vm_capFac free here, so that REMIND can adjust it freely to match the capacity factor from PyPSA-Eur (equation q32_capFac).
+* vm_capFac can be larger than 1 since it is used as a correction factor. Limit to between 0 and 2 here.
+$ifthen "%c32_pypsa_capfac%" == "on"
 if ((cm_PyPSA_eq eq 1),
   vm_capFac.lo(tPy32,regPy32,tePy32) = 0;
   vm_capFac.up(tPy32,regPy32,tePy32) = 2;
 );
-$endif.c32_pypsa_capfac
+$endif
 
 * TEMPORARY: Require a minimum of 600 TWh load in Germany
 * v32_usableSeDisp.lo(tPy32,"DEU","seel") = 600 / 8760;

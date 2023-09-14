@@ -91,7 +91,6 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_ElecPrice=electricity_price;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Curtailment=curtailment;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_PeakResLoadRel=peak_residual_load_relative;
-  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_PeakResLoadAbs=peak_residual_load_absolute;
 
 );
 
