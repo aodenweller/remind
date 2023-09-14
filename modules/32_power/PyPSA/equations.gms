@@ -302,7 +302,7 @@ q32_usableSeDisp(t,regi,entySe)$(tPy32(t) and regPy32(regi) and sameas(entySe,"s
 	v32_usableSeDisp(t,regi,entySe)
 	=e=
 	sum(pe2se(enty,entySe,te)$(tePy32(te)), vm_prodSe(t,regi,enty,entySe,te))
-	+ sum(se2se(enty,entySe,te)$(tePy32(te)), vm_prodSe(t,regi,enty,entySe,te))
+*	+ sum(se2se(enty,entySe,te)$(tePy32(te)), vm_prodSe(t,regi,enty,entySe,te))
 	- sum(te$(tePy32(te) and teVRE(te)), v32_storloss(t,regi,te) )
 ;
 
@@ -311,7 +311,7 @@ q32_usableSeTeDisp(t,regi,entySe,te)$(tPy32(t) and regPy32(regi) and sameas(enty
  	v32_usableSeTeDisp(t,regi,entySe,te)
  	=e=
  	sum(pe2se(enty,entySe,te), vm_prodSe(t,regi,enty,entySe,te) )
-	+ sum(se2se(enty,entySe,te), vm_prodSe(t,regi,enty,entySe,te) )
+*	+ sum(se2se(enty,entySe,te), vm_prodSe(t,regi,enty,entySe,te) )
  	- v32_storloss(t,regi,te)$(teVRE(te))
 ;
 
