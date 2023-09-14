@@ -1350,7 +1350,7 @@ ToDO: Aggregation is not correct yet.
 # REMIND
 dataMarkupREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "pm_Markup",
+    gdxVar = "vm_PyPSAMarkup",
     columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "value"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = FALSE,
@@ -1436,7 +1436,7 @@ Here we look at the tax revenue from markups, which should approach zero over it
 # REMIND
 dataMarkUpRevenue <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "v21_taxrevMarkup",
+    gdxVar = "v21_taxrevPyPSAMarkup",
     columns = c("ttot" = "year", "all_regi" = "region", "value" = "value"),
     colFilter = list("year" = years, "region" = regions),
     restoreZeros = FALSE,
@@ -2111,6 +2111,16 @@ for (r in regList) {
     print(pGenComp)
   }
 }
+```
+
+### Generation shares
+
+Generation shares are not explicitly coupled between REMIND and PyPSA-Eur, but used to parametrise the pre-factor equations that help REMIND's convergence.
+
+```{r generation shares}
+
+
+
 ```
 
 ## Electricity price
