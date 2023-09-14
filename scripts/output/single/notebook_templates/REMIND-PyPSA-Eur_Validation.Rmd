@@ -2178,13 +2178,57 @@ for (r in regList) {
 }
 ```
 
-### Generation shares
+## Generation shares of REMIND technologies
 
-Generation shares are not explicitly coupled between REMIND and PyPSA-Eur, but used to parametrise the pre-factor equations that help REMIND's convergence.
+Generation shares are not explicitly coupled between REMIND and PyPSA-Eur, but used to parametrise the pre-factor equations to avoid oscillations. If they don't converge, there is a always a distortion in the variables passed from PyPSA-Eur to REMIND.
 
 ```{r generation shares}
 
+dataGenShareREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "v32_shSeElDisp",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "value"),
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+    restoreZeros = FALSE)
 
+dataGenSharePyPSA <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "generation_shares.csv")) %>%
+  mutate(technology = as.factor(carrier))
+
+unique_technologies <- unique(dataGenShareREMIND$technology)
+
+techset1 <- unique_technologies[1:ceiling(length(unique_technologies) / 2)]
+techset2 <- unique_technologies[(ceiling(length(unique_technologies) / 2) + 1):length(unique_technologies)]
+
+techsets <- list(techset1, techset2)
+
+for (r in regList) {
+  for (t in techsets) {
+    dataGenShareREMINDplot <- dataGenShareREMIND %>%
+      filter(region %in% r,
+             technology %in% t) %>%
+      group_by(year, iteration, technology) %>%
+      summarise(value = mean(value))  # TODO
+
+    dataGenSharePyPSAplot <- dataGenSharePyPSA %>%
+      filter(region %in% r,
+             technology %in% t) %>%
+      group_by(year, iteration, technology) %>%
+      summarise(value = mean(value))  # TODO
+
+    pGenShareYear <- ggplot() +
+      geom_line(data = dataGenShareREMINDplot, aes(x = year, y = value, color = "REMIND")) +
+      geom_line(data = dataGenSharePyPSAplot, aes(x = year, y = value, color = "PyPSA-Eur")) +
+      scale_color_discrete(name = "Model") +
+      labs(x = "Year", y = "Generation share") +
+      ggtitle("Generation shares over years", regSubtitle(r)) +
+      facet_grid(technology ~ iteration, scales = "free")
+
+    print(pGenShareYear)
+  }
+}
+
+```
 
 ```
 
