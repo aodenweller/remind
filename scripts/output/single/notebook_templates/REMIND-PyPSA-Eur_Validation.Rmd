@@ -1955,7 +1955,7 @@ for (r in regList) {
 ### Generation over years
 
 ```{r generation over years, fig.show = "hold", fig.height = 3.5}
-# REMIND
+# REMIND generation by technology
 dataGenREMIND <- readREMINDgdx(
     paths = rmFiles,
     gdxVar = "v32_usableSeTeDisp",
@@ -1968,12 +1968,26 @@ dataGenREMIND <- readREMINDgdx(
   summarise(value = sum(value)) %>%
   order.levels(technology = names(colorsTech))
 
-# PyPSA-Eur
+# REMIND load in total
+dataLoadREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "v32_usableSeDisp",
+    columns = c("ttot" = "year", "all_regi" = "region", "value" = "value"),
+    colFilter = list("year" = years, "region" = regions),
+    restoreZeros = FALSE,
+    recalcUnit = twa2twh)
+
+# PyPSA-Eur generation by technology
 dataGenPyPSA <- readPyPSAcsv(
   paths = file.path(pyValidationDirs, "generations.csv")) %>%
   mutate(value = value / 1e6) %>%  # MWh to TWh
   mutate(technology = as.factor(carrier)) %>%
   order.levels(technology = names(colorsTech))
+
+# PyPSA-Eur load in total
+dataLoadPyPSA <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "electricity_loads.csv")) %>%
+  mutate(value = value / 1e6)  # Convert MWh to TWh
 
 for (r in regList) {
   for (i in rmIterations){
@@ -1988,6 +2002,12 @@ for (r in regList) {
       group_by(year) %>%
       summarise(value = sum(value))
 
+    dataLoadREMINDploti <- dataLoadREMIND %>%
+      filter(region %in% r,
+             iteration == i) %>%
+      group_by(year) %>%
+      summarise(value = sum(value))
+
     dataGenPyPSAploti <- dataGenPyPSA %>%
       filter(region %in% r,
              iteration == i) %>%
@@ -1995,6 +2015,12 @@ for (r in regList) {
       summarise(value = sum(value))
 
     dataGenPyPSAplotitot <- dataGenPyPSAploti %>%
+      group_by(year) %>%
+      summarise(value = sum(value))
+
+    dataLoadPyPSAploti <- dataLoadPyPSA %>%
+      filter(region %in% r,
+             iteration == i) %>%
       group_by(year) %>%
       summarise(value = sum(value))
 
@@ -2012,6 +2038,10 @@ for (r in regList) {
               linewidth = 0.25,
               color = "black",
               fill = NA) +
+      geom_point(data = dataLoadREMINDploti,
+                 mapping = aes(x = year, y = value, color = "Load"),
+                 position = position_nudge(x = -1.2),
+                 shape = 4) +
       geom_bar(data = dataGenPyPSAploti,
               mapping = aes(x = year, y = value, fill = technology),
               stat = "identity",
@@ -2025,14 +2055,23 @@ for (r in regList) {
               linewidth = 0.25,
               color = "black",
               fill = NA) +
+      geom_point(data = dataLoadPyPSAploti,
+                 mapping = aes(x = year, y = value, color = "Load"),
+                 position = position_nudge(x = 1.2),
+                 shape = 4) +
       scale_fill_manual(
         name = "Technology",
         values = colorsTech,
         labels = namesTech,
+        guide = guide_legend(ncol = 2)
       ) +
       scale_linetype_manual(
         name = "Model",
         values = c("REMIND" = "solid", "PyPSA-Eur" = "dashed"),
+      ) +
+      scale_color_manual(
+        name = NULL,
+        values = c("Load" = "black"),
       ) +
       scale_x_continuous(breaks = years) +
       labs(x = "Year", y = "Generation (TWh)") +
@@ -2059,6 +2098,12 @@ for (r in regList) {
       group_by(iteration) %>%
       summarise(value = sum(value))
 
+    dataLoadREMINDploty <- dataLoadREMIND %>%
+      filter(region %in% r,
+             year == y) %>%
+      group_by(iteration) %>%
+      summarise(value = sum(value))
+
     dataGenPyPSAploty <- dataGenPyPSA %>%
       filter(region %in% r,
              year == y) %>%
@@ -2066,6 +2111,12 @@ for (r in regList) {
       summarise(value = sum(value))
 
     dataGenPyPSAplotytot <- dataGenPyPSAploty %>%
+      group_by(iteration) %>%
+      summarise(value = sum(value))
+
+    dataLoadPyPSAploty <- dataLoadPyPSA %>%
+      filter(region %in% r,
+             year == y) %>%
       group_by(iteration) %>%
       summarise(value = sum(value))
 
@@ -2083,6 +2134,10 @@ for (r in regList) {
               linewidth = 0.25,
               color = "black",
               fill = NA) +
+      geom_point(data = dataLoadREMINDploty,
+                 mapping = aes(x = iteration, y = value, color = "Load"),
+                 position = position_nudge(x = -0.2),
+                 shape = 4) +
       geom_bar(data = dataGenPyPSAploty,
               mapping = aes(x = iteration, y = value, fill = technology),
               stat = "identity",
@@ -2096,6 +2151,10 @@ for (r in regList) {
               linewidth = 0.25,
               color = "black",
               fill = NA) +
+      geom_point(data = dataLoadPyPSAploty,
+                 mapping = aes(x = iteration, y = value, color = "Load"),
+                 position = position_nudge(x = 0.2),
+                 shape = 4) +
       scale_fill_manual(
         name = "Technology",
         values = colorsTech,
@@ -2105,8 +2164,14 @@ for (r in regList) {
         name = "Model",
         values = c("REMIND" = "solid", "PyPSA-Eur" = "dashed"),
       ) +
+      scale_color_manual(
+        name = NULL,
+        values = c("Load" = "black"),
+      ) +
       labs(x = "Iteration", y = "Generation (TWh)") +
-      ggtitle(paste("Generation over iterations, year", y), regSubtitle(r))
+      scale_x_continuous(breaks = rmIterations) +
+      ggtitle(paste("Generation over iterations, year", y), regSubtitle(r)) + 
+      theme(legend.position = "none")  # Don't show legend for now
 
     print(pGenComp)
   }
@@ -2152,7 +2217,7 @@ pElecPriceYear <- ggplot() +
 if (length(regions) > 1) {
   pElecPriceYear <- pElecPriceYear + facet_grid(region ~ iteration, scales = "free")
 } else {
-  pElecPriceYear <- pElecPriceYear + facet_wrap(~ region)
+  pElecPriceYear <- pElecPriceYear + facet_wrap(~ iteration)
 }
 
 print(pElecPriceYear)
@@ -2169,7 +2234,7 @@ pElecPriceIter <- ggplot() +
 if (length(regions) > 1) {
   pElecPriceIter <- pElecPriceIter + facet_grid(region ~ year, scales = "free")
 } else {
-  pElecPriceIter <- pElecPriceIter + facet_wrap(~ region)
+  pElecPriceIter <- pElecPriceIter + facet_wrap(~ year)
 }
 
 print(pElecPriceIter)
@@ -2214,7 +2279,7 @@ pMarketValueYear <- ggplot() +
 if (length(regions) > 1) {
   pMarketValueYear <- pMarketValueYear + facet_grid(region ~ iteration, scales = "free")
 } else {
-  pMarketValueYear <- pMarketValueYear + facet_wrap(~ region)
+  pMarketValueYear <- pMarketValueYear + facet_wrap(~ iteration)
 }
 
 print(pMarketValueYear)
@@ -2232,7 +2297,7 @@ pMarketValueIter <- ggplot() +
 if (length(regions) > 1) {
   pMarketValueIter <- pMarketValueIter + facet_grid(region ~ year, scales = "free")
 } else {
-  pMarketValueIter <- pMarketValueIter + facet_wrap(~ region)
+  pMarketValueIter <- pMarketValueIter + facet_wrap(~ year)
 }
 
 print(pMarketValueIter)
