@@ -1581,19 +1581,24 @@ for (r in regList) {
     geom_line(data = dataCapREMINDplot, aes(x = year, y = cap, color = technology)) +
     scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
     labs(x = "Year", y = "Capacity (GW)") +
-    ggtitle("Optimal capacities in REMIND over years", regSubtitle(r)) +
-    facet_wrap(~ iteration)
-
-  print(pYear)
+    ggtitle("Optimal capacities in REMIND over years", regSubtitle(r))
+  
+  print(pYear + facet_wrap(~ iteration))
 
   pIter <- ggplot() +
     geom_line(data = dataCapREMINDplot, aes(x = iteration, y = cap, color = technology)) +
     scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
     labs(x = "Iteration", y = "Capacity (GW)") +
-    ggtitle("Optimal capacities in REMIND over iterations", regSubtitle(r)) +
-    facet_wrap(~ year, scales = "free")
+    scale_x_continuous(breaks = rmIterations) +
+    ggtitle("Optimal capacities in REMIND over iterations", regSubtitle(r))
 
-  print(pIter)
+  print(pIter + facet_wrap(~ year, scales = "free"))
+
+  print(pYear + facet_grid(technology ~ iteration, scales = "free", labeller = labeller(technology = namesTech)) +
+          theme(legend.position = "none"))
+
+  print(pIter + facet_grid(technology ~ year, scales = "free", labeller = labeller(technology = namesTech)) +
+          theme(legend.position = "none"))
 }
 ```
 
@@ -1772,9 +1777,9 @@ for (r in regList){
 }
 ```
 
-### Optimal capacity comparison over years
+### Optimal capacity over years
 
-```{r optimal capacity comparison over years, fig.height = 3.5}
+```{r optimal capacity over years, fig.height = 3.5}
 # REMIND
 dataCapREMIND <- readREMINDgdx(
   paths = rmFiles,
@@ -1859,6 +1864,7 @@ for (r in regList){
         name = "Technology",
         values = colorsTech,
         labels = namesTech,
+        guide = guide_legend(ncol = 2)
       ) +
       scale_linetype_manual(
         name = "Model",
@@ -1873,9 +1879,9 @@ for (r in regList){
 }
 ```
 
-### Optimal capacity comparison over iterations
+### Optimal capacity over iterations
 
-```{r optimal capacity comparison over iterations, fig.show = "hold", fig.width = 5, fig.height = 3.5}
+```{r optimal capacity over iterations, fig.show = "hold", fig.width = 5, fig.height = 3.5}
 for (r in regList) {
   for (y in years) {
     dataCapREMINDploty <- dataCapREMINDplot %>%
@@ -1936,7 +1942,8 @@ for (r in regList) {
       ) +
       labs(x = "Iteration", y = "Capacity (GW)") +
       scale_x_continuous(breaks = rmIterations) +
-      ggtitle(paste("Capacity over iterations, year", y), regSubtitle(r))
+      ggtitle(paste("Capacity over iterations, year", y), regSubtitle(r)) +
+      theme(legend.position = "none")  # Don't show legend for now
 
     print(pCapComp)
   }
@@ -2206,7 +2213,7 @@ for (r in regList) {
       ) +
       labs(x = "Iteration", y = "Generation (TWh)") +
       scale_x_continuous(breaks = rmIterations) +
-      ggtitle(paste("Generation over iterations, year", y), regSubtitle(r)) + 
+      ggtitle(paste("Generation over iterations, year", y), regSubtitle(r)) +
       theme(legend.position = "none")  # Don't show legend for now
 
     print(pGenComp)
