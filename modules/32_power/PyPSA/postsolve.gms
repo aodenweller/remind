@@ -34,16 +34,17 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
   !! Pre-investment capacities
   p32_preInvCap(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te)) =
     max(1e-8,  !! Require minimum value
-      vm_cap.l(t,regi,te,"1")$(tPy32(t) AND regPy32(regi) AND tePy32(te))
-    - vm_deltaCap.l(t,regi,te,"1")$(tPy32(t) AND regPy32(regi) AND tePy32(te))
-    * (1 - vm_capEarlyReti.l(t,regi,te))$(tPy32(t) AND regPy32(regi) AND tePy32(te)));
+        vm_cap.l(t,regi,te,"1")
+      - vm_deltaCap.l(t,regi,te,"1") * pm_ts(t) * ( 1 - vm_capEarlyReti.l(t,regi,te) )
+       )
+  ;
 
   !! Capital interest rate aggregated for all regions in regPy32
   p32_discountRate(ttot)$(ttot.val gt 2005 and ttot.val le 2130) =
     ( (  ( sum(regPy32(regi), vm_cons.l(ttot+1,regi)) / sum(regPy32(regi), pm_pop(ttot+1,regi)) )
        / ( sum(regPy32(regi), vm_cons.l(ttot-1,regi)) / sum(regPy32(regi), pm_pop(ttot-1,regi)) )
       )
-      ** (1 / ( pm_ttot_val(ttot+1)- pm_ttot_val(ttot-1)))
+      ** ( 1 / ( pm_ttot_val(ttot+1)- pm_ttot_val(ttot-1) ) )
       - 1
     )
     + sum(regPy32(regi), pm_prtp(regi)) / card(regPy32)
