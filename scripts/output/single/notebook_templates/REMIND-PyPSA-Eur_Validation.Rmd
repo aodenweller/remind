@@ -32,11 +32,12 @@ knitr::opts_chunk$set(
   echo = FALSE,
   message = FALSE,
   cache = FALSE,
+  dev = c("png", "pdf"),
+  dev.args = list(png = list(type = "cairo-png", family = "sans"), pdf = list(family = "sans", bg = "transparent")),
   fig.align = "center",
   fig.width = 11,
   fig.height = 7.5,
-  fig.path = "REMIND-PyPSA_Validation_Figures/",
-  fig.ext = "png")
+  fig.path = "REMIND-PyPSA_Validation_Figures/")
 
 # Set ggplot2 theme
 theme_set(theme_bw(base_size = 8))
@@ -171,8 +172,6 @@ techMapping <- read.csv(file.path(pyDir, "config", "technology_mapping.csv"))
 # Create mapping from REMIND to General
 rm2genTech <- setNames(techMapping$general, techMapping$remind.eu)
 rm2genTech <- rm2genTech[!duplicated(names(rm2genTech))]
-
-rm2genTech <- c(rm2genTech, "pc" = "all_coal")  # Remove later
 
 # Create mapping from PyPSA-Eur to General
 py2genTech <- setNames(techMapping$general, techMapping$pypsa.eur)
@@ -436,7 +435,8 @@ dataPreInvCapPyPSA <- readPyPSAcsv(
   paths = file.path(pyValidationDirs, "preinstalled_capacities.csv")) %>%
   mutate(value = value / 1e3) %>%   # Convert capacities to GW
   rename(preInvCap = value) %>%
-  order.levels(carrier = names(colorsTech))
+  rename(technology = carrier) %>%
+  order.levels(technology = names(colorsTech))
 
 # Loop over regions
 for (r in regList){
@@ -448,29 +448,39 @@ for (r in regList){
 
   dataPreInvCapPyPSAplot <- dataPreInvCapPyPSA %>%
     filter(region %in% r) %>%
-    group_by(year, carrier, iteration) %>%
+    group_by(year, technology, iteration) %>%
     summarise(preInvCap = sum(preInvCap))
 
-  pYearFix <- ggplot() +
+  pYear <- ggplot() +
     geom_line(data = dataPreInvCapREMINDplot, aes(x = year, y = preInvCap, color = technology)) +
-    geom_point(data = dataPreInvCapPyPSAplot, aes(x = year, y = preInvCap, color = carrier)) +
+    geom_point(data = dataPreInvCapPyPSAplot, aes(x = year, y = preInvCap, color = technology)) +
     scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
     labs(x = "Year", y = "Capacity (GW)") +
-    ggtitle("Pre-investment capacities over years", regSubtitle(r)) +
-    facet_wrap(~ iteration)
-  
-  print(pYearFix)
+    ggtitle("Pre-investment capacities over years", regSubtitle(r))
+    
+  print(pYear + facet_wrap(~ iteration))
 
-  pIterationFix <- ggplot() +
+  pIteration <- ggplot() +
     geom_line(data = dataPreInvCapREMINDplot, aes(x = iteration, y = preInvCap, color = technology)) +
-    geom_point(data = dataPreInvCapPyPSAplot, aes(x = iteration, y = preInvCap, color = carrier)) +
+    geom_point(data = dataPreInvCapPyPSAplot, aes(x = iteration, y = preInvCap, color = technology)) +
     scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
     labs(x = "Iteration", y = "Capacity (GW)") +
     scale_x_continuous(breaks = rmIterations) +
-    ggtitle("Pre-investment capacities over iterations", regSubtitle(r)) +
-    facet_wrap(~ year)
+    ggtitle("Pre-investment capacities over iterations", regSubtitle(r))
 
-  print(pIterationFix)
+  print(pIteration + facet_wrap(~ year))
+
+  print(pYear +
+    facet_grid(technology ~ iteration,
+               scales = "free",
+               labeller = labeller(technology = namesTech)) +
+    theme(legend.position = "none"))
+  
+  print(pIteration +
+    facet_grid(technology ~ year,
+               scales = "free",
+               labeller = labeller(technology = namesTech)) +
+    theme(legend.position = "none"))
 }
 ```
 
@@ -572,7 +582,8 @@ pCapexTechExtractedYear <- ggplot() +
   labs(x = "Year", y = "Specific capital costs (USD/kW)") +
   scale_y_continuous(labels = function(x) x / 1000) +
   ggtitle("Specific capital costs over years, technologies directly from REMIND") +
-  facet_grid(technology ~ iteration, scales = "free")
+  facet_grid(technology ~ iteration, scales = "free") +
+  theme(legend.position = "none")
 
 print(pCapexTechExtractedYear)
 
@@ -587,7 +598,8 @@ pCapexTechScaledYear <- ggplot() +
   labs(x = "Year", y = "Specific capital costs (USD/kW)") +
   scale_y_continuous(labels = function(x) x / 1000) +
   ggtitle("Specific capital costs over years, additional scaled PyPSA-Eur technologies") +
-  facet_grid(technology ~ iteration, scales = "free")
+  facet_grid(technology ~ iteration, scales = "free", labeller = label_wrap_gen(multi_line = TRUE)) +
+  theme(legend.position = "none")
 
 print(pCapexTechScaledYear)
 ```
@@ -774,7 +786,8 @@ pVOMYear <- ggplot() +
                      guide = guide_legend(order = 2)) +
   labs(x = "Year", y = "Variable O&M costs (USD/MWh)") +
   ggtitle("Variable O&M costs over years") +
-  facet_grid(technology ~ iteration, scales = "free")
+  facet_grid(technology ~ iteration, scales = "free") +
+  theme(legend.position = "none")
 
 print(pVOMYear)
 
@@ -795,7 +808,8 @@ pVOMIter <- ggplot() +
   labs(x = "Iteration", y = "Variable O&M costs (USD/MWh)") +
   scale_x_continuous(breaks = rmIterations) +
   ggtitle("Variable O&M costs over iterations") +
-  facet_grid(technology ~ year, scales = "free")
+  facet_grid(technology ~ year, scales = "free") +
+  theme(legend.position = "none")
 
 print(pVOMIter)
 
@@ -870,7 +884,8 @@ pEtaYear <- ggplot() +
                      guide = guide_legend(order = 2)) +
   labs(x = "Year", y = "Efficiency") +
   ggtitle("Efficiencies over years") +
-  facet_grid(technology ~ iteration)
+  facet_grid(technology ~ iteration) +
+  theme(legend.position = "none")
 
 print(pEtaYear)
 
@@ -892,7 +907,8 @@ pEtaIter <- ggplot() +
   labs(x = "Iteration", y = "Efficiency") +
   scale_x_continuous(breaks = rmIterations) +
   ggtitle("Efficiencies over iterations") +
-  facet_grid(technology ~ year)
+  facet_grid(technology ~ year) +
+  theme(legend.position = "none")
 
 print(pEtaIter)
 ```
@@ -1026,7 +1042,8 @@ pFuelCostsTechYear <- ggplot() +
                      guide = guide_legend(order = 2)) +
   labs(x = "Year", y = "Fuel costs (USD/MWh)") +
   ggtitle("Fuel costs over years by technologies") +
-  facet_grid(technology ~ iteration, scales = "free")
+  facet_grid(technology ~ iteration, scales = "free") +
+  theme(legend.position = "none")
 
 print(pFuelCostsTechYear)
 
@@ -1096,7 +1113,8 @@ pCO2intYear <- ggplot() +
                      guide = guide_legend(order = 2)) +
   labs(x = "CO2 intensity (tCO2/MWh)", y = "technology") +
   ggtitle("CO2 intensity over years") +
-  facet_grid(technology ~ iteration)
+  facet_grid(technology ~ iteration) +
+  theme(legend.position = "none")
 
 print(pCO2intYear)
 
@@ -1118,7 +1136,8 @@ pCO2intIter <- ggplot() +
   labs(x = "CO2 intensity (tCO2/MWh)", y = "technology") +
   scale_x_continuous(breaks = rmIterations) +
   ggtitle("CO2 intensity over iterations") +
-  facet_grid(technology ~ year)
+  facet_grid(technology ~ year) +
+  theme(legend.position = "none")
 
 print(pCO2intIter)
 
@@ -1354,10 +1373,21 @@ dataMarkupREMIND <- readREMINDgdx(
     columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "value"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = FALSE,
-    recalcUnit = trUSDpTWa2USDpMWh) %>%
+    recalcUnit = trUSDpTWa2USDpMWh)
+
+dataGenREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "v32_usableSeTeDisp",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "v32_usableSeTeDisp"),
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+    restoreZeros = FALSE,
+    recalcUnit = twa2twh)
+
+dataMarkupWeightedREMIND <- dataMarkupREMIND %>%
+  right_join(dataGenREMIND, by = c("year", "region", "technology", "iteration")) %>%
   revalue.levels(technology = rm2genTech) %>%
   group_by(year, region, technology, iteration) %>%
-  summarise(value = unique(value)) %>%
+  summarise(value = sum(value * v32_usableSeTeDisp) / sum(v32_usableSeTeDisp)) %>%
   order.levels(technology = names(namesTech))
 
 # PyPSA-Eur
@@ -1378,51 +1408,56 @@ dataElecPricePYPSA <- readPyPSAcsv(
 dataMarkupPyPSA <- dataMarketValuePyPSA %>%
   left_join(dataElecPricePYPSA, by = c("year", "region", "iteration")) %>%
   mutate(value = value.x - value.y) %>%
-  select(year, region, carrier, iteration, value) %>%
-  revalue.levels(carrier = rm2genTech) %>%
   group_by(year, region, carrier, iteration) %>%
   summarise(value = unique(value)) %>%
-  order.levels(carrier = names(namesTech))
+  rename(technology = carrier) %>%
+  order.levels(technology = names(namesTech))
 
 for (r in regList) {
 
-  dataMarkupPlotREMIND <- dataMarkupREMIND %>%
+  dataMarkupPlotREMIND <- dataMarkupWeightedREMIND %>%
     filter(region %in% r) %>%
     group_by(year, technology, iteration) %>%
     summarise(value = mean(value))  # ToDo: Incorrect aggregation
 
   dataMarkupPlotPyPSA <- dataMarkupPyPSA %>%
     filter(region %in% r) %>%
-    group_by(year, carrier, iteration) %>%
+    group_by(year, technology, iteration) %>%
     summarise(value = mean(value))  # ToDo: Incorrect aggregation
 
   pMarkupYear <- ggplot() +
     geom_line(data = dataMarkupPlotREMIND, aes(x = year, y = value, color = technology)) +
-    geom_point(data = dataMarkupPlotPyPSA, aes(x = year, y = value, color = carrier)) +
+    geom_point(data = dataMarkupPlotPyPSA, aes(x = year, y = value, color = technology)) +
     scale_color_manual(
       name = "Technology",
       values = colorsTech,
       labels = namesTech,
     ) +
     labs(x = "Year", y = "Markup ($/MWh)") +
-    ggtitle("Markup over years", regSubtitle(r)) +
-    facet_wrap(~ iteration, scales = "free")
+    ggtitle("Markups over years", regSubtitle(r))
 
-  print(pMarkupYear)
+  print(pMarkupYear + facet_wrap(~ iteration, scales = "free"))
 
   pMarkUpIter <- ggplot() +
     geom_line(data = dataMarkupPlotREMIND, aes(x = iteration, y = value, color = technology)) +
-    geom_point(data = dataMarkupPlotPyPSA, aes(x = iteration, y = value, color = carrier)) +
+    geom_point(data = dataMarkupPlotPyPSA, aes(x = iteration, y = value, color = technology)) +
     scale_color_manual(
       name = "Technology",
       values = colorsTech,
       labels = namesTech,
     ) +
-    labs(x = "Year", y = "Markup ($/MWh)") +
-    ggtitle("Markup over iterations", regSubtitle(r)) +
-    facet_wrap(~ year, scales = "free")
+    labs(x = "Iteration", y = "Markup ($/MWh)") +
+    ggtitle("Markups over iterations", regSubtitle(r))
 
-  print(pMarkUpIter)
+  print(pMarkUpIter + facet_wrap(~ year, scales = "free"))
+
+  print(pMarkupYear +
+        facet_grid(technology ~ iteration, scales = "free", labeller = labeller(technology = namesTech)) +
+        theme(legend.position = "none"))
+
+  print(pMarkUpIter +
+        facet_grid(technology ~ year, scales = "free", labeller = labeller(technology = namesTech)) +
+        theme(legend.position = "none"))
 }
 ```
 
@@ -1489,6 +1524,7 @@ pPeakResLoadIter <- ggplot() +
   geom_line(data = dataPeakResLoadREMIND, aes(x = iteration, y = value, color = region)) +
   geom_point(data = dataPeakResLoadPyPSA, aes(x = iteration, y = relative, color = region)) +
   labs(x = "Iteration", y = "Relative peak residual load") +
+  scale_x_continuous(breaks = rmIterations) +
   ggtitle("Relative peak residual load over iterations") +
   facet_wrap(~ year)
 
@@ -1555,7 +1591,7 @@ for (r in regList) {
     scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
     labs(x = "Iteration", y = "Capacity (GW)") +
     ggtitle("Optimal capacities in REMIND over iterations", regSubtitle(r)) +
-    facet_wrap(~ year)
+    facet_wrap(~ year, scales = "free")
 
   print(pIter)
 }
@@ -2227,7 +2263,6 @@ for (r in regList) {
     print(pGenShareYear)
   }
 }
-
 ```
 
 ```
@@ -2256,6 +2291,7 @@ pElecPriceYear <- ggplot() +
             mapping = aes(x = year, y = value, color = "PyPSA-Eur")) +
   scale_color_discrete(name = "Model") +
   labs(x = "Year", y = "Electricity price ($/MWh)") +
+  scale_y_continuous(limits = c(0, NA)) +
   ggtitle("Electricity price over years")
 
 if (length(regions) > 1) {
@@ -2273,6 +2309,7 @@ pElecPriceIter <- ggplot() +
             mapping = aes(x = iteration, y = value, color = "PyPSA-Eur")) +
   scale_color_discrete(name = "Model") +
   labs(x = "Iteration", y = "Electricity price ($/MWh)") +
+  scale_y_continuous(limits = c(0, NA)) +
   ggtitle("Electricity price over iterations")
 
 if (length(regions) > 1) {
