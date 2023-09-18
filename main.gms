@@ -1639,13 +1639,13 @@ $setglobal c32_pypsa_capfac on !! def = on !! regexp = off|on
 $setglobal c32_pypsa_curtailment off !! def = off !!regexp = off|on
 *** c32_pypsa_peakcap
 *** Switch to enable peak capacity constraint
-$setglobal c32_pypsa_peakcap off !! def = off !!regexp = off|on
+$setglobal c32_pypsa_peakcap on !! def = on !!regexp = off|on
 *** c32_pypsa_multiregion
 *** Switch to enable PyPSA in multiple regions (changes PyPSA/sets.gms)
-$setglobal c32_pypsa_multiregion on !! def = off !!regexp = off|on
+$setglobal c32_pypsa_multiregion off !! def = off !!regexp = off|on
 *** cm_pypsa_markup
 *** Switch to enable markups/markdowns from PyPSA-Eur via tax module 
-$setglobal cm_pypsa_markup off !! def = off !! regexp = off|on
+$setglobal cm_pypsa_markup on !! def = on !! regexp = off|on
 *** set conopt version. Warning: conopt4 is in beta
 $setGlobal cm_conoptv  conopt3    !! def = conopt3
 *' c_empty_model  "Short-circuit the model, just use the input as solution"
