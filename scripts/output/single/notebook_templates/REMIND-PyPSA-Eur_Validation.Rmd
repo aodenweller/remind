@@ -33,7 +33,7 @@ knitr::opts_chunk$set(
   message = FALSE,
   cache = FALSE,
   dev = c("png", "pdf"),
-  dev.args = list(png = list(type = "cairo-png", family = "sans"), pdf = list(family = "sans", bg = "transparent")),
+  dev.args = list(png = list(type = "cairo", family = "sans"), pdf = list(family = "sans", bg = "transparent")),
   fig.align = "center",
   fig.width = 11,
   fig.height = 7.5,
@@ -1198,7 +1198,7 @@ The following plots show the capacity factor.
 ToDo: This doesn't work properly for the case of "all regions" yet as the PyPSA capacity factors cannot simply be aggregated over regions.
 
 ```{r capacity factors}
-
+# REMIND capacity factors (pre-factor based)
 dataCapREMIND <- readREMINDgdx(
     paths = rmFiles,
     gdxVar = "vm_cap",
@@ -1366,7 +1366,7 @@ Markups and markdowns are read into REMIND from PYPSA-Eur. Markup = Average mark
 ToDO: Aggregation is not correct yet.
 
 ```{r markup}
-# REMIND
+# REMIND (pre-factor based)
 dataMarkupREMIND <- readREMINDgdx(
     paths = rmFiles,
     gdxVar = "vm_PyPSAMarkup",
@@ -1447,6 +1447,7 @@ for (r in regList) {
       labels = namesTech,
     ) +
     labs(x = "Iteration", y = "Markup ($/MWh)") +
+    scale_x_continuous(breaks = rmIterations) +
     ggtitle("Markups over iterations", regSubtitle(r))
 
   print(pMarkUpIter + facet_wrap(~ year, scales = "free"))
@@ -1499,20 +1500,38 @@ for (r in regList) {
 Relative peak residual load is passed from PyPSA-Eur to REMIND.
 
 ```{r peak residual load relative}
-
-dataPeakResLoadREMIND <- readREMINDgdx(
+# REMIND data (pre-factor based)
+dataCapREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "p32_PyPSA_PeakResLoadRel",
-    columns = c("ttot" = "year", "all_regi" = "region", "value" = "value"),
+    gdxVar = "vm_cap",
+    columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "rlf" = "grade", "value" = "vm_cap"),
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech), "grade" = 1),
+    restoreZeros = FALSE)
+
+tePyDisp32 <- gdx::readGDX(rmFiles[1], "tePyDisp32", restore_zeros = FALSE)
+
+dataDispCapSumREMIND <- dataCapREMIND %>%
+  filter(technology %in% tePyDisp32) %>%
+  group_by(year, region, iteration) %>%
+  summarise(dispCapSum = sum(vm_cap))
+
+dataGenREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "v32_usableSeDisp",
+    columns = c("ttot" = "year", "all_regi" = "region", "value" = "v32_usableSeDisp"),
     colFilter = list("year" = years, "region" = regions),
     restoreZeros = FALSE)
+
+dataPeakResLoadREMIND <- dataDispCapSumREMIND %>%
+  left_join(dataGenREMIND, by = c("year", "region", "iteration")) %>%
+  mutate(peakResLoad = dispCapSum / v32_usableSeDisp)
 
 # PyPSA csv contains both absolute and relative
 dataPeakResLoadPyPSA <- readPyPSAcsv(
   paths = file.path(pyValidationDirs, "peak_residual_loads.csv"))
 
 pPeakResLoadYear <- ggplot() +
-  geom_line(data = dataPeakResLoadREMIND, aes(x = year, y = value, color = region)) +
+  geom_line(data = dataPeakResLoadREMIND, aes(x = year, y = peakResLoad, color = region)) +
   geom_point(data = dataPeakResLoadPyPSA, aes(x = year, y = relative, color = region)) +
   labs(x = "Year", y = "Relative peak residual load") +
   ggtitle("Relative peak residual load over years") +
@@ -1521,7 +1540,7 @@ pPeakResLoadYear <- ggplot() +
 print(pPeakResLoadYear)
 
 pPeakResLoadIter <- ggplot() +
-  geom_line(data = dataPeakResLoadREMIND, aes(x = iteration, y = value, color = region)) +
+  geom_line(data = dataPeakResLoadREMIND, aes(x = iteration, y = peakResLoad, color = region)) +
   geom_point(data = dataPeakResLoadPyPSA, aes(x = iteration, y = relative, color = region)) +
   labs(x = "Iteration", y = "Relative peak residual load") +
   scale_x_continuous(breaks = rmIterations) +
