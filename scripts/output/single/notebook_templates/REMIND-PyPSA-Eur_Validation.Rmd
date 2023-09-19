@@ -163,7 +163,7 @@ trUSDpTW2USDpMW <- 1E6
 ```
 
 ---
-subtitle: "Run name: `r scenario`"
+subtitle: "`r scenario`"
 ---
 
 ```{r mappings, include = FALSE}
@@ -1528,7 +1528,9 @@ dataPeakResLoadREMIND <- dataDispCapSumREMIND %>%
 
 # PyPSA csv contains both absolute and relative
 dataPeakResLoadPyPSA <- readPyPSAcsv(
-  paths = file.path(pyValidationDirs, "peak_residual_loads.csv"))
+  paths = file.path(pyValidationDirs, "peak_residual_loads.csv")) %>%
+  # Increment iteration by 1 to match REMIND
+  mutate(iteration = iteration + 1)
 
 pPeakResLoadYear <- ggplot() +
   geom_line(data = dataPeakResLoadREMIND, aes(x = year, y = peakResLoad, color = region)) +
@@ -2007,6 +2009,7 @@ for (r in regList) {
     geom_line(data = dataGenREMINDplot, aes(x = iteration, y = value, color = technology)) +
     scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
     labs(x = "Iteration", y = "Generation (TWh)") +
+    scale_x_continuous(breaks = rmIterations) +
     ggtitle("Generation in REMIND over iterations", regSubtitle(r)) +
     facet_wrap(~ year)
 
@@ -2350,6 +2353,19 @@ print(pElecPriceIter)
 ## LCOEs
 
 In the long-term equilibrium the levelised cost of electricity (LCOE) should be the same as the market value for each technology.
+
+```{r LCOEs}
+
+# Calculate LCOE from components
+dataLCOEcompREMIND <- readREMINDgdx(
+  paths = rmFiles,
+  gdxVar = "vm_lcoe",
+  columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "vmLCOE"),
+  colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+  restoreZeros = FALSE,
+  recalcUnit = 1e3)  # TW to GW
+
+```
 
 # Model-specific variables
 
