@@ -16,6 +16,9 @@ if(!exists("source_include")) {
 # Load config.Rdata
 load(file.path(outputdir, "config.Rdata"))
 
+# Get run name with timestamp
+scenario <- basename(outputdir)
+
 # Check if run used the PyPSA power module
 if (cfg$gms$power == "PyPSA") {
   # Check if iteration gdxes were written
@@ -26,7 +29,9 @@ if (cfg$gms$power == "PyPSA") {
       to = file.path(outputdir, "REMIND-PyPSA-Eur_Validation.Rmd"),
       overwrite = TRUE)
     # Render REMIND-PyPSA-Eur_Validation.Rmd
-    rmarkdown::render(file.path(outputdir, "REMIND-PyPSA-Eur_Validation.Rmd"))
+    rmarkdown::render(input = file.path(outputdir, "REMIND-PyPSA-Eur_Validation.Rmd"),
+                      output_dir = outputdir,
+                      output_file = paste0("REMIND-PyPSA-Eur_Validation_", scenario, ".pdf"))
   } else {
     stop("This run didn't have c_keep_iteration_gdxes activated.")
     }

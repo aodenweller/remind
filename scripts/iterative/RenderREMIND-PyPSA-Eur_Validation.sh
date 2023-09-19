@@ -6,6 +6,5 @@
 #SBATCH --nodes=1
 #SBATCH --time=00:15:00
 
-# Logging info
 echo "Rendering REMIND-PyPSA-Eur Validation"
-Rscript -e "rmarkdown::render('REMIND-PyPSA-Eur_Validation.Rmd');"
+Rscript -e "rmarkdown::render(input = 'REMIND-PyPSA-Eur_Validation.Rmd', output_file = paste0('REMIND-PyPSA-Eur_Validation_', basename(getwd()), '.pdf'));"
