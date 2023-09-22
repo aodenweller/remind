@@ -1636,16 +1636,22 @@ $setglobal c32_pypsa_dir /p/tmp/adrianod/pypsa-eur
 $setglobal c32_pypsa_capfac on !! def = on !! regexp = off|on
 *** c32_pypsa_curtailment
 *** Switch to enable curtailment import from PyPSA-Eur
-$setglobal c32_pypsa_curtailment off !! def = off !!regexp = off|on
+$setglobal c32_pypsa_curtailment off !! def = off !! regexp = off|on
 *** c32_pypsa_peakcap
 *** Switch to enable peak capacity constraint
-$setglobal c32_pypsa_peakcap on !! def = on !!regexp = off|on
+$setglobal c32_pypsa_peakcap on !! def = on !! regexp = off|on
 *** c32_pypsa_multiregion
 *** Switch to enable PyPSA in multiple regions (changes PyPSA/sets.gms)
-$setglobal c32_pypsa_multiregion off !! def = off !!regexp = off|on
+$setglobal c32_pypsa_multiregion off !! def = off !! regexp = off|on
 *** cm_pypsa_markup
-*** Switch to enable markups/markdowns from PyPSA-Eur via tax module 
+*** Switch to enable markups/markdowns from PyPSA-Eur via tax module
 $setglobal cm_pypsa_markup on !! def = on !! regexp = off|on
+*** cm_pypsa_costConverge
+*** Switch to enable additional costs for generation share divergence
+$setglobal cm_pypsa_costConverge off !! def = off !! regexp = off|on
+*** c32_pypsa_preFacManual
+*** Switch to enable manual specification of pre-factors in datainput.gms
+$setglobal c32_pypsa_preFacManual off !! def = on !! regexp = off|on
 *** set conopt version. Warning: conopt4 is in beta
 $setGlobal cm_conoptv  conopt3    !! def = conopt3
 *' c_empty_model  "Short-circuit the model, just use the input as solution"

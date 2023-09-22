@@ -69,15 +69,24 @@ v32_flexPriceShareMin(tall,all_regi,all_te)         "possible minimum of share o
 ***------------------------------------------------------------
 
 parameters
-    p32_preInvCap(ttot,all_regi,all_te)                 "PyPSA export: Pre-investment capacities [TW]"
-    p32_discountRate(ttot)                              "PyPSA export: Interest rate / discount rate aggregated across all regions in regPy32 [1]"
-    p32_PyPSA_CF(ttot,all_regi,all_te)                  "PyPSA import: Capacity factors [1]"
-    p32_PyPSA_shSeEl(ttot,all_regi,all_te)              "PyPSA import: Electricity generation share by technology [1]"
-    p32_PyPSA_MV(ttot,all_regi,all_te)                  "PyPSA import: Market values [$/MWh]"
-    p32_PyPSA_ElecPrice(ttot,all_regi)                  "PyPSA import: Electricity prices [$/MWh]"
-    p32_PyPSA_Curtailment(ttot,all_regi,all_te)         "PyPSA import: Curtailment by technology [MWh]"  !! Not yet implemented
-    p32_PyPSA_PeakResLoadRel(ttot,all_regi)             "PyPSA import: Peak residual load in relative terms [1]"
-    p32_PyPSA_ValueFactor(ttot,all_regi,all_te)         "PyPSA calculation: Value factor = Market value / electricity price [1]"
+    p32_preInvCap(ttot,all_regi,all_te)                     "Pre-investment capacities [TW]"
+    p32_preInvCap_iter(iteration,ttot,all_regi,all_te)      "Pre-investment capacities in iterations [TW]"
+    p32_preInvCapAvg(ttot,all_regi,all_te)                  "PyPSA export: Pre-investment capacities averaged over iterations [TW]"
+    p32_discountRate(ttot)                                  "PyPSA export: Interest rate / discount rate aggregated across all regions in regPy32 [1]"
+    p32_PyPSA_CF(ttot,all_regi,all_te)                      "PyPSA import: Capacity factors [1]"
+    p32_PyPSA_shSeEl(ttot,all_regi,all_te)                  "PyPSA import: Electricity generation share by technology [1]"
+    p32_PyPSA_MV(ttot,all_regi,all_te)                      "PyPSA import: Market values [$/MWh]"
+    p32_PyPSA_ElecPrice(ttot,all_regi)                      "PyPSA import: Electricity prices [$/MWh]"
+    p32_PyPSA_Curtailment(ttot,all_regi,all_te)             "PyPSA import: Curtailment by technology [MWh]"
+    p32_PyPSA_PeakResLoadRel(ttot,all_regi)                 "PyPSA import: Peak residual load in relative terms [1]"
+    p32_PyPSA_ValueFactor(ttot,all_regi,all_te)             "PyPSA calculation: Value factor = Market value / electricity price [1]"
+    p32_iniCapPHS(all_regi,all_te)                          "Initial capacity of pumped hydro storage [TW]"  !! Maybe only temporarily
+    p32_iniProdPHS(all_regi,all_te)                         "Initial production of pumped hydro storage [TWa]"  !! Maybe only temporarily
+    p32_preFactor_CF(all_regi,all_te)                       "Pre-factor for the capacity factor [1]"
+    p32_preFactor_MV(all_regi,all_te)                       "Pre-factor for the market value [1]"
+    p32_PEPrice_iter(iteration,ttot,all_regi,all_enty)      "PE price in iterations [T$/TWa, nuclear: T$/Mt]"
+    p32_PEPriceAvg(ttot,all_regi,all_enty)                  "PyPSA export: PE price averaged over iterations [T$/TWa, nuclear: T$/Mt]"
+*    p32_PEPriceAvg_iter(iteration,ttot,all_regi,all_enty)   "p32_PEPriceAvg across iterations [T$/TWa, nuclear: T$/Mt]"
 ;
 
 variables

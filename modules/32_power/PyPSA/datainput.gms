@@ -111,4 +111,50 @@ p32_PyPSA_MV(tPy32,regPy32,tePy32) = 0;
 p32_PyPSA_ElecPrice(tPy32,regPy32) = 0;
 p32_PyPSA_ValueFactor(tPy32,regPy32,tePy32) = 0;
 
+*** Hydro: Pumped hydro storage (PHS) capacity and generation values in 2020
+*** This is necessary because PyPSA doesn't include PHS as a generation technology
+p32_iniCapPHS("DEU","hydro") = 5.3E-3;  !! 5.3 GW
+p32_iniProdPHS("DEU","hydro") = 6.1/8760;  !! 6.1 TWh/yr
+
+*** Technology-specific pre-factor values for capacity factors
+p32_preFactor_CF("DEU","biochp") = 2;
+p32_preFactor_CF("DEU","bioigcc") = 2;
+p32_preFactor_CF("DEU","bioigccc") = 2;
+p32_preFactor_CF("DEU","ngcc") = 0;
+p32_preFactor_CF("DEU","ngccc") = 0;
+p32_preFactor_CF("DEU","gaschp") = 0;
+p32_preFactor_CF("DEU","igcc") = 0.2;
+p32_preFactor_CF("DEU","igccc") = 0.2;
+p32_preFactor_CF("DEU","pc") = 0.2;
+p32_preFactor_CF("DEU","coalchp") = 0.2;
+p32_preFactor_CF("DEU","tnrs") = 0.2;
+p32_preFactor_CF("DEU","fnrs") = 0.2;
+p32_preFactor_CF("DEU","ngt") = -0.1;
+p32_preFactor_CF("DEU","windoff") = -0.1;
+p32_preFactor_CF("DEU","dot") = 0.5;
+p32_preFactor_CF("DEU","wind") = -0.1;
+p32_preFactor_CF("DEU","hydro") = 0;
+p32_preFactor_CF("DEU","spv") = -0.1;
+
+*** Technology-specific pre-factor values for market values
+p32_preFactor_MV("DEU","biochp") = -4;
+p32_preFactor_MV("DEU","bioigcc") = -4;
+p32_preFactor_MV("DEU","bioigccc") = -4;
+p32_preFactor_MV("DEU","ngcc") = 0;
+p32_preFactor_MV("DEU","ngccc") = 0;
+p32_preFactor_MV("DEU","gaschp") = -0.1;
+p32_preFactor_MV("DEU","igcc") = -1;
+p32_preFactor_MV("DEU","igccc") = -1;
+p32_preFactor_MV("DEU","pc") = -1;
+p32_preFactor_MV("DEU","coalchp") = -1;
+p32_preFactor_MV("DEU","tnrs") = -1;
+p32_preFactor_MV("DEU","fnrs") = -1;
+p32_preFactor_MV("DEU","ngt") = -0.2;
+p32_preFactor_MV("DEU","windoff") = -0.2;
+p32_preFactor_MV("DEU","dot") = -2;
+p32_preFactor_MV("DEU","wind") = -0.2;
+p32_preFactor_MV("DEU","hydro") = -1;
+p32_preFactor_MV("DEU","spv") = -0.5;
+
+
 *** EOF ./modules/32_power/PyPSA/datainput.gms

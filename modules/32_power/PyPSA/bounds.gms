@@ -120,9 +120,6 @@ if ((cm_PyPSA_eq eq 1),
 );
 $endif
 
-* TEMPORARY: Require a minimum of 600 TWh load in Germany
-* v32_usableSeDisp.lo(tPy32,"DEU","seel") = 600 / 8760;
-
 * Restrict v32_shSeElDisp between 0 and 1
 v32_shSeElDisp.lo(tPy32,regPy32,tePy32) = 0;
 v32_shSeElDisp.up(tPy32,regPy32,tePy32) = 1;

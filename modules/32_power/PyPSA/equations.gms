@@ -304,6 +304,7 @@ q32_usableSeDisp(t,regi,entySe)$(tPy32(t) and regPy32(regi) and sameas(entySe,"s
 	sum(pe2se(enty,entySe,te)$(tePy32(te)), vm_prodSe(t,regi,enty,entySe,te))
 *	+ sum(se2se(enty,entySe,te)$(tePy32(te)), vm_prodSe(t,regi,enty,entySe,te))
 	- sum(te$(tePy32(te) and teVRE(te)), v32_storloss(t,regi,te) )
+  - p32_iniProdPHS(regi,"hydro")
 ;
 
 *** Calculate usable electricity generation by technology
@@ -313,6 +314,7 @@ q32_usableSeTeDisp(t,regi,entySe,te)$(tPy32(t) and regPy32(regi) and sameas(enty
  	sum(pe2se(enty,entySe,te), vm_prodSe(t,regi,enty,entySe,te) )
 *	+ sum(se2se(enty,entySe,te), vm_prodSe(t,regi,enty,entySe,te) )
  	- v32_storloss(t,regi,te)$(teVRE(te))
+  - p32_iniProdPHS(regi,te)
 ;
 
 *** Calculate electricity generation shares by technology
@@ -333,17 +335,20 @@ q32_shSeElDisp(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te))..
 *** There are two parameters we need to set to define the pre-factor:
 *** (i) Cutoff value between (1) and (2) in terms of the capacity factor. Currently set to 0.5.
 *** (ii) Slope of the pre-factor. Currently set to 0.5.
-* TODO: Hydro
-$ifthen "%c32_pypsa_capfac%" == "on"
-q32_capFac(t,regi,te)$(tPy32(t) and regPy32(regi) AND tePy32(te) AND (cm_PyPSA_eq eq 1) and NOT sameas(te, "hydro"))..
+$ifthen.c32_pypsa_capfac "%c32_pypsa_capfac%" == "on"
+q32_capFac(t,regi,te)$(tPy32(t) and regPy32(regi) AND tePy32(te) AND (cm_PyPSA_eq eq 1))..
   v32_usableSeTeDisp(t,regi,"seel",te)
   =e=
-    vm_cap(t,regi,te,"1")
+    ( vm_cap(t,regi,te,"1") - p32_iniCapPHS(regi,te) )
+$ifthen.c32_pypsa_preFacManual "%c32_pypsa_preFacManual%" == "on"
+  * p32_PyPSA_CF(t,regi,te) * ( 1 + p32_preFactor_CF(regi,te) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
+$elseif.c32_pypsa_preFacManual "%c32_pypsa_preFacManual%" == "off"
   * (   p32_PyPSA_CF(t,regi,te) * ( 1 + 0.5 * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )$(p32_PyPSA_CF(t,regi,te) ge 0.5)
       + p32_PyPSA_CF(t,regi,te) * ( 1 - 0.5 * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )$(p32_PyPSA_CF(t,regi,te) lt 0.5)
     )
+$endif.c32_pypsa_preFacManual
 ;
-$endif
+$endif.c32_pypsa_capfac
 
 ***------------------------------------------------------------
 ***            PyPSA-Eur to REMIND: Markups / Markdowns
@@ -353,35 +358,55 @@ $endif
 *** The pre-factor is based on the following intuition.
 *** For all technologies: When the share increases, the market value (and thus the markup) decreases.
 *** The slope of this decrease depends depends on the negative of the value factor (- p32_PyPSA_ValueFactor).
-*** To fine tune the convergence process, we use another slope parameter, currently set to 0.5
+*** To fine tune the convergence process, we use another slope parameter, currently set to 1.
 *** As an example, this means that:
 *** (1) For peaker technologies (high value factor): When the share increases, market values decrease to a large extent.
 *** (2) For VRE technologies (low value factor): When the share increases, market values decrease to a smaller extent.
-$ifthen "%cm_pypsa_markup%" == "on"
+$ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
 q32_MarkUp(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (cm_PyPSA_eq eq 1))..
 	vm_PyPSAMarkup(t,regi,te)
 	=e=
-    (   p32_PyPSA_MV(t,regi,te) * ( 1 - 0.5 * p32_PyPSA_ValueFactor(t,regi,te) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
+$ifthen.c32_pypsa_preFacManual "%c32_pypsa_preFacManual%" == "on"
+    (   p32_PyPSA_MV(t,regi,te) * ( 1 + p32_preFactor_MV(regi,te) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
       - p32_PyPSA_ElecPrice(t,regi)
     )
+$elseif.c32_pypsa_preFacManual "%c32_pypsa_preFacManual%" == "off"
+    (   p32_PyPSA_MV(t,regi,te) * ( 1 - p32_PyPSA_ValueFactor(t,regi,te) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
+      - p32_PyPSA_ElecPrice(t,regi)
+    )
+$endif.c32_pypsa_preFacManual
   * sm_TWa_2_MWh / 1e12
 ;
-$endif
+$endif.cm_pypsa_markup
 
 ***------------------------------------------------------------
 ***            PyPSA-Eur to REMIND: Peak residual load
 ***------------------------------------------------------------
 *** Pre-factor equation to set the minimum dispatchable capacity to always cover peak residual load.
 *** This constraint is formulated relative to the average load, v32_usableSeDisp [TWa/a].
-*** The pre-factor is based on the following intuition:
-*** If the sum of VRE shares increases, peak residual load increases.
-*** Slope parameter currently set to 0.5.
+*** The pre-factor can be based on the following intuition:
+*** If the sum of VRE shares increases, peak residual load decreases.
+*** However, since VREs have a small capacity credit, this effect is also small.
+*** Slope parameter currently set to 0.1.
 $ifthen "%c32_pypsa_peakcap%" == "on"
 q32_PeakResCap(t,regi)$(tPy32(t) AND regPy32(regi) AND (cm_PyPSA_eq eq 1))..
-  sum(tePyDisp32, vm_cap(t,regi,tePyDisp32, "1"))
+  sum(tePyDisp32, vm_cap(t,regi,tePyDisp32, "1"))  !! TODO: Hydro included or not?
   =g=
-    p32_PyPSA_PeakResLoadRel(t,regi) * ( 1 + 0.2 * ( sum(tePyVRE32, v32_shSeElDisp(t,regi,tePyVRE32) - p32_PyPSA_shSeEl(t,regi,tePyVRE32)) ) )
+    p32_PyPSA_PeakResLoadRel(t,regi) !!* ( 1 - 0.1 * ( sum(tePyVRE32, v32_shSeElDisp(t,regi,tePyVRE32) - p32_PyPSA_shSeEl(t,regi,tePyVRE32)) ) )
   * v32_usableSeDisp(t,regi,"seel")
+;
+$endif
+
+***------------------------------------------------------------
+***            PyPSA cost penalty for divergence
+***------------------------------------------------------------
+*** Cost penalty if generation shares in REMIND and PyPSA-Eur diverge
+*** This is added to v_costInv in equation q_costInv (unit trillion $)
+$ifthen "%cm_pypsa_costConverge%" == "on"
+qm_costPyPSAconverge(t,regi)$(tPy32(t) AND regPy32(regi) and (cm_PyPSA_eq eq 1))..
+  vm_costPyPSAconverge(t,regi)
+  =e=
+  0.05 * sum(te, power(v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te), 2))
 ;
 $endif
 

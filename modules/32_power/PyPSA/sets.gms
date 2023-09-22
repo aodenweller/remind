@@ -29,7 +29,7 @@ $endif
         /biochp, bioigcc, bioigccc, ngcc, ngccc, gaschp, igcc, igccc, pc, coalchp, tnrs, fnrs, ngt, dot/
 
     tePyVRE32(all_te)           "REMIND VRE SE electricity technologies (with grades)"
-        /windoff, wind, spv/
+        /windoff, wind, hydro, spv/
 ;
 
 *** EOF ./modules/32_power/PyPSA/sets.gms

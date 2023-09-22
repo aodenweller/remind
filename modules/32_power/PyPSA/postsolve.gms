@@ -28,7 +28,10 @@ loop(t,
 ***                  PyPSA-Eur coupling
 ***------------------------------------------------------------
 
-*** Execute PyPSA-Eur only every x-th iteration after iteration c32_startIter_PyPSA
+*** Track PE price in iterations
+p32_PEPrice_iter(iteration,ttot,regi,entyPe) = pm_PEPrice(ttot,regi,entyPe);
+
+*** Execute PyPSA-Eur only every X-th iteration after iteration c32_startIter_PyPSA
 if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIter_PyPSA, 1) eq 0),
   
   !! Pre-investment capacities
@@ -36,8 +39,26 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
     max(1e-8,  !! Require minimum value
         vm_cap.l(t,regi,te,"1")
       - vm_deltaCap.l(t,regi,te,"1") * pm_ts(t) * ( 1 - vm_capEarlyReti.l(t,regi,te) )
+      - p32_iniCapPHS(regi,te)
        )
   ;
+  !! Track pre-investment capacities in iterations
+  p32_preInvCap_iter(iteration,t,regi,te) = p32_preInvCap(t,regi,te);
+
+  !! Variables that need to be averaged over iterations to eliminate oscillations:
+  !! (1) Pre-investment capacities
+  !! (2) PE prices
+  if (iteration.val lt c32_startIter_PyPSA + 4,
+    !! Non-averaged pre-investment capacities
+    p32_preInvCapAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_preInvCap(t,regi,te);
+    !! Non-averaged PE prices
+    p32_PEPriceAvg(t,regi,entyPe)$(tPy32(t) and regPy32(regi)) = pm_PEPrice(t,regi,entyPe);
+  else
+    !!! Averaged pre-investment capacities over iterations
+    p32_preInvCapAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = sum(iteration2, p32_preInvCap_iter(iteration2,t,regi,te)) / iteration.val;
+    !! Averaged PE prices over iterations
+    p32_PEPriceAvg(t,regi,entyPe)$(tPy32(t) and regPy32(regi)) = sum(iteration2, p32_PEPrice_iter(iteration2,t,regi,entyPe)) / iteration.val;
+  );
 
   !! Capital interest rate aggregated for all regions in regPy32
   p32_discountRate(ttot)$(ttot.val gt 2005 and ttot.val le 2130) =
@@ -59,8 +80,8 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
     tPy32, regPy32, tePy32, !! General info: Coupled time steps, regions and technologies
     v32_usableSeDisp, !! Load
     vm_costTeCapital, pm_data, p_r, p32_discountRate, !! Capital cost components
-    pm_eta_conv, pm_dataeta, pm_PEPrice, pe2se, p_priceCO2, fm_dataemiglob  !! Marginal cost components
-    p32_preInvCap, !! Pre-investment capacities
+    pm_eta_conv, pm_dataeta, p32_PEPriceAvg, pe2se, p_priceCO2, fm_dataemiglob,  !! Marginal cost components
+    p32_preInvCapAvg, !! Pre-investment capacities
     v32_usableSeTeDisp, !! For weighted averages
     !! PyPSA to REMIND
     v32_shSeElDisp  !! To downscale PyPSA generation shares to REMIND technologies

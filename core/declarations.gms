@@ -429,6 +429,10 @@ vm_demFeForEs(ttot,all_regi,all_enty,all_esty,all_teEs)     "Final energy which 
 vm_prodEs(ttot,all_regi,all_enty,all_esty,all_teEs)          "Energy services (unit determined by conversion factor pm_fe2es)."
 vm_transpGDPscale(ttot,all_regi)                            "dampening factor to align edge-t non-energy transportation costs with historical GDP data"  
 
+$ifthen "%cm_pypsa_costConverge%" == "on"
+vm_costPyPSAconverge(ttot,all_regi)                   "Cost penalty if generation shares diverge too much between REMIND and PyPSA-Eur"
+$endif
+
 ;
 ***----------------------------------------------------------------------------------------
 ***                                   EQUATIONS
@@ -547,6 +551,10 @@ q_limitCapFeH2BI(ttot,all_regi,emi_sectors)               "capacity limit equati
 $IFTHEN.sehe_upper not "%cm_sehe_upper%" == "off"
 q_heat_limit(ttot,all_regi)  "equation to limit maximum level of secondary energy district heating and heat pumps use"
 $ENDIF.sehe_upper
+
+$ifthen "%cm_pypsa_costConverge%" == "on"
+qm_costPyPSAconverge(ttot,all_regi)                   "Equation to define vm_costPyPSAconverge cost penalty for divergence"
+$endif
 
 ***----------------------------------------------------------------------------------------
 ***----------------------------------------------trade module------------------------------
