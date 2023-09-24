@@ -1134,15 +1134,26 @@ parameter
 *'
 parameter
   c32_startIter_PyPSA        "Starting iteration of PyPSA"
-*** Starting iteration of coupling with the power system model PyPSA
+*' Starting iteration of coupling with the power system model PyPSA
 ;
-  c32_startIter_PyPSA = 5; !! def = 5
+  c32_startIter_PyPSA = 1; !! def = 1
 *'
 parameter
-  cm_PyPSA_eq               "Switch to activate PyPSA coupling equations (in 32_power and 21_tax)"
+  cm_PyPSA_eq               "Activate PyPSA coupling equations"
 ;
   cm_PyPSA_eq = 0; !! def = 0
-*'
+*' Switch that turns to 1 after iteration.val >= c32_startIter_PyPSA
+parameter
+  c32_avg_rm2py
+;
+c32_avg_rm2py = 0;  !! def = 0  !! regexp = 0|1
+*' Pass iteration-averaged variables from REMIND to PyPSA (0 = off, 1 = on)
+parameter
+  c32_avg_py2rm
+;
+c32_avg_py2rm = 0; !! def = 0  !! regexp = 0|1
+*' Pass iteration-averaged variables from PyPSA to REMIND (0 = off, 1 = on)
+
 ***-----------------------------------------------------------------------------
 *' ####                     FLAGS
 ***-----------------------------------------------------------------------------
@@ -1649,6 +1660,9 @@ $setglobal cm_pypsa_markup on !! def = on !! regexp = off|on
 *** cm_pypsa_costConverge
 *** Switch to enable additional costs for generation share divergence
 $setglobal cm_pypsa_costConverge off !! def = off !! regexp = off|on
+*** c32_pypsa_preFac
+*** Switch to enable pre-factors
+$setglobal c32_pypsa_preFac on !! def = on !! regexp = off|on
 *** c32_pypsa_preFacManual
 *** Switch to enable manual specification of pre-factors in datainput.gms
 $setglobal c32_pypsa_preFacManual off !! def = on !! regexp = off|on

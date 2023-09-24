@@ -74,8 +74,12 @@ parameters
     p32_preInvCapAvg(ttot,all_regi,all_te)                  "PyPSA export: Pre-investment capacities averaged over iterations [TW]"
     p32_discountRate(ttot)                                  "PyPSA export: Interest rate / discount rate aggregated across all regions in regPy32 [1]"
     p32_PyPSA_CF(ttot,all_regi,all_te)                      "PyPSA import: Capacity factors [1]"
+    p32_PyPSA_CF_iter(iteration,ttot,all_regi,all_te)       "PyPSA calculation: Capacity factors in iterations [1]"
+    p32_PyPSA_CFAvg(ttot,all_regi,all_te)                   "PyPSA calculation: Capacity factors averaged over iterations [1]"
     p32_PyPSA_shSeEl(ttot,all_regi,all_te)                  "PyPSA import: Electricity generation share by technology [1]"
     p32_PyPSA_MV(ttot,all_regi,all_te)                      "PyPSA import: Market values [$/MWh]"
+    p32_PyPSA_MV_iter(iteration,ttot,all_regi,all_te)       "PyPSA calculation: Market values in iterations [1]" 
+    p32_PyPSA_MVAvg(ttot,all_regi,all_te)                   "PyPSA calculation: Market values averaged over iterations [$/MWh]"
     p32_PyPSA_ElecPrice(ttot,all_regi)                      "PyPSA import: Electricity prices [$/MWh]"
     p32_PyPSA_Curtailment(ttot,all_regi,all_te)             "PyPSA import: Curtailment by technology [MWh]"
     p32_PyPSA_PeakResLoadRel(ttot,all_regi)                 "PyPSA import: Peak residual load in relative terms [1]"
@@ -86,7 +90,6 @@ parameters
     p32_preFactor_MV(all_regi,all_te)                       "Pre-factor for the market value [1]"
     p32_PEPrice_iter(iteration,ttot,all_regi,all_enty)      "PE price in iterations [T$/TWa, nuclear: T$/Mt]"
     p32_PEPriceAvg(ttot,all_regi,all_enty)                  "PyPSA export: PE price averaged over iterations [T$/TWa, nuclear: T$/Mt]"
-*    p32_PEPriceAvg_iter(iteration,ttot,all_regi,all_enty)   "p32_PEPriceAvg across iterations [T$/TWa, nuclear: T$/Mt]"
 ;
 
 variables
@@ -105,7 +108,7 @@ equations
     q32_shSeElDisp(ttot,all_regi,all_te)                "PyPSA coupling: Calculate v32_shSeElDisp"
 
 $ifthen "%c32_pypsa_capfac%" == "on"
-    q32_capFac(ttot,all_regi,all_te)                    "PyPSA coupling: Pre-factor equation for capacity factors (p32_PyPSA_CF)"
+    q32_capFac(ttot,all_regi,all_te)                    "PyPSA coupling: Pre-factor equation for capacity factors"
 $endif
 
 $ifthen "%cm_pypsa_markup%" == "on"
@@ -113,7 +116,7 @@ $ifthen "%cm_pypsa_markup%" == "on"
 $endif
 
 $ifthen "%c32_pypsa_peakcap%" == "on"
-    q32_PeakResCap(ttot,all_regi)                       "PyPSA coupling: Require dispatchable generators to cover peak residual load (p32_PyPSA_PeakResLoadRel)"
+    q32_PeakResCap(ttot,all_regi)                       "PyPSA coupling: Pre-factor equation for peak residual load"
 $endif
 ;
 

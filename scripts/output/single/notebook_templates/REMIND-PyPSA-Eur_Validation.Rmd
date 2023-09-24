@@ -418,6 +418,18 @@ Pre-investment capacities are used to initialize the PyPSA-Eur model. They are m
 
 ```{r pre-investment capacities, echo = FALSE, message = FALSE}
 # Read REMIND data
+dataPreInvCapAvgREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "p32_preInvCapAvg",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_preInvCap"),
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+    restoreZeros = TRUE,
+    recalcUnit = 1e3) %>%   # TW to GW
+  revalue.levels(technology = rm2genTech) %>%
+  group_by(year, region, technology, iteration) %>%
+  summarise(preInvCap = sum(p32_preInvCap)) %>%
+  order.levels(technology = names(colorsTech))
+
 dataPreInvCapREMIND <- readREMINDgdx(
     paths = rmFiles,
     gdxVar = "p32_preInvCap",
@@ -441,6 +453,11 @@ dataPreInvCapPyPSA <- readPyPSAcsv(
 # Loop over regions
 for (r in regList){
 
+  dataPreInvCapAvgREMINDplot <- dataPreInvCapAvgREMIND %>%
+    filter(region %in% r) %>%
+    group_by(year, technology, iteration) %>%
+    summarise(preInvCap = sum(preInvCap))
+
   dataPreInvCapREMINDplot <- dataPreInvCapREMIND %>%
     filter(region %in% r) %>%
     group_by(year, technology, iteration) %>%
@@ -452,18 +469,22 @@ for (r in regList){
     summarise(preInvCap = sum(preInvCap))
 
   pYear <- ggplot() +
-    geom_line(data = dataPreInvCapREMINDplot, aes(x = year, y = preInvCap, color = technology)) +
+    geom_line(data = dataPreInvCapAvgREMINDplot, aes(x = year, y = preInvCap, color = technology)) +
+    geom_point(data = dataPreInvCapREMINDplot, aes(x = year, y = preInvCap, color = technology, shape = "Non-avg. value")) +
     geom_point(data = dataPreInvCapPyPSAplot, aes(x = year, y = preInvCap, color = technology)) +
     scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
+    scale_shape_manual(name = NULL, values = c("Non-avg. value" = 4)) +
     labs(x = "Year", y = "Capacity (GW)") +
     ggtitle("Pre-investment capacities over years", regSubtitle(r))
-    
+  
   print(pYear + facet_wrap(~ iteration))
 
   pIteration <- ggplot() +
-    geom_line(data = dataPreInvCapREMINDplot, aes(x = iteration, y = preInvCap, color = technology)) +
+    geom_line(data = dataPreInvCapAvgREMINDplot, aes(x = iteration, y = preInvCap, color = technology)) +
+    geom_point(data = dataPreInvCapREMINDplot, aes(x = iteration, y = preInvCap, color = technology, shape = "Non-avg. value")) +
     geom_point(data = dataPreInvCapPyPSAplot, aes(x = iteration, y = preInvCap, color = technology)) +
     scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
+    scale_shape_manual(name = NULL, values = c("Non-avg. value" = 4)) +
     labs(x = "Iteration", y = "Capacity (GW)") +
     scale_x_continuous(breaks = rmIterations) +
     ggtitle("Pre-investment capacities over iterations", regSubtitle(r))
@@ -1055,9 +1076,17 @@ pFuelCostsIter <- ggplot() +
 
 print(pFuelCostsIter + facet_wrap(~ year))
 
-print(pFuelCostsYear + facet_grid(technology ~ iteration, scales = "free"))
+print(pFuelCostsYear +
+  facet_grid(technology ~ iteration,
+              scales = "free",
+              labeller = labeller(technology = namesTech)) +
+  theme(legend.position = "none"))
 
-print(pFuelCostsIter + facet_grid(technology ~ year, scales = "free"))
+print(pFuelCostsIter +
+  facet_grid(technology ~ year,
+              scales = "free",
+              labeller = labeller(technology = namesTech)) +
+  theme(legend.position = "none"))
 
 ```
 
@@ -1123,7 +1152,7 @@ pCO2intYear <- ggplot() +
   scale_shape_manual(name = "Scaled technology\n(similar REMIND tech)",
                      values = pyTechScaledShape,
                      guide = guide_legend(order = 2)) +
-  labs(x = "CO2 intensity (tCO2/MWh)", y = "technology") +
+  labs(x = "Year", y = "CO2 intensity (tCO2/MWh)") +
   ggtitle("CO2 intensity over years") +
   facet_grid(technology ~ iteration) +
   theme(legend.position = "none")
@@ -1145,7 +1174,7 @@ pCO2intIter <- ggplot() +
   scale_shape_manual(name = "Scaled technology\n(similar REMIND tech)",
                      values = pyTechScaledShape,
                      guide = guide_legend(order = 2)) +
-  labs(x = "CO2 intensity (tCO2/MWh)", y = "technology") +
+  labs(x = "Iteration", y = "CO2 intensity (tCO2/MWh)") +
   scale_x_continuous(breaks = rmIterations) +
   ggtitle("CO2 intensity over iterations") +
   facet_grid(technology ~ year) +

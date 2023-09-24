@@ -103,14 +103,6 @@ p32_PriceDurSlope(regi,"elh2") = cm_PriceDurSlope_elh2;
 ***                  PyPSA-Eur
 ***------------------------------------------------------------
 
-*** Initialise several parameters at 0
-*** This is required so that GAMS doesn't complain as these are used in equations.
-*** All parameters are overwritten with values from PyPSA-Eur.
-p32_PyPSA_shSeEl(tPy32,regPy32,tePy32) = 0;
-p32_PyPSA_MV(tPy32,regPy32,tePy32) = 0;
-p32_PyPSA_ElecPrice(tPy32,regPy32) = 0;
-p32_PyPSA_ValueFactor(tPy32,regPy32,tePy32) = 0;
-
 *** Hydro: Pumped hydro storage (PHS) capacity and generation values in 2020
 *** This is necessary because PyPSA doesn't include PHS as a generation technology
 p32_iniCapPHS("DEU","hydro") = 5.3E-3;  !! 5.3 GW

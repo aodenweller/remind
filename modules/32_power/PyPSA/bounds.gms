@@ -23,7 +23,7 @@ if ((cm_pypsa_eq eq 1),
 * This is probably redundant as vm_capfac is not fixed to pm_cf any longer, but free
 * ToDo: Check capacity factor reporting, maybe set pm_cf = vm_capfac.l in postsolve for reporting
 $ifthen "%c32_pypsa_capfac%" == "on"
-  pm_cf(tPy32,regPy32,tePyDisp32) = p32_PyPSA_CF(tPy32,regPy32,tePyDisp32);
+  pm_cf(tPy32,regPy32,tePyDisp32) = p32_PyPSA_CFAvg(tPy32,regPy32,tePyDisp32);
 $endif
 
 * Read in curtailment at some point?
@@ -39,7 +39,7 @@ $endif
 
 * Calculate value factor to parametrise the pre-factor equation for markups
 $ifthen "%cm_pypsa_markup%" == "on"
-  p32_PyPSA_ValueFactor(tPy32,regPy32,tePy32) = p32_PyPSA_MV(tPy32,regPy32,tePy32) / p32_PyPSA_ElecPrice(tPy32,regPy32)
+  p32_PyPSA_ValueFactor(tPy32,regPy32,tePy32) = p32_PyPSA_MVAvg(tPy32,regPy32,tePy32) / p32_PyPSA_ElecPrice(tPy32,regPy32)
 $endif
 );
 

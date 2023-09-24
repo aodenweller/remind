@@ -340,13 +340,17 @@ q32_capFac(t,regi,te)$(tPy32(t) and regPy32(regi) AND tePy32(te) AND (cm_PyPSA_e
   v32_usableSeTeDisp(t,regi,"seel",te)
   =e=
     ( vm_cap(t,regi,te,"1") - p32_iniCapPHS(regi,te) )
+$ifthen.c32_pypsa_preFac "%c32_pypsa_preFac%" == "on"
 $ifthen.c32_pypsa_preFacManual "%c32_pypsa_preFacManual%" == "on"
-  * p32_PyPSA_CF(t,regi,te) * ( 1 + p32_preFactor_CF(regi,te) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
+  * p32_PyPSA_CFAvg(t,regi,te) * ( 1 + p32_preFactor_CF(regi,te) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
 $elseif.c32_pypsa_preFacManual "%c32_pypsa_preFacManual%" == "off"
-  * (   p32_PyPSA_CF(t,regi,te) * ( 1 + 0.5 * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )$(p32_PyPSA_CF(t,regi,te) ge 0.5)
-      + p32_PyPSA_CF(t,regi,te) * ( 1 - 0.5 * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )$(p32_PyPSA_CF(t,regi,te) lt 0.5)
+  * (   p32_PyPSA_CFAvg(t,regi,te) * ( 1 + 0.5 * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )$(p32_PyPSA_CFAvg(t,regi,te) ge 0.5)
+      + p32_PyPSA_CFAvg(t,regi,te) * ( 1 - 0.5 * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )$(p32_PyPSA_CFAvg(t,regi,te) lt 0.5)
     )
 $endif.c32_pypsa_preFacManual
+$elseif.c32_pypsa_preFac "%c32_pypsa_preFac%" == "off"
+  * p32_PyPSA_CFAvg(t,regi,te)
+$endif.c32_pypsa_preFac
 ;
 $endif.c32_pypsa_capfac
 
@@ -366,15 +370,19 @@ $ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
 q32_MarkUp(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (cm_PyPSA_eq eq 1))..
 	vm_PyPSAMarkup(t,regi,te)
 	=e=
+$ifthen.c32_pypsa_preFac "%c32_pypsa_preFac%" == "on"
 $ifthen.c32_pypsa_preFacManual "%c32_pypsa_preFacManual%" == "on"
-    (   p32_PyPSA_MV(t,regi,te) * ( 1 + p32_preFactor_MV(regi,te) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
+    (   p32_PyPSA_MVAvg(t,regi,te) * ( 1 + p32_preFactor_MV(regi,te) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
       - p32_PyPSA_ElecPrice(t,regi)
     )
 $elseif.c32_pypsa_preFacManual "%c32_pypsa_preFacManual%" == "off"
-    (   p32_PyPSA_MV(t,regi,te) * ( 1 - p32_PyPSA_ValueFactor(t,regi,te) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
+    (   p32_PyPSA_MVAvg(t,regi,te) * ( 1 - p32_PyPSA_ValueFactor(t,regi,te) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
       - p32_PyPSA_ElecPrice(t,regi)
     )
 $endif.c32_pypsa_preFacManual
+$elseif.c32_pypsa_preFac "%c32_pypsa_preFac%" == "off"
+    ( p32_PyPSA_MVAvg(t,regi,te) - p32_PyPSA_ElecPrice(t,regi) )
+$endif.c32_pypsa_preFac
   * sm_TWa_2_MWh / 1e12
 ;
 $endif.cm_pypsa_markup
@@ -387,7 +395,7 @@ $endif.cm_pypsa_markup
 *** The pre-factor can be based on the following intuition:
 *** If the sum of VRE shares increases, peak residual load decreases.
 *** However, since VREs have a small capacity credit, this effect is also small.
-*** Slope parameter currently set to 0.1.
+*** Currently deactivate pre-factors.
 $ifthen "%c32_pypsa_peakcap%" == "on"
 q32_PeakResCap(t,regi)$(tPy32(t) AND regPy32(regi) AND (cm_PyPSA_eq eq 1))..
   sum(tePyDisp32, vm_cap(t,regi,tePyDisp32, "1"))  !! TODO: Hydro included or not?
