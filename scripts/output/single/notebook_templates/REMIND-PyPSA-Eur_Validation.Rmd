@@ -206,8 +206,8 @@ colorsTech <- c(
   "wind_onshore" = "#337fff",
   "wind_offshore" = "#334cff",
   "offwind" = "#334cff",  # Remove later
-  "biomass" = "#005900",
   "hydro" = "#191999",
+  "biomass" = "#005900",
   "CCGT" = "#999959",
   "OCGT" = "#e5e5b2",
   "oil" = "#663a00",
@@ -223,8 +223,8 @@ namesTech <- c(
   "wind_onshore" = "Wind Onshore",
   "wind_offshore" = "Wind Offshore",
   "offwind" = "Wind Offshore",  # Remove later?
-  "biomass" = "Biomass",
   "hydro" = "Hydro (dams+ror)",
+  "biomass" = "Biomass",
   "CCGT" = "CCGT",
   "OCGT" = "OCGT",
   "oil" = "Oil",
@@ -238,8 +238,8 @@ pyTechColor <- c(
   "solar" = "#ffcc00",
   "onwind" = "#337fff",
   "offwind" = "#334cff",
-  "biomass" = "#005900",
   "hydro" = "#191999",
+  "biomass" = "#005900",
   "CCGT" = "#999959",
   "OCGT" = "#e5e5b2",
   "oil" = "#663a00",
@@ -1047,7 +1047,7 @@ pFuelCostsYear <- ggplot() +
                      values = pyTechScaledShape,
                      guide = guide_legend(order = 2)) +
   labs(x = "Year", y = "Fuel costs (USD/MWh)") +
-  ggtitle("Fuel costs over years", "Smoothed over iterations")
+  ggtitle("Fuel costs over years", "Averaged over iterations")
 
 print(pFuelCostsYear + facet_wrap(~ iteration))
 
@@ -1072,7 +1072,7 @@ pFuelCostsIter <- ggplot() +
                      guide = guide_legend(order = 2)) +
   labs(x = "Iteration", y = "Fuel costs (USD/MWh)") +
   scale_x_continuous(breaks = rmIterations) +
-  ggtitle("Fuel costs over iterations", "Smoothed over iterations")
+  ggtitle("Fuel costs over iterations", "Averaged over iterations")
 
 print(pFuelCostsIter + facet_wrap(~ year))
 
@@ -1196,7 +1196,7 @@ dataCO2PriceREMIND <- readREMINDgdx(
   columns = c("tall" = "year", "all_regi" = "region", "value" = "value"),
   colFilter = list("year" = years, "region" = regions),
   restoreZeros = TRUE,
-  recalcUnit = 1E3 / tC2tCO2
+  recalcUnit = 1 / tC2tCO2
 )
 
 # PyPSA data
@@ -1348,6 +1348,8 @@ Work in progress. Not yet coupled from PyPSA-Eur to REMIND.
 
 ```{r curtailments}
 # REMIND
+tePyVRE32 <- gdx::readGDX(rmFiles[1], "tePyVRE32", restore_zeros = FALSE)
+
 dataCurtailmentREMIND <- readREMINDgdx(
     paths = rmFiles,
     gdxVar = "v32_storloss",
@@ -1355,8 +1357,10 @@ dataCurtailmentREMIND <- readREMINDgdx(
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = FALSE,
     recalcUnit = twa2twh) %>%
+  filter(technology %in% tePyVRE32) %>%
   revalue.levels(technology = rm2genTech) %>%
   quitte::order.levels(technology = names(colorsTech))
+
 
 # PyPSA-Eur
 dataCurtailmentPyPSA <- readPyPSAcsv(
@@ -1383,7 +1387,7 @@ for (r in regList) {
     group_by(year, technology, iteration) %>%
     summarise(value = sum(value))
 
-  pCurtailmentYearFix <- ggplot() +
+  pCurtailmentYear <- ggplot() +
     geom_line(data = dataCurtailmentplotREMIND, aes(x = year, y = v32_storloss, color = technology)) +
     geom_point(data = dataCurtailmentplotPyPSA, aes(x = year, y = value, color = technology)) +
     scale_color_manual(
@@ -1395,9 +1399,9 @@ for (r in regList) {
     ggtitle("Curtailment over years", regSubtitle(r)) +
     facet_wrap(~ iteration)
 
-  print(pCurtailmentYearFix)
+  print(pCurtailmentYear)
 
-  pCurtailmentIterFix <- ggplot() +
+  pCurtailmentIter <- ggplot() +
     geom_line(data = dataCurtailmentplotREMIND, aes(x = iteration, y = v32_storloss, color = technology)) +
     geom_point(data = dataCurtailmentplotPyPSA, aes(x = iteration, y = value, color = technology)) +
     scale_color_manual(
@@ -1410,7 +1414,7 @@ for (r in regList) {
     ggtitle("Curtailment over iterations", regSubtitle(r)) +
     facet_wrap(~ year)
 
-  print(pCurtailmentIterFix)
+  print(pCurtailmentIter)
 }
 ```
 
@@ -1552,7 +1556,7 @@ for (r in regList) {
 
 ### Peak residual load
 
-Relative peak residual load is passed from PyPSA-Eur to REMIND.
+Relative peak residual load is passed from PyPSA-Eur to REMIND. REMIND can go higher than the PyPSA-Eur value, but not lower.
 
 ```{r peak residual load relative}
 # REMIND data (pre-factor based)
@@ -1641,17 +1645,25 @@ dataCapREMIND <- readREMINDgdx(
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech), "grade" = 1),
     restoreZeros = FALSE,
     recalcUnit = 1e3) %>%   # TW to GW
-  select(-grade) %>%   # Remove grade column
-  revalue.levels(technology = rm2genTech) %>%
-  group_by(year, region, technology, iteration) %>%
-  summarise(cap = sum(vm_cap))
+  select(-grade)  # Remove grade column
+
+dataPHScapREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "p32_iniCapPHS",
+    columns = c("all_regi" = "region", "all_te" = "technology", "value" = "p32_iniCapPHS"),
+    colFilter = list("region" = regions),
+    restoreZeros = TRUE,
+    recalcUnit = 1e3)  # TW to GW
 
 for (r in regList) {
 
-  dataCapREMINDplot <- dataCapREMIND %>%
+  dataCapREMINDplot <- left_join(dataCapREMIND, dataPHScapREMIND) %>%
+    mutate(cap = vm_cap - p32_iniCapPHS) %>%
     filter(region %in% r) %>%
+    revalue.levels(technology = rm2genTech) %>%
     group_by(year, technology, iteration) %>%
-    summarise(cap = sum(cap))
+    summarise(cap = sum(cap)) %>%
+    order.levels(technology = names(colorsTech))
 
   pYear <- ggplot() +
     geom_line(data = dataCapREMINDplot, aes(x = year, y = cap, color = technology)) +
@@ -1689,14 +1701,19 @@ PyPSA-Eur should therefore only start investing into new capacity once the free 
 # Read REMIND data
 dataPreInvCapREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "p32_preInvCap",
+    gdxVar = "p32_preInvCapAvg",
     columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_preInvCap"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+    restoreZeros = FALSE,
+    recalcUnit = 1e3)
+
+dataPHScapREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "p32_iniCapPHS",
+    columns = c("all_regi" = "region", "all_te" = "technology", "value" = "p32_iniCapPHS"),
+    colFilter = list("region" = regions),
     restoreZeros = TRUE,
-    recalcUnit = 1e3) %>%   # TW to GW
-  revalue.levels(technology = rm2genTech) %>%
-  group_by(year, region, technology, iteration) %>%
-  summarise(preInvCap = sum(p32_preInvCap))
+    recalcUnit = 1e3)  # TW to GW
 
 dataCapREMIND <- readREMINDgdx(
     paths = rmFiles,
@@ -1705,13 +1722,16 @@ dataCapREMIND <- readREMINDgdx(
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech), "grade" = 1),
     restoreZeros = FALSE,
     recalcUnit = 1e3) %>%   # TW to GW
-  select(-grade) %>%   # Remove grade column
+  select(-grade)  # Remove grade column
+
+dataCapInvestREMIND <- left_join(dataPreInvCapREMIND, dataPHScapREMIND) %>%
+  full_join(dataCapREMIND) %>%
+  mutate(vm_cap = vm_cap - p32_iniCapPHS,
+         deltaCap = vm_cap - p32_preInvCap) %>%
   revalue.levels(technology = rm2genTech) %>%
   group_by(year, region, technology, iteration) %>%
-  summarise(cap = sum(vm_cap))
-
-dataCapInvestREMIND <- full_join(dataPreInvCapREMIND, dataCapREMIND) %>%
-  mutate(deltaCap = cap - preInvCap) %>%
+  summarise(deltaCap = sum(deltaCap),
+            preInvCap = sum(p32_preInvCap)) %>%
   order.levels(technology = names(colorsTech)) %>%
   pivot_longer(cols = c("deltaCap", "preInvCap"),
                names_to = "variable",
@@ -1871,6 +1891,24 @@ dataCapREMINDplot <- dataCapREMIND %>%
   summarise(value = sum(value)) %>%
   order.levels(technology = names(colorsTech))
 
+# Also calculate minimum capacities from peak residual load
+dataGenREMIND <- readREMINDgdx(
+  paths = rmFiles,
+  gdxVar = "v32_usableSeDisp",
+  columns = c("ttot" = "year", "all_regi" = "region", "value" = "v32_usableSeDisp"),
+  colFilter = list("year" = years, "region" = regions),
+  restoreZeros = FALSE,
+  recalcUnit = 1E3)  # TWa to GWa
+
+dataPeakResLoadPyPSA <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "peak_residual_loads.csv")) %>%
+  # Increment iteration by 1 to match REMIND
+  mutate(absolute = absolute / 1e3)  # Convert capacities to GW
+
+dataPeakResLoadMinREMIND <- full_join(dataPeakResLoadPyPSA %>% mutate(iteration = iteration + 1),
+                                      dataGenREMIND) %>%
+  mutate(minCap = relative * v32_usableSeDisp)
+
 # Read optimal capacities from the CSV files
 dataCapPyPSA <- readPyPSAcsv(
   paths = file.path(pyValidationDirs, "optimal_capacities.csv")) %>%
@@ -1909,6 +1947,18 @@ for (r in regList){
       group_by(year) %>%
       summarise(value = sum(value))
 
+    dataPeakResLoadMinREMINDplot <- dataPeakResLoadMinREMIND %>%
+      filter(region %in% r,
+             iteration == i) %>%
+      group_by(year) %>%
+      summarise(minCap = sum(minCap))
+
+    dataPeakResLoadPyPSAplot <- dataPeakResLoadPyPSA %>%
+      filter(region %in% r,
+             iteration == i) %>%
+      group_by(year) %>%
+      summarise(minCap = sum(absolute))
+
     pCapComp <- ggplot() +
       geom_bar(data = dataCapREMINDploti,
               mapping = aes(x = year, y = value, fill = technology),
@@ -1936,6 +1986,14 @@ for (r in regList){
               linewidth = 0.25,
               color = "black",
               fill = NA) +
+      geom_point(data = dataPeakResLoadMinREMINDplot,
+                mapping = aes(x = year, y = minCap, shape = "Peak residual load"),
+                position = position_nudge(x = -1.2),
+                fill = "white") +
+      geom_point(data = dataPeakResLoadPyPSAplot,
+                mapping = aes(x = year, y = minCap, shape = "Peak residual load"),
+                position = position_nudge(x = 1.2),
+                fill = "white") +
       scale_fill_manual(
         name = "Technology",
         values = colorsTech,
@@ -1945,6 +2003,10 @@ for (r in regList){
       scale_linetype_manual(
         name = "Model",
         values = c("REMIND" = "solid", "PyPSA-Eur" = "dashed"),
+      ) +
+      scale_shape_manual(
+        name = NULL,
+        values = c("Peak residual load" = 23),
       ) +
       scale_x_continuous(breaks = years) +
       labs(x = "Year", y = "Capacity (GW)") +
@@ -1980,6 +2042,18 @@ for (r in regList) {
       group_by(iteration) %>%
       summarise(value = sum(value))
 
+    dataPeakResLoadMinREMINDplot <- dataPeakResLoadMinREMIND %>%
+      filter(region %in% r,
+             year == y) %>%
+      group_by(iteration) %>%
+      summarise(minCap = sum(minCap))
+
+    dataPeakResLoadPyPSAplot <- dataPeakResLoadPyPSA %>%
+      filter(region %in% r,
+             year == y) %>%
+      group_by(iteration) %>%
+      summarise(minCap = sum(absolute))
+
     pCapComp <- ggplot() +
       geom_bar(data = dataCapREMINDploty,
               mapping = aes(x = iteration, y = value, fill = technology),
@@ -2007,6 +2081,14 @@ for (r in regList) {
               linewidth = 0.25,
               color = "black",
               fill = NA) +
+      geom_point(data = dataPeakResLoadMinREMINDplot,
+                mapping = aes(x = iteration, y = minCap, shape = "Peak residual load"),
+                position = position_nudge(x = -0.2),
+                fill = "white") +
+      geom_point(data = dataPeakResLoadPyPSAplot,
+                mapping = aes(x = iteration, y = minCap, shape = "Peak residual load"),
+                position = position_nudge(x = 0.2),
+                fill = "white") +
       scale_fill_manual(
         name = "Technology",
         values = colorsTech,
@@ -2015,6 +2097,10 @@ for (r in regList) {
       scale_linetype_manual(
         name = "Model",
         values = c("REMIND" = "solid", "PyPSA-Eur" = "dashed"),
+      ) +
+      scale_shape_manual(
+        name = NULL,
+        values = c("Peak residual load" = 23),
       ) +
       labs(x = "Iteration", y = "Capacity (GW)") +
       scale_x_continuous(breaks = rmIterations) +
@@ -2404,6 +2490,7 @@ pElecPriceIter <- ggplot() +
             mapping = aes(x = iteration, y = value, color = "PyPSA-Eur")) +
   scale_color_discrete(name = "Model") +
   labs(x = "Iteration", y = "Electricity price ($/MWh)") +
+  scale_x_continuous(breaks = rmIterations) +
   scale_y_continuous(limits = c(0, NA)) +
   ggtitle("Electricity price over iterations")
 
