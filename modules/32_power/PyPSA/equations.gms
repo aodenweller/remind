@@ -410,12 +410,12 @@ $endif
 ***------------------------------------------------------------
 *** Cost penalty if generation shares in REMIND and PyPSA-Eur diverge
 *** This is added to v_costInv in equation q_costInv (unit trillion $)
-$ifthen "%cm_pypsa_sharePenalty%" == "on"
-qm_sharePenaltyPyPSA(t,regi)$(tPy32(t) AND regPy32(regi) and (cm_PyPSA_eq eq 1))..
-  vm_sharePenaltyPyPSA(t,regi)
-  =e=
-  0.05 * sum(te, power(v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te), 2))
-;
-$endif
+*** $ifthen "%cm_pypsa_sharePenalty%" == "on"
+*** qm_sharePenaltyPyPSA(t,regi)$(tPy32(t) AND regPy32(regi) and (cm_PyPSA_eq eq 1))..
+***  vm_sharePenaltyPyPSA(t,regi)
+***  =e=
+***  0.05 * sum(te, power(v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te), 2))
+***;
+***$endif
 
 *** EOF ./modules/32_power/PyPSA/equations.gms

@@ -48,10 +48,6 @@ q_costInv(t,regi)..
   sum(in$(ppfen_CESMkup(in)),
     vm_costCESMkup(t,regi,in)
   )
-*** Cost penalty for divergence of generation shares between REMIND and PyPSA-Eur
-$ifthen "%cm_pypsa_costConverge%" == "on"
-  + vm_costPyPSAconverge(t,regi)
-$endif
 ;
 
 

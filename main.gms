@@ -1656,10 +1656,7 @@ $setglobal c32_pypsa_peakcap on !! def = on !! regexp = off|on
 $setglobal c32_pypsa_multiregion off !! def = off !! regexp = off|on
 *** cm_pypsa_markup
 *** Switch to enable markups/markdowns from PyPSA-Eur via tax module
-$setglobal cm_pypsa_markup on !! def = on !! regexp = off|on
-*** cm_pypsa_costConverge
-*** Switch to enable additional costs for generation share divergence
-$setglobal cm_pypsa_costConverge off !! def = off !! regexp = off|on
+$setglobal cm_pypsa_markup off !! def = off !! regexp = off|on
 *** c32_pypsa_preFac
 *** Switch to enable pre-factors
 $setglobal c32_pypsa_preFac on !! def = on !! regexp = off|on
