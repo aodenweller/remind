@@ -27,6 +27,27 @@ pm_SEPrice(t,regi,entySE)$(    abs(qm_budget.m(t,regi)) gt sm_eps
 if ((iteration.val gt c32_startIter_PyPSA),
   Put_utility logfile, "Exec" /
   "sbatch RenderREMIND-PyPSA-Eur_Validation.sh";
+
+  !! Overwrite deactivated equations with zeros to avoid confusion
+  !! Otherwise, these contain the numbers from the previous iteration
+  q32_limitCapTeStor.l(t,regi,teStor)$(tPy32(t) and regPy32(regi)) = 0;
+  q32_limitCapTeStor.m(t,regi,teStor)$(tPy32(t) and regPy32(regi)) = 0;
+  q32_h2turbVREcapfromTestor.l(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
+  q32_h2turbVREcapfromTestor.m(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
+  q32_h2turbVREcapfromTestorUp.l(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
+  q32_h2turbVREcapfromTestor.m(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
+  q32_limitCapTeGrid.l(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
+  q32_limitCapTeGrid.m(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
+  q32_shStor.l(t,regi,teVRE)$(tPy32(t) and regPy32(regi)) = 0;
+  q32_shStor.m(t,regi,teVRE)$(tPy32(t) and regPy32(regi)) = 0;
+  q32_storloss.l(t,regi,teVRE)$(tPy32(t) and regPy32(regi)) = 0;
+  q32_storloss.m(t,regi,teVRE)$(tPy32(t) and regPy32(regi)) = 0;
+  q32_TotVREshare.l(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
+  q32_TotVREshare.m(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
+  q32_shAddIntCostTotVRE.l(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
+  q32_shAddIntCostTotVRE.m(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
+  q32_operatingReserve.l(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
+  q32_operatingReserve.m(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
 );
 
 *** EOF ./modules/32_power/PyPSA/presolve.gms
