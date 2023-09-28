@@ -59,7 +59,7 @@ q32_usableSeTe(t,regi,entySe,te)$(sameas(entySe,"seel") AND teVRE(te))..
 *` Definition of capacity constraints for storage:
 ***---------------------------------------------------------------------------
 *` This equation calculates the storage cpacity for each testor that needs to be installed based on the amount of v32_storloss that is calculated below in 
-*` q32_storloss. Multiplying v32_storloss with "eta/(1-eta)" yields the total output of a storage technology; this output has to be smaller than cap * capfac.  
+*` q32_storloss. Multiplying v32_storloss with "eta/(1-eta)" yields the total output of a storage technology; this output has to be smaller than cap * capfac.
 q32_limitCapTeStor(t,regi,teStor)$( t.val ge 2020 AND ( ( regPy32(regi) AND ( cm_PyPSA_eq eq 0 OR ( cm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) ) )..
     ( 0.5$( cm_VRE_supply_assumptions eq 1 )   !! reduce storage investment needs by half for VRE_supply_assumptions = 1 
     + 1$(   cm_VRE_supply_assumptions ne 1 )
@@ -113,7 +113,7 @@ q32_limitCapTeChp(t,regi)..
 *** Calculation of necessary grid installations for centralized renewables:
 ***---------------------------------------------------------------------------
 *` Additional grid expansion to integrate VRE are driven linearly by VRE output 
-q32_limitCapTeGrid(t,regi)$( t.val ge 2020 ) .. 
+q32_limitCapTeGrid(t,regi)$( t.val ge 2020 AND ( ( regPy32(regi) AND ( cm_PyPSA_eq eq 0 OR ( cm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) ) )..
     vm_cap(t,regi,"gridwind",'1')      !! Technology is now parameterized to yield marginal costs of ~3.5$/MWh VRE electricity
     / p32_grid_factor(regi)            !! It is assumed that large regions require higher grid investment 
     =g=
@@ -410,9 +410,9 @@ $endif
 ***------------------------------------------------------------
 *** Cost penalty if generation shares in REMIND and PyPSA-Eur diverge
 *** This is added to v_costInv in equation q_costInv (unit trillion $)
-$ifthen "%cm_pypsa_costConverge%" == "on"
-qm_costPyPSAconverge(t,regi)$(tPy32(t) AND regPy32(regi) and (cm_PyPSA_eq eq 1))..
-  vm_costPyPSAconverge(t,regi)
+$ifthen "%cm_pypsa_sharePenalty%" == "on"
+qm_sharePenaltyPyPSA(t,regi)$(tPy32(t) AND regPy32(regi) and (cm_PyPSA_eq eq 1))..
+  vm_sharePenaltyPyPSA(t,regi)
   =e=
   0.05 * sum(te, power(v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te), 2))
 ;
