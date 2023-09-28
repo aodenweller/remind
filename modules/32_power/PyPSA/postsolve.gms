@@ -31,6 +31,24 @@ loop(t,
 *** Track PE price in iterations
 p32_PEPrice_iter(iteration,ttot,regi,entyPe) = pm_PEPrice(ttot,regi,entyPe);
 
+*** Check that budget equation is binding and that PE prices are positive for relevant time steps, regions and PE carriers
+if ((iteration.val ge c32_startIter_PyPSA) AND (mod(iteration.val - c32_startIter_PyPSA, 1) eq 0),
+  loop( (tPy32, regPy32, entyPe)$( sameas(entyPe,"pecoal") or sameas(entyPe,"pegas") or sameas(entyPe,"peoil") or sameas(entyPe,"pebiolc") ),
+    if (abs(qm_budget.m(tPy32,regPy32)) le sm_eps,
+      display "Budget equation not binding, postponing PyPSA-Eur by one iteration";
+      display "Current iteration: " iteration;
+      c32_startIter_PyPSA = c32_startIter_PyPSA + 1;
+      break;
+    );
+    if (pm_PEPrice(tPy32, regPy32, entyPe) le sm_eps,
+      display "Some PE prices are negative, postponing PyPSA-Eur by one iteration.";
+      display "Current iteration: " iteration;
+      c32_startIter_PyPSA = c32_startIter_PyPSA + 1;
+      break;
+    );
+  );
+);
+
 ***------------------------------------------------------------
 ***                  Only execute every X-th iteration
 ***------------------------------------------------------------
@@ -53,23 +71,27 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
 *** The idea behind averaging follows three steps:
 *** (1) allow x iterations (until c32_startIter_PyPSA + x) without averaging so that variables can adjust/drift
 *** (2) allow another y iterations (until c32_startIter + x + y) without averaging so that variables can start oscillating
-*** (3) afterwards (from c_32_startIter + x + y) take the average of the previous y iterations, where y should be an even number
-*** Currently set x to 3 and y to 4
+*** (3a) afterwards (from c32_startIter + x + y) take the average of the previous y iterations, where y should be an even number
+*** (3b) afterwards (from c32_startIter + x + y) take the average of all previous iterations larger than c32_startIter + x
+*** 3b might lead to over-damping, while 3a could lead to under-damping for heavily-oscillating technologies
+*** Currently we use 3a and set x to 3 and y to 4
 
   !! Implement step (1) and (2)
   if ((c32_avg_rm2py eq 0) or (iteration.val lt c32_startIter_PyPSA + 3 + 4 - 1),  !! c32_startIter_PYPSA + x + y - 1
     !! Non-averaged pre-investment capacities
     p32_preInvCapAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_preInvCap(t,regi,te);
     !! Non-averaged PE prices
-    p32_PEPriceAvg(t,regi,entyPe)$(tPy32(t) and regPy32(regi)) = pm_PEPrice(t,regi,entyPe);
+    p32_PEPriceAvg(t,regi,entyPe)$(tPy32(t) and regPy32(regi)) = max(0, pm_PEPrice(t,regi,entyPe));  !! Prevent negative PE prices
   !! Implement step (3)
   elseif (c32_avg_rm2py eq 1),
     !!! Averaged pre-investment capacities over iterations
     p32_preInvCapAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) =
-      sum(iteration2$(iteration2.val gt (iteration.val - 4)), p32_preInvCap_iter(iteration2,t,regi,te)) / 4;  !! iteration.val - y, divide by y
+      sum(iteration2$(iteration2.val gt (iteration.val - 4)), p32_preInvCap_iter(iteration2,t,regi,te)) / 4;  !! (3a)
+      !!sum(iteration2$(iteration2.val ge (c32_startIter_PyPSA + 3)), p32_preInvCap_iter(iteration2,t,regi,te)) / (iteration.val - 3);  !! (3b)
     !! Averaged PE prices over iterations
     p32_PEPriceAvg(t,regi,entyPe)$(tPy32(t) and regPy32(regi)) =
-      sum(iteration2$(iteration2.val gt (iteration.val - 4)), p32_PEPrice_iter(iteration2,t,regi,entyPe)) / 4; !! iteration.val - y, divide by y
+      sum(iteration2$(iteration2.val gt (iteration.val - 4)), max(0, p32_PEPrice_iter(iteration2,t,regi,entyPe))) / 4; !! (3a)
+      !!sum(iteration2$(iteration2.val ge (c32_startIter_PyPSA + 3)), max(0, p32_PEPrice_iter(iteration2,t,regi,entyPe))) / (iteration.val - 3); !! (3b)
   );
 
   !! Capital interest rate aggregated for all regions in regPy32
@@ -142,12 +164,14 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
     p32_PyPSA_MVAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_PyPSA_MV(t,regi,te);
   !! Implement step (3)
   elseif (c32_avg_py2rm eq 1),
-    !!! Averaged capacity factors over iterations
+    !! Averaged capacity factors over iterations
     p32_PyPSA_CFAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) =
-      sum(iteration2$(iteration2.val gt (iteration.val - 4)), p32_PyPSA_CF_iter(iteration2,t,regi,te)) / 4;  !! iteration.val - y, divide by y
+      sum(iteration2$(iteration2.val gt (iteration.val - 4)), p32_PyPSA_CF_iter(iteration2,t,regi,te)) / 4;  !! (3a)
+      !!sum(iteration2$(iteration2.val ge (c32_startIter_PyPSA + 3)), p32_PyPSA_CF_iter(iteration2,t,regi,te)) / (iteration.val - 3);  !! (3b)
     !! Averaged market values over iterations
     p32_PyPSA_MVAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) =
-      sum(iteration2$(iteration2.val gt (iteration.val - 4)), p32_PyPSA_MV_iter(iteration2,t,regi,te)) / 4; !! iteration.val - y, divide by y
+      sum(iteration2$(iteration2.val gt (iteration.val - 4)), p32_PyPSA_MV_iter(iteration2,t,regi,te)) / 4; !! (3a)
+      !!sum(iteration2$(iteration2.val ge (c32_startIter_PyPSA + 3)), p32_PyPSA_MV_iter(iteration2,t,regi,te)) / (iteration.val - 3); !! (3b)
   );
 
 );
