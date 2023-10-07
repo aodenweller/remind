@@ -24,7 +24,7 @@ pm_SEPrice(t,regi,entySE)$(    abs(qm_budget.m(t,regi)) gt sm_eps
 *** Render validation RMarkdown file
 *** Don't put in postsolve.gms because fulldata_i.gdx is only written afterwards
 
-if ((iteration.val gt c32_startIter_PyPSA),
+if ((iteration.val ge (c32_startIter_PyPSA + 1)),
   Put_utility logfile, "Exec" /
   "sbatch RenderREMIND-PyPSA-Eur_Validation.sh";
 
@@ -48,6 +48,10 @@ if ((iteration.val gt c32_startIter_PyPSA),
   q32_shAddIntCostTotVRE.m(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
   q32_operatingReserve.l(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
   q32_operatingReserve.m(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
+);
+
+if((c32_iterPreFacFadeOut ne 0) and (iteration.val ge c32_iterPreFacFadeOut),
+ s32_preFacFadeOut = 0.7**(iteration.val - c32_iterPreFacFadeOut + 1);
 );
 
 *** EOF ./modules/32_power/PyPSA/presolve.gms

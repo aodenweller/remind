@@ -336,16 +336,16 @@ q32_shSeElDisp(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te))..
 *** (i) Cutoff value between (1) and (2) in terms of the capacity factor. Currently set to 0.5.
 *** (ii) Slope of the pre-factor. Currently set to 0.5.
 $ifthen.c32_pypsa_capfac "%c32_pypsa_capfac%" == "on"
-q32_capFac(t,regi,te)$(tPy32(t) and regPy32(regi) AND tePy32(te) AND (cm_PyPSA_eq eq 1))..
+q32_capFac(t,regi,te)$(tPy32(t) and regPy32(regi) AND tePy32(te) AND (cm_PyPSA_eq eq 1) AND NOT sameas(te, "hydro"))..
   v32_usableSeTeDisp(t,regi,"seel",te)
   =e=
     ( vm_cap(t,regi,te,"1") - p32_iniCapPHS(regi,te) )
 $ifthen.c32_pypsa_preFac "%c32_pypsa_preFac%" == "on"
 $ifthen.c32_pypsa_preFacManual "%c32_pypsa_preFacManual%" == "on"
-  * p32_PyPSA_CFAvg(t,regi,te) * ( 1 + p32_preFactor_CF(regi,te) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
+  * p32_PyPSA_CFAvg(t,regi,te) * ( 1 + s32_preFacFadeOut * p32_preFactor_CF(regi,te) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
 $elseif.c32_pypsa_preFacManual "%c32_pypsa_preFacManual%" == "off"
-  * (   p32_PyPSA_CFAvg(t,regi,te) * ( 1 + 0.5 * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )$(p32_PyPSA_CFAvg(t,regi,te) ge 0.5)
-      + p32_PyPSA_CFAvg(t,regi,te) * ( 1 - 0.5 * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )$(p32_PyPSA_CFAvg(t,regi,te) lt 0.5)
+  * (   p32_PyPSA_CFAvg(t,regi,te) * ( 1 + s32_preFacFadeOut * 0.5 * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )$(p32_PyPSA_CFAvg(t,regi,te) ge 0.5)
+      + p32_PyPSA_CFAvg(t,regi,te) * ( 1 - s32_preFacFadeOut * 0.5 * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )$(p32_PyPSA_CFAvg(t,regi,te) lt 0.5)
     )
 $endif.c32_pypsa_preFacManual
 $elseif.c32_pypsa_preFac "%c32_pypsa_preFac%" == "off"
@@ -367,16 +367,16 @@ $endif.c32_pypsa_capfac
 *** (1) For peaker technologies (high value factor): When the share increases, market values decrease to a large extent.
 *** (2) For VRE technologies (low value factor): When the share increases, market values decrease to a smaller extent.
 $ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
-q32_MarkUp(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (cm_PyPSA_eq eq 1))..
+q32_MarkUp(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (cm_PyPSA_eq eq 1) AND NOT sameas(te, "hydro"))..
 	vm_PyPSAMarkup(t,regi,te)
 	=e=
 $ifthen.c32_pypsa_preFac "%c32_pypsa_preFac%" == "on"
 $ifthen.c32_pypsa_preFacManual "%c32_pypsa_preFacManual%" == "on"
-    (   p32_PyPSA_MVAvg(t,regi,te) * ( 1 + p32_preFactor_MV(regi,te) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
+    (   p32_PyPSA_MVAvg(t,regi,te) * ( 1 + s32_preFacFadeOut * p32_preFactor_MV(regi,te) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
       - p32_PyPSA_ElecPrice(t,regi)
     )
 $elseif.c32_pypsa_preFacManual "%c32_pypsa_preFacManual%" == "off"
-    (   p32_PyPSA_MVAvg(t,regi,te) * ( 1 - p32_PyPSA_ValueFactor(t,regi,te) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
+    (   p32_PyPSA_MVAvg(t,regi,te) * ( 1 - s32_preFacFadeOut * p32_PyPSA_ValueFactor(t,regi,te) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
       - p32_PyPSA_ElecPrice(t,regi)
     )
 $endif.c32_pypsa_preFacManual
@@ -405,17 +405,19 @@ q32_PeakResCap(t,regi)$(tPy32(t) AND regPy32(regi) AND (cm_PyPSA_eq eq 1))..
 ;
 $endif
 
+$ontext
 ***------------------------------------------------------------
 ***            PyPSA cost penalty for divergence
 ***------------------------------------------------------------
 *** Cost penalty if generation shares in REMIND and PyPSA-Eur diverge
 *** This is added to v_costInv in equation q_costInv (unit trillion $)
-*** $ifthen "%cm_pypsa_sharePenalty%" == "on"
-*** qm_sharePenaltyPyPSA(t,regi)$(tPy32(t) AND regPy32(regi) and (cm_PyPSA_eq eq 1))..
-***  vm_sharePenaltyPyPSA(t,regi)
-***  =e=
-***  0.05 * sum(te, power(v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te), 2))
-***;
-***$endif
+$ifthen "%cm_pypsa_sharePenalty%" == "on"
+qm_sharePenaltyPyPSA(t,regi)$(tPy32(t) AND regPy32(regi) and (cm_PyPSA_eq eq 1))..
+  vm_sharePenaltyPyPSA(t,regi)
+  =e=
+  0.05 * sum(te, power(v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te), 2))
+;
+$endif
+$offtext
 
 *** EOF ./modules/32_power/PyPSA/equations.gms

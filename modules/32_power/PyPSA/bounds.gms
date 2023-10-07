@@ -10,9 +10,9 @@
 ***                  PyPSA-Eur coupling (data import))
 ***------------------------------------------------------------
 
-* Set cm_PyPSA_eq to 1 after the starting iteration of PyPSA
+* Set cm_PyPSA_eq to 1 starting in c32_startIter_PyPSA + 1
 * This is used to activate equations and bounds
-if ((iteration.val gt c32_startIter_PyPSA),
+if ((iteration.val ge (c32_startIter_PyPSA + 1)),
   cm_PyPSA_eq = 1;
 );
 
@@ -110,9 +110,9 @@ vm_cap.fx(t,regi,"elh2VRE",rlf) = 0;
 ***                  PyPSA-Eur coupling (bounds)
 ***------------------------------------------------------------
 
-* All capacity factors come from PyPSA-Eur.
-* Set vm_capFac free here, so that REMIND can adjust it freely to match the capacity factor from PyPSA-Eur (equation q32_capFac).
-* vm_capFac can be larger than 1 since it is used as a correction factor. Limit to between 0 and 2 here.
+*** All capacity factors come from PyPSA-Eur.
+*** Set vm_capFac free here, so that REMIND can adjust it freely to match the capacity factor from PyPSA-Eur (equation q32_capFac).
+*** vm_capFac can be larger than 1 since it is used as a correction factor. Limit to between 0 and 2 here.
 $ifthen "%c32_pypsa_capfac%" == "on"
 if ((cm_PyPSA_eq eq 1),
   vm_capFac.lo(tPy32,regPy32,tePy32) = 0;
@@ -120,8 +120,13 @@ if ((cm_PyPSA_eq eq 1),
 );
 $endif
 
-* Restrict v32_shSeElDisp between 0 and 1
+*** Restrict v32_shSeElDisp between 0 and 1
 v32_shSeElDisp.lo(tPy32,regPy32,tePy32) = 0;
 v32_shSeElDisp.up(tPy32,regPy32,tePy32) = 1;
+
+*** Temporarily fix hydro markup to zero
+$ifthen "%cm_pypsa_markup%" == "on"
+vm_PyPSAMarkup.fx(tPy32,regPy32,"hydro") = 0;
+$endif
 
 *** EOF ./modules/32_power/PyPSA/bounds.gms

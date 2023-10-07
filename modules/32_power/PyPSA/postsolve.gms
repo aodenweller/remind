@@ -31,29 +31,23 @@ loop(t,
 *** Track PE price in iterations
 p32_PEPrice_iter(iteration,ttot,regi,entyPe) = pm_PEPrice(ttot,regi,entyPe);
 
-*** Check that budget equation is binding and that PE prices are positive for relevant time steps, regions and PE carriers
-if ((iteration.val ge c32_startIter_PyPSA) AND (mod(iteration.val - c32_startIter_PyPSA, 1) eq 0),
-  loop( (tPy32, regPy32, entyPe)$( sameas(entyPe,"pecoal") or sameas(entyPe,"pegas") or sameas(entyPe,"peoil") or sameas(entyPe,"pebiolc") ),
-    if (abs(qm_budget.m(tPy32,regPy32)) le sm_eps,
-      display "Budget equation not binding, postponing PyPSA-Eur by one iteration";
-      display "Current iteration: " iteration;
-      c32_startIter_PyPSA = c32_startIter_PyPSA + 1;
-      break;
-    );
-    if (pm_PEPrice(tPy32, regPy32, entyPe) le sm_eps,
-      display "Some PE prices are negative, postponing PyPSA-Eur by one iteration.";
-      display "Current iteration: " iteration;
-      c32_startIter_PyPSA = c32_startIter_PyPSA + 1;
-      break;
-    );
+$ontext
+*** Check that budget equation is binding and that all PE prices are positive for all PyPSA time steps and regions
+c32_skipIter_PyPSA = 0;
+loop ( (tPy32, regPy32, entyPe)$( sameas(entyPe,"pecoal") or sameas(entyPe,"pegas") or sameas(entyPe,"peoil") or sameas(entyPe,"pebiolc") ),
+  if ((abs(qm_budget.m(tPy32,regPy32)) le sm_eps) OR (pm_PEPrice(tPy32, regPy32, entyPe) le 0),
+    c32_skipIter_PyPSA = c32_skipIter_PyPSA + 1;
+    break;
   );
 );
+$offtext
 
 ***------------------------------------------------------------
 ***                  Only execute every X-th iteration
 ***------------------------------------------------------------
-if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIter_PyPSA, 1) eq 0),
+if ( (iteration.val ge (c32_startIter_PyPSA)) and (mod(iteration.val - (c32_startIter_PyPSA), 1) eq 0),
   
+  !! TODO: Shift pre-investment capacites and preInvCap_iter before loop so that values are available for all iteraions (for averaging)
   !! Pre-investment capacities
   p32_preInvCap(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te)) =
     max(1e-8,  !! Require minimum value
@@ -107,13 +101,17 @@ if ( (iteration.val ge c32_startIter_PyPSA) and (mod(iteration.val - c32_startIt
   !! Set the interest rate to 0.05 after 2100
   p32_discountRate(ttot)$(ttot.val gt 2100) = 0.05;
 
+  !! Specific capital costs and adjustment costs
+  p32_capCostwAdjCost(t,regi,te)$(tPy32(t) and regPy32(regi), and tePy32(te)) = 
+    vm_costTeCapital.l(t,regi,te) + o_margAdjCostInv(t,regi,te);
+
   !! Export REMIND output data for PyPSA (REMIND2PyPSA.gdx)
   !! Don't use fulldata.gdx so that we keep track of which variables are exported to PyPSA
   Execute_Unload "REMIND2PyPSAEUR.gdx",
     !! REMIND to PyPSA
     tPy32, regPy32, tePy32, !! General info: Coupled time steps, regions and technologies
     v32_usableSeDisp, !! Load
-    vm_costTeCapital, pm_data, p_r, p32_discountRate, !! Capital cost components
+    p32_capCostwAdjCost, pm_data, p_r, p32_discountRate, !! Capital cost components
     pm_eta_conv, pm_dataeta, p32_PEPriceAvg, pe2se, p_priceCO2, fm_dataemiglob,  !! Marginal cost components
     p32_preInvCapAvg, !! Pre-investment capacities
     v32_usableSeTeDisp, !! For weighted averages

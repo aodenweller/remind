@@ -73,6 +73,7 @@ parameters
     p32_preInvCap_iter(iteration,ttot,all_regi,all_te)      "Pre-investment capacities in iterations [TW]"
     p32_preInvCapAvg(ttot,all_regi,all_te)                  "PyPSA export: Pre-investment capacities averaged over iterations [TW]"
     p32_discountRate(ttot)                                  "PyPSA export: Interest rate / discount rate aggregated across all regions in regPy32 [1]"
+    p32_capCostwAdjCost(ttot,all_regi,all_te)               "PyPSA export: Specific capital costs plus adjustment costs [T$/TW]"
     p32_PyPSA_CF(ttot,all_regi,all_te)                      "PyPSA import: Capacity factors [1]"
     p32_PyPSA_CF_iter(iteration,ttot,all_regi,all_te)       "PyPSA calculation: Capacity factors in iterations [1]"
     p32_PyPSA_CFAvg(ttot,all_regi,all_te)                   "PyPSA calculation: Capacity factors averaged over iterations [1]"
@@ -90,6 +91,7 @@ parameters
     p32_preFactor_MV(all_regi,all_te)                       "Pre-factor for the market value [1]"
     p32_PEPrice_iter(iteration,ttot,all_regi,all_enty)      "PE price in iterations [T$/TWa, nuclear: T$/Mt]"
     p32_PEPriceAvg(ttot,all_regi,all_enty)                  "PyPSA export: PE price averaged over iterations [T$/TWa, nuclear: T$/Mt]"
+    s32_preFacFadeOut                                       "Multiplicative factor to fade out the pre-factors [1]"
 ;
 
 variables

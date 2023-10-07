@@ -1153,6 +1153,16 @@ parameter
 ;
 c32_avg_py2rm = 0; !! def = 0  !! regexp = 0|1
 *' Pass iteration-averaged variables from PyPSA to REMIND (0 = off, 1 = on)
+parameter
+  c32_PHSsubtract
+;
+c32_PHSsubtract = 0;
+*' Switch to subtract pumped hydro storage in capacity and production terms from variables passed to and from PyPSA
+parameter
+  c32_iterPreFacFadeOut !! def = 0
+;
+c32_iterPreFacFadeOut = 0;
+*' Iteration in which PyPSA pre-factor fade out is activated, zero means it's never activated
 
 ***-----------------------------------------------------------------------------
 *' ####                     FLAGS
