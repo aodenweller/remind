@@ -92,6 +92,8 @@ parameters
     p32_PEPrice_iter(iteration,ttot,all_regi,all_enty)      "PE price in iterations [T$/TWa, nuclear: T$/Mt]"
     p32_PEPriceAvg(ttot,all_regi,all_enty)                  "PyPSA export: PE price averaged over iterations [T$/TWa, nuclear: T$/Mt]"
     s32_preFacFadeOut                                       "Multiplicative factor to fade out the pre-factors [1]"
+    s32_checkPrice                                          "Boolean to check if PE prices are non-negative (0 = error, 1 = all good)"
+    s32_checkPrice_iter(iteration)                          "Track s32_checkPrices in iterations"
 ;
 
 variables

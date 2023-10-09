@@ -31,21 +31,20 @@ loop(t,
 *** Track PE price in iterations
 p32_PEPrice_iter(iteration,ttot,regi,entyPe) = pm_PEPrice(ttot,regi,entyPe);
 
-$ontext
 *** Check that budget equation is binding and that all PE prices are positive for all PyPSA time steps and regions
-c32_skipIter_PyPSA = 0;
-loop ( (tPy32, regPy32, entyPe)$( sameas(entyPe,"pecoal") or sameas(entyPe,"pegas") or sameas(entyPe,"peoil") or sameas(entyPe,"pebiolc") ),
-  if ((abs(qm_budget.m(tPy32,regPy32)) le sm_eps) OR (pm_PEPrice(tPy32, regPy32, entyPe) le 0),
-    c32_skipIter_PyPSA = c32_skipIter_PyPSA + 1;
+s32_checkPrice = 1;
+loop ( (tPy32, regPy32, entyPePy32),
+  if ((abs(qm_budget.m(tPy32,regPy32)) le sm_eps) OR (pm_PEPrice(tPy32, regPy32, entyPePy32) le 0),
+    s32_checkPrice = 0;
     break;
   );
 );
-$offtext
+s32_checkPrice_iter(iteration) = s32_checkPrice;
 
 ***------------------------------------------------------------
 ***                  Only execute every X-th iteration
 ***------------------------------------------------------------
-if ( (iteration.val ge (c32_startIter_PyPSA)) and (mod(iteration.val - (c32_startIter_PyPSA), 1) eq 0),
+if ( (s32_checkPrice eq 1) AND (iteration.val ge c32_startIter_PyPSA), !!  AND (mod(iteration.val - c32_startIter_PyPSA, 1) eq 0)
   
   !! TODO: Shift pre-investment capacites and preInvCap_iter before loop so that values are available for all iteraions (for averaging)
   !! Pre-investment capacities
@@ -80,11 +79,17 @@ if ( (iteration.val ge (c32_startIter_PyPSA)) and (mod(iteration.val - (c32_star
   elseif (c32_avg_rm2py eq 1),
     !!! Averaged pre-investment capacities over iterations
     p32_preInvCapAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) =
-      sum(iteration2$(iteration2.val gt (iteration.val - 4)), p32_preInvCap_iter(iteration2,t,regi,te)) / 4;  !! (3a)
+        sum(iteration2$(iteration2.val gt (iteration.val - 4)),
+            s32_checkPrice_iter(iteration2) * p32_preInvCap_iter(iteration2,t,regi,te))
+      / sum(iteration2$(iteration2.val gt (iteration.val - 4)),
+            s32_checkPrice_iter(iteration2));  !! (3a)
       !!sum(iteration2$(iteration2.val ge (c32_startIter_PyPSA + 3)), p32_preInvCap_iter(iteration2,t,regi,te)) / (iteration.val - 3);  !! (3b)
     !! Averaged PE prices over iterations
-    p32_PEPriceAvg(t,regi,entyPe)$(tPy32(t) and regPy32(regi)) =
-      sum(iteration2$(iteration2.val gt (iteration.val - 4)), max(0, p32_PEPrice_iter(iteration2,t,regi,entyPe))) / 4; !! (3a)
+    p32_PEPriceAvg(t,regi,entyPe)$(tPy32(t) and regPy32(regi) and entyPePy32(entyPe)) =
+        sum(iteration2$(iteration2.val gt (iteration.val - 4)),
+            s32_checkPrice_iter(iteration2) * p32_PEPrice_iter(iteration2,t,regi,entyPe))
+      / sum(iteration2$(iteration2.val gt (iteration.val - 4)),
+            s32_checkPrice_iter(iteration2)); !! (3a)
       !!sum(iteration2$(iteration2.val ge (c32_startIter_PyPSA + 3)), max(0, p32_PEPrice_iter(iteration2,t,regi,entyPe))) / (iteration.val - 3); !! (3b)
   );
 
@@ -102,8 +107,8 @@ if ( (iteration.val ge (c32_startIter_PyPSA)) and (mod(iteration.val - (c32_star
   p32_discountRate(ttot)$(ttot.val gt 2100) = 0.05;
 
   !! Specific capital costs and adjustment costs
-  p32_capCostwAdjCost(t,regi,te)$(tPy32(t) and regPy32(regi), and tePy32(te)) = 
-    vm_costTeCapital.l(t,regi,te) + o_margAdjCostInv(t,regi,te);
+  p32_capCostwAdjCost(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = 
+    max(0, vm_costTeCapital.l(t,regi,te) + o_avgAdjCostInv(t,regi,te));
 
   !! Export REMIND output data for PyPSA (REMIND2PyPSA.gdx)
   !! Don't use fulldata.gdx so that we keep track of which variables are exported to PyPSA
