@@ -1149,11 +1149,6 @@ parameter
   c32_startIter_PyPSA = 1; !! def = 1
 *'
 parameter
-  cm_PyPSA_eq               "Activate PyPSA coupling equations"
-;
-  cm_PyPSA_eq = 0; !! def = 0
-*' Switch that turns to 1 after iteration.val >= c32_startIter_PyPSA
-parameter
   c32_avg_rm2py
 ;
 c32_avg_rm2py = 0;  !! def = 0  !! regexp = 0|1

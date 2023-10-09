@@ -91,6 +91,7 @@ parameters
     p32_preFactor_MV(all_regi,all_te)                       "Pre-factor for the market value [1]"
     p32_PEPrice_iter(iteration,ttot,all_regi,all_enty)      "PE price in iterations [T$/TWa, nuclear: T$/Mt]"
     p32_PEPriceAvg(ttot,all_regi,all_enty)                  "PyPSA export: PE price averaged over iterations [T$/TWa, nuclear: T$/Mt]"
+    sm_PyPSA_eq                                             "Boolean to turn on PyPSA coupling equations after PyPSA ran for the first time"
     s32_preFacFadeOut                                       "Multiplicative factor to fade out the pre-factors [1]"
     s32_checkPrice                                          "Boolean to check if PE prices are non-negative (0 = error, 1 = all good)"
     s32_checkPrice_iter(iteration)                          "Track s32_checkPrices in iterations"

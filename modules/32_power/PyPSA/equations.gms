@@ -60,7 +60,7 @@ q32_usableSeTe(t,regi,entySe,te)$(sameas(entySe,"seel") AND teVRE(te))..
 ***---------------------------------------------------------------------------
 *` This equation calculates the storage cpacity for each testor that needs to be installed based on the amount of v32_storloss that is calculated below in 
 *` q32_storloss. Multiplying v32_storloss with "eta/(1-eta)" yields the total output of a storage technology; this output has to be smaller than cap * capfac.
-q32_limitCapTeStor(t,regi,teStor)$( t.val ge 2020 AND ( ( regPy32(regi) AND ( cm_PyPSA_eq eq 0 OR ( cm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) ) )..
+q32_limitCapTeStor(t,regi,teStor)$( t.val ge 2020 AND ( ( regPy32(regi) AND ( sm_PyPSA_eq eq 0 OR ( sm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) ) )..
     ( 0.5$( cm_VRE_supply_assumptions eq 1 )   !! reduce storage investment needs by half for VRE_supply_assumptions = 1 
     + 1$(   cm_VRE_supply_assumptions ne 1 )
     )
@@ -82,7 +82,7 @@ q32_limitCapTeStor(t,regi,teStor)$( t.val ge 2020 AND ( ( regPy32(regi) AND ( cm
 *** These H2 turbines (h2turbVRE) do not have capital cost. Their cost are already considered in storage technologies.
 *** H2 turbines do not need be built if sufficient gas turbines (ngt) are available to provide flexibility. 
 *` Require a certain capacity  of either hydrogen or gas turbines as peaking backup capacity. The driver is the testor capacity, which in turn is determined by v32_storloss 
-q32_h2turbVREcapfromTestor(t,regi)$( ( regPy32(regi) AND ( cm_PyPSA_eq eq 0 OR ( cm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) )..
+q32_h2turbVREcapfromTestor(t,regi)$( ( regPy32(regi) AND ( sm_PyPSA_eq eq 0 OR ( sm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) )..
   vm_cap(t,regi,"h2turbVRE","1")
   + vm_cap(t,regi,"ngt","1")
   =g=
@@ -91,7 +91,7 @@ q32_h2turbVREcapfromTestor(t,regi)$( ( regPy32(regi) AND ( cm_PyPSA_eq eq 0 OR (
 ;
 
 *** h2turbVRE hydrogen turbines should only be built in conjunction with storage capacities and not on its own
-q32_h2turbVREcapfromTestorUp(t,regi)$( ( regPy32(regi) AND ( cm_PyPSA_eq eq 0 OR ( cm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) )..
+q32_h2turbVREcapfromTestorUp(t,regi)$( ( regPy32(regi) AND ( sm_PyPSA_eq eq 0 OR ( sm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) )..
   vm_cap(t,regi,"h2turbVRE","1")
   =l=
   sum(te$testor(te), 
@@ -113,7 +113,7 @@ q32_limitCapTeChp(t,regi)..
 *** Calculation of necessary grid installations for centralized renewables:
 ***---------------------------------------------------------------------------
 *` Additional grid expansion to integrate VRE are driven linearly by VRE output 
-q32_limitCapTeGrid(t,regi)$( t.val ge 2020 AND ( ( regPy32(regi) AND ( cm_PyPSA_eq eq 0 OR ( cm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) ) )..
+q32_limitCapTeGrid(t,regi)$( t.val ge 2020 AND ( ( regPy32(regi) AND ( sm_PyPSA_eq eq 0 OR ( sm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) ) )..
     vm_cap(t,regi,"gridwind",'1')      !! Technology is now parameterized to yield marginal costs of ~3.5$/MWh VRE electricity
     / p32_grid_factor(regi)            !! It is assumed that large regions require higher grid investment 
     =g=
@@ -139,7 +139,7 @@ q32_shSeEl(t,regi,teVRE)..
 ***---------------------------------------------------------------------------
 *` v32_shStor is an aggregated measure for the SPECIFIC (= per kWh) integration challenge of one teVRE. It currently increases linearly in VRE share as p32_storexp is set to 1
 *` For solar technologies that have a very strong temporal mathching (PV, CSP), the share of the other technology also increases integration challenges by a reduced factor.    
-q32_shStor(t,regi,teVRE)$(t.val ge 2015 AND ( ( regPy32(regi) AND ( cm_PyPSA_eq eq 0 OR ( cm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) ) )..
+q32_shStor(t,regi,teVRE)$(t.val ge 2015 AND ( ( regPy32(regi) AND ( sm_PyPSA_eq eq 0 OR ( sm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) ) )..
   v32_shStor(t,regi,teVRE)
   =g=
   p32_factorStorage(regi,teVRE) * 100 
@@ -164,7 +164,7 @@ q32_shStor(t,regi,teVRE)$(t.val ge 2015 AND ( ( regPy32(regi) AND ( cm_PyPSA_eq 
 *` An example: If the specific integration challenges (v32_shStor + p32_Fact * v32_shAddInt) of eg. PV would reach 100%, then ALL the usable output of PV 
 *` would have to be "stabilized" by going through storsp, so the total storage losses & curtailment would exactly represent the (1-eta) values of storspv. When
 *` the specific integration challenge term () is below 100%, the required storage and resulting losses are scaled down accordingly.    
-q32_storloss(t,regi,teVRE)$( t.val ge 2020 AND ( ( regPy32(regi) AND ( cm_PyPSA_eq eq 0 OR ( cm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) OR ( NOT regPy32(regi) ) ) ) )..
+q32_storloss(t,regi,teVRE)$( t.val ge 2020 AND ( ( regPy32(regi) AND ( sm_PyPSA_eq eq 0 OR ( sm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) OR ( NOT regPy32(regi) ) ) ) )..
   v32_storloss(t,regi,teVRE)
   =e=
   ( v32_shStor(t,regi,teVRE)                                         !! integration challenges due to the technology itself
@@ -174,7 +174,7 @@ q32_storloss(t,regi,teVRE)$( t.val ge 2020 AND ( ( regPy32(regi) AND ( cm_PyPSA_
   * vm_usableSeTe(t,regi,"seel",teVRE)
 ;
 
-q32_TotVREshare(t,regi)$( ( ( regPy32(regi) AND ( cm_PyPSA_eq eq 0 OR ( cm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) ) )..
+q32_TotVREshare(t,regi)$( ( ( regPy32(regi) AND ( sm_PyPSA_eq eq 0 OR ( sm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) ) )..
   v32_TotVREshare(t,regi)
   =e=
   sum(teVRE, 
@@ -185,7 +185,7 @@ q32_TotVREshare(t,regi)$( ( ( regPy32(regi) AND ( cm_PyPSA_eq eq 0 OR ( cm_PyPSA
 *` Calculate additional integration costs if total VRE share is above a certain threshold. (A system with only 40% VRE will be less challenged to handle 30% PV than
 *` a system with 70% VRE, because you have less thermal plants that can act as backup and provide inertia. This threshold increases over time to represent that 
 *` network operators learn about managing high-VRE systems, and that technologies such as grid-stabilizing VRE and batteries become widespread. 
-q32_shAddIntCostTotVRE(t,regi)$( ( ( regPy32(regi) AND ( cm_PyPSA_eq eq 0 OR ( cm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) ) )..
+q32_shAddIntCostTotVRE(t,regi)$( ( ( regPy32(regi) AND ( sm_PyPSA_eq eq 0 OR ( sm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) ) )..
   v32_shAddIntCostTotVRE(t,regi)
   =g=
   v32_TotVREshare(t,regi)
@@ -199,7 +199,7 @@ $ENDIF.WindOff
 ***---------------------------------------------------------------------------
 *** Operating reserve constraint
 ***---------------------------------------------------------------------------
-q32_operatingReserve(t,regi)$( t.val ge 2010 AND ( ( regPy32(regi) AND ( cm_PyPSA_eq eq 0 OR ( cm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) ) )..
+q32_operatingReserve(t,regi)$( t.val ge 2010 AND ( ( regPy32(regi) AND ( sm_PyPSA_eq eq 0 OR ( sm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) ) )..
 ***1 is the chosen load coefficient
 	vm_usableSe(t,regi,"seel")
 	=l=    
@@ -336,7 +336,7 @@ q32_shSeElDisp(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te))..
 *** (i) Cutoff value between (1) and (2) in terms of the capacity factor. Currently set to 0.5.
 *** (ii) Slope of the pre-factor. Currently set to 0.5.
 $ifthen.c32_pypsa_capfac "%c32_pypsa_capfac%" == "on"
-q32_capFac(t,regi,te)$(tPy32(t) and regPy32(regi) AND tePy32(te) AND (cm_PyPSA_eq eq 1) AND NOT sameas(te, "hydro"))..
+q32_capFac(t,regi,te)$(tPy32(t) and regPy32(regi) AND tePy32(te) AND (sm_PyPSA_eq eq 1) AND NOT sameas(te, "hydro"))..
   v32_usableSeTeDisp(t,regi,"seel",te)
   =e=
     ( vm_cap(t,regi,te,"1") - p32_iniCapPHS(regi,te) )
@@ -367,7 +367,7 @@ $endif.c32_pypsa_capfac
 *** (1) For peaker technologies (high value factor): When the share increases, market values decrease to a large extent.
 *** (2) For VRE technologies (low value factor): When the share increases, market values decrease to a smaller extent.
 $ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
-q32_MarkUp(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (cm_PyPSA_eq eq 1) AND NOT sameas(te, "hydro"))..
+q32_MarkUp(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (sm_PyPSA_eq eq 1) AND NOT sameas(te, "hydro"))..
 	vm_PyPSAMarkup(t,regi,te)
 	=e=
 $ifthen.c32_pypsa_preFac "%c32_pypsa_preFac%" == "on"
@@ -397,7 +397,7 @@ $endif.cm_pypsa_markup
 *** However, since VREs have a small capacity credit, this effect is also small.
 *** Currently deactivate pre-factors.
 $ifthen "%c32_pypsa_peakcap%" == "on"
-q32_PeakResCap(t,regi)$(tPy32(t) AND regPy32(regi) AND (cm_PyPSA_eq eq 1))..
+q32_PeakResCap(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
   sum(tePyDisp32, vm_cap(t,regi,tePyDisp32, "1"))  !! TODO: Hydro included or not?
   =g=
     p32_PyPSA_PeakResLoadRel(t,regi) !!* ( 1 - 0.1 * ( sum(tePyVRE32, v32_shSeElDisp(t,regi,tePyVRE32) - p32_PyPSA_shSeEl(t,regi,tePyVRE32)) ) )
@@ -412,7 +412,7 @@ $ontext
 *** Cost penalty if generation shares in REMIND and PyPSA-Eur diverge
 *** This is added to v_costInv in equation q_costInv (unit trillion $)
 $ifthen "%cm_pypsa_sharePenalty%" == "on"
-qm_sharePenaltyPyPSA(t,regi)$(tPy32(t) AND regPy32(regi) and (cm_PyPSA_eq eq 1))..
+qm_sharePenaltyPyPSA(t,regi)$(tPy32(t) AND regPy32(regi) and (sm_PyPSA_eq eq 1))..
   vm_sharePenaltyPyPSA(t,regi)
   =e=
   0.05 * sum(te, power(v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te), 2))

@@ -10,14 +10,8 @@
 ***                  PyPSA-Eur coupling (data import))
 ***------------------------------------------------------------
 
-* Set cm_PyPSA_eq to 1 starting in c32_startIter_PyPSA + 1
-* This is used to activate equations and bounds
-if ((iteration.val ge (c32_startIter_PyPSA + 1)),
-  cm_PyPSA_eq = 1;
-);
-
 * Read in values after first PyPSA run in previous iteration
-if ((cm_pypsa_eq eq 1),
+if ((sm_PyPSA_eq eq 1),
 
 * Capacity factors: Overwrite pm_cf for dispatchable technologies
 * This is probably redundant as vm_capfac is not fixed to pm_cf any longer, but free
@@ -29,17 +23,13 @@ $endif
 * Read in curtailment at some point?
 $ifthen "%c32_pypsa_curtailment%" == "on"
   v32_storloss.fx(tPy32,regPy32,tePyVRE32) = p32_PyPSA_Curtailment / sm_TWa_2_MWh;
-$endif
-
-* If not, set curtailment to zero
-* ToDO: Rethink how to handle curtailment and storage losses.
-$ifthen "%c32_pypsa_curtailment%" == "off"
+$else
   v32_storloss.fx(tPy32,regPy32,tePy32) = 0;
 $endif
 
 * Calculate value factor to parametrise the pre-factor equation for markups
 $ifthen "%cm_pypsa_markup%" == "on"
-  p32_PyPSA_ValueFactor(tPy32,regPy32,tePy32) = p32_PyPSA_MVAvg(tPy32,regPy32,tePy32) / p32_PyPSA_ElecPrice(tPy32,regPy32)
+  p32_PyPSA_ValueFactor(tPy32,regPy32,tePy32) = p32_PyPSA_MVAvg(tPy32,regPy32,tePy32) / p32_PyPSA_ElecPrice(tPy32,regPy32);
 $endif
 );
 
@@ -114,7 +104,7 @@ vm_cap.fx(t,regi,"elh2VRE",rlf) = 0;
 *** Set vm_capFac free here, so that REMIND can adjust it freely to match the capacity factor from PyPSA-Eur (equation q32_capFac).
 *** vm_capFac can be larger than 1 since it is used as a correction factor. Limit to between 0 and 2 here.
 $ifthen "%c32_pypsa_capfac%" == "on"
-if ((cm_PyPSA_eq eq 1),
+if ((sm_PyPSA_eq eq 1),
   vm_capFac.lo(tPy32,regPy32,tePy32) = 0;
   vm_capFac.up(tPy32,regPy32,tePy32) = 2;
 );
