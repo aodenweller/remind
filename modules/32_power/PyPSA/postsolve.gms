@@ -25,16 +25,28 @@ loop(t,
 );
 
 ***------------------------------------------------------------
-***                  PyPSA-Eur coupling
+***                  PyPSA-Eur reporting
+***------------------------------------------------------------
+
+if ((sm_PyPSA_eq eq 1),
+*** Calculate shadow price of peak residual load constraint
+p32_PeakResLoadShadowPrice(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePyDisp32(te) AND ((qm_budget.m(t,regi) * p32_PyPSA_CFAvg(t,regi,te) ) ne 0))  =
+      q32_PeakResCap.m(t,regi)
+  / ( qm_budget.m(t,regi) * p32_PyPSA_CFAvg(t,regi,te) );
+);
+
+***------------------------------------------------------------
+***                  PyPSA-Eur pre-coupling
 ***------------------------------------------------------------
 
 *** Track PE price in iterations
 p32_PEPrice_iter(iteration,ttot,regi,entyPe) = pm_PEPrice(ttot,regi,entyPe);
 
-*** Check that budget equation is binding and that all PE prices are positive for all PyPSA time steps and regions
+*** Check that budget equation is binding
+*** Optionally, also check that all PE prices are positive (currently disabled)
 s32_checkPrice = 1;
 loop ((tPy32, regPy32, entyPePy32),
-  if ((abs(qm_budget.m(tPy32,regPy32)) le sm_eps) OR (pm_PEPrice(tPy32, regPy32, entyPePy32) lt 0),
+  if ((abs(qm_budget.m(tPy32,regPy32)) le sm_eps), !!  OR (pm_PEPrice(tPy32, regPy32, entyPePy32) lt 0
     s32_checkPrice = 0;
     break;
   );
@@ -42,7 +54,7 @@ loop ((tPy32, regPy32, entyPePy32),
 s32_checkPrice_iter(iteration) = s32_checkPrice;
 
 ***------------------------------------------------------------
-***                  Only execute every X-th iteration
+***                  PyPSA-Eur coupling
 ***------------------------------------------------------------
 if ( (s32_checkPrice eq 1) AND (iteration.val ge c32_startIter_PyPSA), !!  AND (mod(iteration.val - c32_startIter_PyPSA, 1) eq 0)
   
@@ -87,7 +99,7 @@ if ( (s32_checkPrice eq 1) AND (iteration.val ge c32_startIter_PyPSA), !!  AND (
     !! Averaged PE prices over iterations
     p32_PEPriceAvg(t,regi,entyPe)$(tPy32(t) and regPy32(regi) and entyPePy32(entyPe)) =
         sum(iteration2$(iteration2.val gt (iteration.val - 4)),
-            s32_checkPrice_iter(iteration2) * p32_PEPrice_iter(iteration2,t,regi,entyPe))
+            s32_checkPrice_iter(iteration2) * max(0, p32_PEPrice_iter(iteration2,t,regi,entyPe)))  !! Prevent negative PE prices
       / sum(iteration2$(iteration2.val gt (iteration.val - 4)),
             s32_checkPrice_iter(iteration2)); !! (3a)
       !!sum(iteration2$(iteration2.val ge (c32_startIter_PyPSA + 3)), max(0, p32_PEPrice_iter(iteration2,t,regi,entyPe))) / (iteration.val - 3); !! (3b)
@@ -106,9 +118,9 @@ if ( (s32_checkPrice eq 1) AND (iteration.val ge c32_startIter_PyPSA), !!  AND (
   !! Set the interest rate to 0.05 after 2100
   p32_discountRate(ttot)$(ttot.val gt 2100) = 0.05;
 
-  !! Specific capital costs and adjustment costs
+  !! Specific capital costs plus adjustment costs
   p32_capCostwAdjCost(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = 
-    max(0, vm_costTeCapital.l(t,regi,te) + o_avgAdjCostInv(t,regi,te));
+    max(0, vm_costTeCapital.l(t,regi,te) + o_avgAdjCostInv(t,regi,te)$( sum(te2rlf(te,rlf), vm_deltaCap.l(t,regi,te,rlf)) ge 1e-5 ));
 
   !! Export REMIND output data for PyPSA (REMIND2PyPSA.gdx)
   !! Don't use fulldata.gdx so that we keep track of which variables are exported to PyPSA
@@ -177,7 +189,7 @@ if ( (s32_checkPrice eq 1) AND (iteration.val ge c32_startIter_PyPSA), !!  AND (
       !!sum(iteration2$(iteration2.val ge (c32_startIter_PyPSA + 3)), p32_PyPSA_MV_iter(iteration2,t,regi,te)) / (iteration.val - 3); !! (3b)
   );
 
-*** Activate PyPSA equations from 
+*** Activate PyPSA equations from now on
 sm_PyPSA_eq = 1;
 
 );

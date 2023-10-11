@@ -95,13 +95,13 @@ parameters
     s32_preFacFadeOut                                       "Multiplicative factor to fade out the pre-factors [1]"
     s32_checkPrice                                          "Boolean to check if PE prices are non-negative (0 = error, 1 = all good)"
     s32_checkPrice_iter(iteration)                          "Track s32_checkPrices in iterations"
+    p32_PeakResLoadShadowPrice(ttot,all_regi,all_te)        "Shadow price of peak residual load constraint [T$/TWa]"
 ;
 
 variables
     v32_usableSeDisp(ttot,all_regi,all_enty)            "PyPSA export: Usable SE electricity for dispatch without own consumption [TWa]"
     v32_usableSeTeDisp(ttot,all_regi,all_enty,all_te)   "PyPSA export: Usable SE electricity for dispatch without own consumption by technology [TWa]"
     v32_shSeElDisp(ttot,all_regi,all_te)                "PyPSA export: Share of usable SE electricity for dispatch without own consumption [1]"
-
 $ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
     vm_PyPSAMarkup(ttot,all_regi,all_te)                "PyPSA coupling: Markups for electricity technologies according to PyPSA-Eur [Tr$/TWa]"
 $endif.cm_pypsa_markup
@@ -111,15 +111,12 @@ equations
     q32_usableSeDisp(ttot,all_regi,all_enty)            "PyPSA coupling: Calculate v32_usableSeDisp"
     q32_usableSeTeDisp(ttot,all_regi,all_enty,all_te)   "PyPSA coupling: Calculate v32_usableSeTeDisp"
     q32_shSeElDisp(ttot,all_regi,all_te)                "PyPSA coupling: Calculate v32_shSeElDisp"
-
 $ifthen "%c32_pypsa_capfac%" == "on"
     q32_capFac(ttot,all_regi,all_te)                    "PyPSA coupling: Pre-factor equation for capacity factors"
 $endif
-
 $ifthen "%cm_pypsa_markup%" == "on"
     q32_MarkUp(ttot,all_regi,all_te)                    "PyPSA coupling: Pre-factor equation to calculate technology-specific markups"
 $endif
-
 $ifthen "%c32_pypsa_peakcap%" == "on"
     q32_PeakResCap(ttot,all_regi)                       "PyPSA coupling: Pre-factor equation for peak residual load"
 $endif
