@@ -1315,6 +1315,19 @@ dataPHScapREMIND <- readREMINDgdx(
     colFilter = list("region" = regions),
     restoreZeros = TRUE)
 
+# REMIND averaged capacity factors
+dataCapFacAvgREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "p32_PyPSA_CFAvg",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_PyPSA_CFAvg"),
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+    restoreZeros = FALSE) %>%
+  # Increment iteration by 1 because this value is only available for the next iteration
+  mutate(iteration = iteration + 1) %>%
+  revalue.levels(technology = rm2genTech) %>%
+  group_by(year, region, technology, iteration) %>%
+  summarise(p32_PyPSA_CFAvg = unique(p32_PyPSA_CFAvg))
+
 # PyPSA-Eur capacity factors
 dataCapfacPyPSA <- readPyPSAcsv(
   paths = file.path(pyValidationDirs, "capacity_factors.csv")) %>%
@@ -1351,28 +1364,28 @@ for (r in regList){
 
   # Plot by year
   pCapfacYear <- ggplot() +
-    # Layer 1: REMIND
     geom_line(data = dataCapfacREMINDplot, aes(x = year, y = value, color = technology)) +
-    # Layer 2: PyPSA-Eur
-    geom_point(data = dataCapfacPyPSAplot, aes(x = year, y = value, color = technology)) +
-    # Legend formatting
+    geom_point(data = dataCapfacPyPSAplot, aes(x = year, y = value, color = technology, shape = "Non-avg. value")) +
+    geom_point(data = dataCapFacAvgREMIND, aes(x = year, y = p32_PyPSA_CFAvg, color = technology)) +
+    scale_shape_manual(name = NULL,
+                       values = c("Non-avg. value" = 4)) +
     scale_color_manual(
       name = "Technology",
       values = colorsTech,
       labels = namesTech,
     ) +
     labs(x = "Year", y = "Capacity factor") +
-    ggtitle("Capacity factors over years", regSubtitle(r))
+    ggtitle("Capacity factors over years, averaged over iterations", regSubtitle(r))
 
   print(pCapfacYear + facet_wrap(~ iteration))
 
   # Plot by iteration
   pCapfacIter <- ggplot() +
-    # Layer 1: REMIND
     geom_line(data = dataCapfacREMINDplot, aes(x = iteration, y = value, color = technology)) +
-    # Layer 2: PyPSA-Eur
-    geom_point(data = dataCapfacPyPSAplot, aes(x = iteration, y = value, color = technology)) +
-    # Legend formatting
+    geom_point(data = dataCapfacPyPSAplot, aes(x = iteration, y = value, color = technology, shape = "Non-avg. value")) +
+    geom_point(data = dataCapFacAvgREMIND, aes(x = iteration, y = p32_PyPSA_CFAvg, color = technology)) +
+    scale_shape_manual(name = NULL,
+                       values = c("Non-avg. value" = 4)) +
     scale_color_manual(
       name = "Technology",
       values = colorsTech,
@@ -1380,7 +1393,7 @@ for (r in regList){
     ) +
     labs(x = "Iteration", y = "Capacity factor") +
     scale_x_continuous(breaks = rmIterations) +
-    ggtitle("Capacity factors over iterations", regSubtitle(r))
+    ggtitle("Capacity factors over iterations, averaged over iterations", regSubtitle(r))
 
   print(pCapfacIter + facet_wrap(~ year))
 
@@ -1392,7 +1405,6 @@ for (r in regList){
 
 }
 ```
-
 
 ### Curtailments
 
@@ -1525,6 +1537,23 @@ dataMarkupPyPSA <- dataMarketValuePyPSA %>%
   rename(technology = carrier) %>%
   order.levels(technology = names(namesTech))
 
+# Average markup REMIND
+dataMarketValueAvgREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "p32_PyPSA_MVAvg",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_PyPSA_MVAvg"),
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+    restoreZeros = FALSE) %>%
+  # Increment iteration by 1 because this value is only available for the next iteration
+  mutate(iteration = iteration + 1) %>%
+  revalue.levels(technology = rm2genTech) %>%
+  group_by(year, region, technology, iteration) %>%
+  summarise(p32_PyPSA_MVAvg = unique(p32_PyPSA_MVAvg))
+
+dataMarkupAvgREMIND <- dataMarketValueAvgREMIND %>%
+  right_join(dataElecPricePYPSA, by = c("year", "region", "iteration")) %>%
+  mutate(p32_PyPSA_MarkupAvg = p32_PyPSA_MVAvg - value)
+
 for (r in regList) {
 
   dataMarkupPlotREMIND <- dataMarkupWeightedREMIND %>%
@@ -1539,7 +1568,10 @@ for (r in regList) {
 
   pMarkupYear <- ggplot() +
     geom_line(data = dataMarkupPlotREMIND, aes(x = year, y = value, color = technology)) +
-    geom_point(data = dataMarkupPlotPyPSA, aes(x = year, y = value, color = technology)) +
+    geom_point(data = dataMarkupPlotPyPSA, aes(x = year, y = value, color = technology, shape = "Non-avg. value")) +
+    geom_point(data = dataMarkupAvgREMIND, aes(x = year, y = p32_PyPSA_MarkupAvg, color = technology)) +
+    scale_shape_manual(name = NULL,
+                       values = c("Non-avg. value" = 4)) +
     scale_color_manual(
       name = "Technology",
       values = colorsTech,
@@ -1552,7 +1584,10 @@ for (r in regList) {
 
   pMarkUpIter <- ggplot() +
     geom_line(data = dataMarkupPlotREMIND, aes(x = iteration, y = value, color = technology)) +
-    geom_point(data = dataMarkupPlotPyPSA, aes(x = iteration, y = value, color = technology)) +
+    geom_point(data = dataMarkupPlotPyPSA, aes(x = iteration, y = value, color = technology, shape = "Non-avg. value")) +
+    geom_point(data = dataMarkupAvgREMIND, aes(x = iteration, y = p32_PyPSA_MarkupAvg, color = technology)) +
+    scale_shape_manual(name = NULL,
+                       values = c("Non-avg. value" = 4)) +
     scale_color_manual(
       name = "Technology",
       values = colorsTech,
@@ -1754,7 +1789,7 @@ PyPSA-Eur should therefore only start investing into new capacity once the free 
 # Read REMIND data
 dataPreInvCapREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "p32_preInvCapAvg",
+    gdxVar = "p32_preInvCap",
     columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_preInvCap"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = FALSE,
@@ -2503,8 +2538,6 @@ for (r in regList) {
 }
 ```
 
-```
-
 ## Electricity price
 
 ```{r electricity price over years}
@@ -2644,13 +2677,13 @@ vm_capFac <- readREMINDgdx(
     columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "vm_capFac"),
     colFilter = list(year = years, "region" = regions, "technology" = names(rm2genTech)))
     
-teVRE <- readGDX(rmFiles[1], "teVRE")
+teReNoBio <- readGDX(rmFiles[1], "teReNoBio")
 
 vm_capDistr <- readREMINDgdx(
     paths = rmFiles,
     gdxVar = "vm_capDistr",
     columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "rlf" = "rlf", "value" = "vm_capDistr"),
-    colFilter = list(year = years, "region" = regions, "technology" = teVRE),
+    colFilter = list(year = years, "region" = regions, "technology" = teReNoBio),
     restoreZeros = FALSE)
 
 pm_dataren <- readREMINDgdx(
@@ -2672,6 +2705,7 @@ capfacVRE <- vm_capDistr %>%
 
 # Calculate capacity factors for dispatchable technologies
 capfacDisp <- vm_capFac %>%
+  filter(!(technology %in% teReNoBio)) %>%
   rename(capfac = vm_capFac)
 
 capfac <- bind_rows(capfacVRE, capfacDisp)
@@ -2779,9 +2813,22 @@ lcoe.co2 <- full_join(p_priceCO2, eta) %>%
   select(year, region, technology, lcoe, iteration) %>%
   mutate(type = "co2")
 
+# Weights
+dataGenTechREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "v32_usableSeTeDisp",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_enty" = "secarrier", "all_te" = "technology", "value" = "v32_usableSeTeDisp"),
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+    restoreZeros = FALSE) %>%
+  select(-secarrier)
+
 # Toal LCOEs
 lcoeREMIND <- bind_rows(lcoe.investment, lcoe.fom, lcoe.vom, lcoe.fuel, lcoe.co2) %>%
-  order.levels(type = c("co2", "fuel", "vom", "fom", "investment"))
+  order.levels(type = c("co2", "fuel", "vom", "fom", "investment")) %>%
+  full_join(dataGenTechREMIND) %>%
+  revalue.levels(technology = rm2genTech) %>%
+  group_by(year, region, technology, type, iteration) %>%
+  summarise(lcoe = sum(lcoe * v32_usableSeTeDisp) / sum(v32_usableSeTeDisp))
 
 # Market value = electricity price and markups
 dataElecPriceREMIND <- readREMINDgdx(
@@ -2793,7 +2840,7 @@ dataElecPriceREMIND <- readREMINDgdx(
     recalcUnit = trUSDpTWa2USDpMWh) %>%  # T$/TWa to $/MWh
   tidyr::crossing(technology = names(rm2genTech)) %>%
   select(year, region, technology, value, iteration) %>%
-  mutate(type = "Electricity price")
+  mutate(type = "elec")
 
 dataMarkupREMIND <- readREMINDgdx(
     paths = rmFiles,
@@ -2807,40 +2854,30 @@ dataElecPlusMarkupREMIND <- dataElecPriceREMIND %>%
   left_join(dataMarkupREMIND) %>%
   mutate(value = value + vm_PyPSAMarkup) %>%
   select(year, region, technology, value, iteration) %>%
-  mutate(type = "Electricity price + Markup")
+  mutate(type = "elec + markup")
 
 # Peak capacity shadow price
-dataPeakCapMargREMIND <- readREMINDgdx(
+dataPeakCapShadowPriceREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "q32_PeakResCap",
-    columns = c("ttot" = "year", "all_regi" = "region", "value" = "q32_PeakResCap"),
-    colFilter = list("year" = years, "region" = regions),
-    restoreZeros = FALSE,
-    field = "m")
-
-dataBudgetMargREMIND <- readREMINDgdx(
-    paths = rmFiles,
-    gdxVar = "qm_budget",
-    columns = c("ttot" = "year", "all_regi" = "region", "value" = "qm_budget"),
-    colFilter = list("year" = years, "region" = regions),
-    restoreZeros = FALSE,
-    field = "m")
-
-dataPeakCapShadowPriceREMIND <- dataPeakCapMargREMIND %>%
-  left_join(dataBudgetMargREMIND) %>%
-  left_join(capfac) %>%
-  filter(!(technology %in% teVRE)) %>%
-  mutate(peakShadowPrice = q32_PeakResCap / qm_budget / capfac * trUSDpTWa2USDpMWh) %>%
-  select(year, region, iteration, technology, peakShadowPrice)
+    gdxVar = "p32_PeakResLoadShadowPrice",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_PeakResLoadShadowPrice"),
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+    restoreZeros = TRUE,
+    recalcUnit = trUSDpTWa2USDpMWh
+  )
 
 dataElecPlusMarkupPlusPeakShadowREMIND <- dataElecPlusMarkupREMIND %>%
   left_join(dataPeakCapShadowPriceREMIND) %>%
-  mutate(value = value + peakShadowPrice) %>%
+  mutate(value = value + p32_PeakResLoadShadowPrice) %>%
   select(year, region, technology, value, iteration) %>%
-  mutate(type = "Electricity price + Markup + Peak capacity shadow price")
+  mutate(type = "elec + markup + peakcap")
 
 dataPricesREMIND <- bind_rows(dataElecPriceREMIND, dataElecPlusMarkupREMIND, dataElecPlusMarkupPlusPeakShadowREMIND) %>%
-  order.levels(type = c("Electricity price + Markup + Peak capacity shadow price", "Electricity price + Markup", "Electricity price"))
+  order.levels(type = c("elec + markup + peakcap", "elec + markup", "elec")) %>%
+  full_join(dataGenTechREMIND) %>%
+  revalue.levels(technology = rm2genTech) %>%
+  group_by(year, region, technology, iteration, type) %>%
+  summarise(value = sum(value * v32_usableSeTeDisp) / sum(v32_usableSeTeDisp))
 
 colorsInvest <- c(
   "co2" = "#e41a1c",
@@ -2856,35 +2893,38 @@ labelsInvest <- c(
   "fom" = "Fixed O&M cost",
   "investment" = "Investment cost")
 
-p <- ggplot() +
-  geom_bar(data = lcoeREMIND %>% filter(iteration == 14),
-           aes(x = year, y = lcoe, fill = type),
-           stat = "identity",
-           position = "stack",
-           alpha = 0.8) +
-  geom_line(data = dataPricesREMIND %>% filter(iteration == 14),
-            aes(x = year, y = value, linetype = type),
-            linewidth = 0.5) +
-  scale_linetype_manual(
-    name = NULL,
-    values = c("Electricity price + Markup + Peak capacity shadow price" = "solid",
-               "Electricity price + Markup" = "dashed",
-               "Electricity price" = "dotted"),
-    guide = guide_legend(order = 1)
-  ) +
-  scale_fill_manual(
-    name = "Cost component",
-    values = colorsInvest,
-    labels = labelsInvest,
-    guide = guide_legend(order = 2)
-  ) +
-  labs(x = "Year", y = "LCOE ($/MWh)") +
-  facet_wrap(~ technology, scales = "free") +
-  ggtitle("LCOE (simple) vs. electricity price and markup")
+for (i in rmIterations) {
+  p <- ggplot() +
+    geom_bar(data = lcoeREMIND %>% filter(iteration == i),
+            aes(x = year, y = lcoe, fill = type),
+            stat = "identity",
+            position = "stack",
+            alpha = 0.8) +
+    geom_line(data = dataPricesREMIND %>% filter(iteration == i),
+              aes(x = year, y = value, linetype = type),
+              linewidth = 0.5) +
+    scale_linetype_manual(
+      name = NULL,
+      values = c("elec + markup + peakcap" = "solid",
+                "elec + markup" = "dashed",
+                "elec" = "dotted"),
+      labels = c("elec + markup + peakcap" = "Elec. price + Markup +\nPeak capacity shadow price",
+                "elec + markup" = "Elec. price + Markup",
+                "elec" = "Elec. price"),
+      guide = guide_legend(order = 1)
+    ) +
+    scale_fill_manual(
+      name = "Cost component",
+      values = colorsInvest,
+      labels = labelsInvest,
+      guide = guide_legend(order = 2)
+    ) +
+    labs(x = "Year", y = "LCOE ($/MWh)") +
+    facet_wrap(~ technology, scales = "free", labeller = labeller(technology = namesTech)) +
+    ggtitle("LCOE (simple) vs. electricity price and markup")
 
-print(p)
-ggsave("lcoe_simple.png")
-
+  print(p)
+  }
 }
 
 ```
@@ -2892,13 +2932,43 @@ ggsave("lcoe_simple.png")
 ```{r lcoe pypsa}
 
 dataCostsPyPSA <- readPyPSAcsv(
-  paths = file.path(pyResourcesDirs, "costs.csv"))
+  paths = file.path(pyResourcesDirs, "costs.csv")) %>%
+  filter(str_detect(further.description, "^Extracted from REMIND-EU")) %>%
+  select(-further.description, -original_value, -source)
 
 # PyPSA-Eur: Capital costs
+dataCapex <- dataCostsPyPSA %>%
+  filter(parameter == "investment")
 
+dataLifetime <- dataCostsPyPSA %>%
+  filter(parameter == "lifetime")
+
+dataDisrate <- dataCostsPyPSA %>%
+  filter(parameter == "discount_rate")
+
+dataCapfac <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "capacity_factors.csv")) %>%
+  revalue.levels(carrier = rm2pyTech) %>%
+  group_by(year, region, carrier, iteration) %>%
+  summarise(capfac = unique(value))
+
+lcoe.investment <- dataCostsPyPSA %>%
+  filter(parameter %in% c("investment", "lifetime", "discount_rate")) %>%
+  select(-unit) %>%
+  pivot_wider(names_from = parameter, values_from = value) %>%
+  mutate(annuity = discount_rate / (1 - (1 + discount_rate)**(-lifetime))) %>%
+  rename(carrier = technology) %>%
+  full_join(dataCapfac) %>%
+  mutate(lcoe = annuity * investment / (capfac * 8760))
 
 # PyPSA-Eur: FOM
-
+lcoe.fom <- dataCostsPyPSA %>%
+  filter(parameter %in% c("investment", "FOM")) %>%
+  select(-unit) %>%
+  pivot_wider(names_from = parameter, values_from = value) %>%
+  rename(carrier = technology) %>%
+  full_join(dataCapfac) %>%
+  mutate(lcoe = 1e-2 * investment * FOM / (capfac * 8760))  # FOM is in percent
 
 # PyPSA-Eur: VOM
 
