@@ -20,10 +20,10 @@ Execute_Loadpoint 'input' q32_balSe.m = q32_balSe.m;
 * Initialise variables
 sm_PyPSA_eq = 0;
 p32_PyPSA_CFAvg(tPy32,regPy32,tePy32) = 0;
+p32_PyPSA_MVAvg(tPy32,regPy32,tePy32) = 0;
+p32_PyPSA_ElecPriceAvg(tPy32,regPy32) = 0;
 p32_PyPSA_PeakResLoadRel(tPy32,regPy32) = 0;
 p32_PyPSA_shSeEl(tPy32,regPy32,tePy32) = 0;
-p32_PyPSA_MVAvg(tPy32,regPy32,tePy32) = 0;
-p32_PyPSA_ElecPrice(tPy32,regPy32) = 0;
 p32_PyPSA_ValueFactor(tPy32,regPy32,tePy32) = 0;
 
 *** EOF ./modules/32_power/PyPSA/preloop.gms

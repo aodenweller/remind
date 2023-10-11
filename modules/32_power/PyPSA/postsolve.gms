@@ -141,7 +141,7 @@ $offtext
       max(0, vm_costTeCapital.l(t,regi,te) + o_margAdjCostInv(t,regi,te)$( sum(te2rlf(te,rlf), vm_deltaCap.l(t,regi,te,rlf)) ge 1e-5 ));
   );
 
-  !! Export REMIND output data for PyPSA (REMIND2PyPSA.gdx)
+  !! Export REMIND output data for PyPSA (REMIND2PyPSAEUR.gdx)
   !! Don't use fulldata.gdx so that we keep track of which variables are exported to PyPSA
   Execute_Unload "REMIND2PyPSAEUR.gdx",
     !! REMIND to PyPSA
@@ -174,7 +174,7 @@ $offtext
   logfile.nr = sm_tmp;
   logfile.nd = sm_tmp2;
 
-  !! Import PyPSA data for REMIND (PyPSA2REMIND.gdx)
+  !! Import PyPSA data for REMIND (PyPSAEUR2REMIND.gdx)
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_CF=capacity_factor;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_shSeEl=generation_share;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_MV=market_value;
@@ -185,6 +185,7 @@ $offtext
   !! Track capacity factors and market values in iterations
   p32_PyPSA_CF_iter(iteration,t,regi,te) = p32_PyPSA_CF(t,regi,te);
   p32_PyPSA_MV_iter(iteration,t,regi,te) = p32_PyPSA_MV(t,regi,te);
+  p32_PyPSA_ElecPrice_iter(iteration,t,regi) = p32_PyPSA_ElecPrice(t,regi);
 
 *** PyPSA-Eur to REMIND: Calculate averages to reduce oscillations
 *** (i) Capacity factors
@@ -196,6 +197,8 @@ $offtext
     p32_PyPSA_CFAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_PyPSA_CF(t,regi,te);
     !! Non-averaged market values
     p32_PyPSA_MVAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_PyPSA_MV(t,regi,te);
+    !! Non-averaged electricity prices
+    p32_PyPSA_ElecPriceAvg(t,regi)$(tPy32(t) and regPy32(regi)) = p32_PyPSA_ElecPrice(t,regi);
   !! Implement step (3)
   elseif (c32_avg_py2rm eq 1),
     !! Averaged capacity factors over iterations
@@ -204,6 +207,9 @@ $offtext
     !! Averaged market values over iterations
     p32_PyPSA_MVAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) =
       sum(iteration2$(iteration2.val gt (iteration.val - 4)), p32_PyPSA_MV_iter(iteration2,t,regi,te)) / 4;
+    !! Averaged electricity prices over iterations
+    p32_PyPSA_ElecPriceAvg(t,regi)$(tPy32(t) and regPy32(regi)) =
+      sum(iteration2$(iteration2.val gt (iteration.val - 4)), p32_PyPSA_ElecPrice_iter(iteration2,t,regi)) / 4;
   );
 
 *** Activate PyPSA equations if PyPSA ran once
