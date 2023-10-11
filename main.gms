@@ -1168,6 +1168,12 @@ parameter
 ;
 c32_iterPreFacFadeOut = 0;
 *' Iteration in which PyPSA pre-factor fade out is activated, zero means it's never activated
+parameter
+  c32_adjCost !! def = 0  !! regexp = [0-2]
+;
+c32_adjCost = 0;
+*' Include adjustment cost into capital costs for PyPSA
+*' 0 = off, 1 = average adjustment costs, 2 = marginal adjustment costs
 
 ***-----------------------------------------------------------------------------
 *' ####                     FLAGS
