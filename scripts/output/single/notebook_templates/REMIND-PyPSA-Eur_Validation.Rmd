@@ -2925,7 +2925,7 @@ for (i in rmIterations) {
     ) +
     labs(x = "Year", y = "LCOE ($/MWh)") +
     facet_wrap(~ technology, scales = "free", labeller = labeller(technology = namesTech)) +
-    ggtitle("LCOEs (simple) vs. market values in REMIND")
+    ggtitle(paste("LCOEs (simple) vs. market values in REMIND, iteration", i))
 
   print(p)
 }
@@ -3056,7 +3056,7 @@ for (i in rmIterations) {
     ) +
     labs(x = "Year", y = "LCOE ($/MWh)") +
     facet_wrap(~ technology, scales = "free", labeller = labeller(technology = namesTech)) +
-    ggtitle("LCOEs vs. market values in PyPSA")
+    ggtitle(paste("LCOEs vs. market values in PyPSA, iteration", i))
 
   print(p)
 }
