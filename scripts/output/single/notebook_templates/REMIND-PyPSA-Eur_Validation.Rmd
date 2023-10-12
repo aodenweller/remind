@@ -3136,9 +3136,10 @@ dataHourlyElecPricesPyPSA <- readPyPSAcsv(
                names_to = "time",
                values_to = "value") %>%
   group_by(year, region, carrier, iteration) %>%
-  mutate(hour = 1:8760) %>%
+  mutate(hour = 1:n()) %>%
   arrange(-value) %>%
-  mutate(hour.sorted = 1:8760)
+  mutate(hour.sorted = 1:n(),
+         year.fraction = hour.sorted / n())
 
 for (i in pyIterations) {
   dataHourlyElecPricesPyPSAplot <- dataHourlyElecPricesPyPSA %>%
@@ -3146,8 +3147,8 @@ for (i in pyIterations) {
 
   pPriceDuration <- ggplot() +
     geom_line(data = dataHourlyElecPricesPyPSAplot,
-              mapping = aes(x = hour.sorted, y = value, color = region)) +
-    labs(x = "Hour", y = "Electricity price ($/MWh)") +
+              mapping = aes(x = year.fraction, y = value, color = region)) +
+    labs(x = "Hours of year (fraction)", y = "Electricity price ($/MWh)") +
     ggtitle(paste("Price duration curve, iteration", i)) +
     scale_y_continuous(trans = "log10") +
     facet_wrap(~ year)
