@@ -19,6 +19,7 @@ Execute_Loadpoint 'input' q32_balSe.m = q32_balSe.m;
 
 * Initialise variables
 sm_PyPSA_eq = 0;
+s32_preFacFadeOut = 1;
 p32_PyPSA_CFAvg(tPy32,regPy32,tePy32) = 0;
 p32_PyPSA_MVAvg(tPy32,regPy32,tePy32) = 0;
 p32_PyPSA_ElecPriceAvg(tPy32,regPy32) = 0;
