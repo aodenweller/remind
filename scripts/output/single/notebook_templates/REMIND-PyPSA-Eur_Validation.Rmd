@@ -1578,7 +1578,7 @@ for (r in regList) {
       labels = namesTech,
     ) +
     labs(x = "Year", y = "Markup ($/MWh)") +
-    ggtitle("Markups over years", regSubtitle(r))
+    ggtitle("Markups over years, averaged over iterations", regSubtitle(r))
 
   print(pMarkupYear + facet_wrap(~ iteration, scales = "free"))
 
@@ -2633,8 +2633,6 @@ This section contains a simple calculation of the LCOE for each technology. It d
 This means, for example, that we can use the annuity factor for investment costs.
 
 ```{r LCOE simple}
-if (FALSE) {
-
 # REMIND: 1) Investment costs in USD/MWh
 # Investment cost = Overnight cost (CAPEX) * annuity factor / (capfac * 8760h)
 
@@ -2921,10 +2919,9 @@ for (i in rmIterations) {
     ) +
     labs(x = "Year", y = "LCOE ($/MWh)") +
     facet_wrap(~ technology, scales = "free", labeller = labeller(technology = namesTech)) +
-    ggtitle("LCOE (simple) vs. electricity price and markup")
+    ggtitle("LCOEs (simple) vs. market values in REMIND")
 
   print(p)
-  }
 }
 
 ```
@@ -2937,48 +2934,126 @@ dataCostsPyPSA <- readPyPSAcsv(
   select(-further.description, -original_value, -source)
 
 # PyPSA-Eur: Capital costs
-dataCapex <- dataCostsPyPSA %>%
-  filter(parameter == "investment")
-
-dataLifetime <- dataCostsPyPSA %>%
-  filter(parameter == "lifetime")
-
-dataDisrate <- dataCostsPyPSA %>%
-  filter(parameter == "discount_rate")
-
 dataCapfac <- readPyPSAcsv(
   paths = file.path(pyValidationDirs, "capacity_factors.csv")) %>%
   revalue.levels(carrier = rm2pyTech) %>%
   group_by(year, region, carrier, iteration) %>%
-  summarise(capfac = unique(value))
+  summarise(capfac = unique(value)) %>%
+  rename(technology = carrier)
 
 lcoe.investment <- dataCostsPyPSA %>%
-  filter(parameter %in% c("investment", "lifetime", "discount_rate")) %>%
+  filter(parameter %in% c("investment", "lifetime", "discount_rate"),
+         !(technology %in% c("solar-utility", "solar-rooftop"))) %>%
   select(-unit) %>%
   pivot_wider(names_from = parameter, values_from = value) %>%
-  mutate(annuity = discount_rate / (1 - (1 + discount_rate)**(-lifetime))) %>%
-  rename(carrier = technology) %>%
+  mutate(annuity = 0.05 / (1 - (1 + 0.05)**(-lifetime))) %>%
   full_join(dataCapfac) %>%
-  mutate(lcoe = annuity * investment / (capfac * 8760))
+  mutate(lcoe = annuity * investment / (capfac * 8760)) %>%
+  select(year, technology, lcoe, iteration) %>%
+  mutate(type = "investment")
 
 # PyPSA-Eur: FOM
 lcoe.fom <- dataCostsPyPSA %>%
-  filter(parameter %in% c("investment", "FOM")) %>%
+  filter(parameter %in% c("investment", "FOM"),
+         !(technology %in% c("solar-utility", "solar-rooftop"))) %>%
   select(-unit) %>%
   pivot_wider(names_from = parameter, values_from = value) %>%
-  rename(carrier = technology) %>%
   full_join(dataCapfac) %>%
-  mutate(lcoe = 1e-2 * investment * FOM / (capfac * 8760))  # FOM is in percent
+  mutate(lcoe = 1e-2 * investment * FOM / (capfac * 8760)) %>%  # FOM is in percent
+  select(year, technology, lcoe, iteration) %>%
+  mutate(type = "fom")
 
 # PyPSA-Eur: VOM
-
+lcoe.vom <- dataCostsPyPSA %>%
+  filter(parameter %in% c("VOM")) %>%
+  mutate(lcoe = value) %>%
+  select(year, technology, lcoe, iteration) %>%
+  mutate(type = "vom")
 
 # PyPSA-Eur: Fuel costs
-
+lcoe.fuel <- dataCostsPyPSA %>%
+  filter(parameter %in% c("fuel", "efficiency"),
+         !(technology %in% c("solar-utility", "solar-rooftop"))) %>%
+  select(-unit) %>%
+  pivot_wider(names_from = parameter, values_from = value) %>%
+  mutate(lcoe = fuel / efficiency) %>%
+  select(year, technology, lcoe, iteration) %>%
+  mutate(type = "fuel")
 
 # PyPSA-Eur: CO2 costs
+dataCO2PricePyPSA <- readPyPSAcsv(
+    paths = file.path(pyResultsDirs, "co2_price_scenarios.csv")) %>% 
+  # Extract the CO2 price from the opts columns which starts with Ep followed by a number of format 0.0
+  mutate(co2 = as.numeric(str_extract(opts, "(?<=Ep)\\d+\\.\\d{1,2}"))) %>%
+  select(year, iteration, co2)
 
+lcoe.co2 <- dataCostsPyPSA %>%
+  filter(parameter %in% c("CO2 intensity", "efficiency"),
+         !(technology %in% c("solar-utility", "solar-rooftop"))) %>%
+  select(-unit) %>%
+  pivot_wider(names_from = parameter, values_from = value) %>%
+  full_join(dataCO2PricePyPSA) %>%
+  mutate(lcoe = co2 * `CO2 intensity` / efficiency) %>%
+  select(year, technology, lcoe, iteration) %>%
+  mutate(type = "co2")
 
+# PyPSA-Eur total LCOE
+lcoePyPSA <- bind_rows(lcoe.investment, lcoe.fom, lcoe.vom, lcoe.fuel, lcoe.co2) %>%
+  order.levels(type = c("co2", "fuel", "vom", "fom", "investment")) %>%
+  revalue.levels(technology = py2genTech)
+
+# Market values
+dataMarketValuePyPSA <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "market_values.csv")) %>%
+  quitte::revalue.levels(carrier = rm2genTech) %>%
+  group_by(year, region, carrier, iteration) %>%
+  summarise(value = unique(value)) %>%
+  rename(technology = carrier) %>%
+  quitte::order.levels(technology = names(namesTech)) %>%
+  select(year, region, technology, value, iteration) %>%
+  mutate(type = "market value")
+
+# Electricity prices
+dataElecPricePyPSA <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "electricity_prices.csv")) %>%
+  tidyr::crossing(technology = unique(rm2genTech)) %>%
+  select(year, region, technology, value, iteration) %>%
+  mutate(type = "elec")
+
+dataPricesPyPSA <- bind_rows(dataMarketValuePyPSA, dataElecPricePyPSA) %>%
+  order.levels(type = c("market value", "elec"))
+
+# Plots
+for (i in rmIterations) {
+  p <- ggplot() +
+    geom_bar(data = lcoePyPSA %>% filter(iteration == i),
+            aes(x = year, y = lcoe, fill = type),
+            stat = "identity",
+            position = "stack",
+            alpha = 0.8) +
+    geom_line(data = dataPricesPyPSA %>% filter(iteration == i),
+              aes(x = year, y = value, linetype = type),
+              linewidth = 0.5) +
+    scale_linetype_manual(
+      name = NULL,
+      values = c("market value" = "solid",
+                "elec" = "dotted"),
+      labels = c("market value" = "Market value",
+                "elec" = "Electricity price"),
+      guide = guide_legend(order = 1)
+    ) +
+    scale_fill_manual(
+      name = "Cost component",
+      values = colorsInvest,
+      labels = labelsInvest,
+      guide = guide_legend(order = 2)
+    ) +
+    labs(x = "Year", y = "LCOE ($/MWh)") +
+    facet_wrap(~ technology, scales = "free", labeller = labeller(technology = namesTech)) +
+    ggtitle("LCOEs vs. market values in PyPSA")
+
+  print(p)
+}
 ```
 
 ```{r lcoe complex}
