@@ -886,19 +886,24 @@ print(pVOMIter)
 ### Efficiencies
 
 ```{r efficiencies}
+
+teReNoBio <- readGDX(rmFiles[1], "teReNoBio")
+
 # Technologies for which eta is constant
 dataEtaConvREMIND <- readREMINDgdx(
     paths = rmFiles,
     gdxVar = "pm_eta_conv",
     columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "eta"),
-    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2pyTech)))
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2pyTech)),
+    restoreZeros = FALSE)
 
 # Technologies for which eta varies over time
 dataEtaTimeREMIND <- readREMINDgdx(
     paths = rmFiles,
     gdxVar = "pm_dataeta",
     columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "eta"),
-    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2pyTech)))
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2pyTech)),
+    restoreZeros = FALSE)
 
 # Read weights
 dataGenTechREMIND <- readREMINDgdx(
@@ -2751,7 +2756,8 @@ pm_eta_conv <- readREMINDgdx(
     paths = rmFiles,
     gdxVar = "pm_eta_conv",
     columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "eta"),
-    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2pyTech))) %>%
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2pyTech)),
+    restoreZeros = FALSE) %>%
   filter(eta > 0)
 
 pm_dataeta <- readREMINDgdx(
