@@ -21,10 +21,10 @@ pm_SEPrice(t,regi,entySE)$(    abs(qm_budget.m(t,regi)) gt sm_eps
 ***                  PyPSA coupling
 ***------------------------------------------------------------
 
-*** Render validation RMarkdown file
-*** Don't put in postsolve.gms because fulldata_i.gdx is only written afterwards
-
-if ((iteration.val ge (c32_startIter_PyPSA + 1)),
+*** If PyPSA equation switch is turned on (end of postsolve.gms)
+if ((sm_PyPSA_eq eq 1),
+  !! Render validation Rmd file
+  !! Don't put in postsolve.gms because fulldata_i.gdx is only written afterwards
   Put_utility logfile, "Exec" /
   "sbatch RenderREMIND-PyPSA-Eur_Validation.sh";
 
@@ -50,6 +50,7 @@ if ((iteration.val ge (c32_startIter_PyPSA + 1)),
   q32_operatingReserve.m(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
 );
 
+*** Fade out pre-factor if configured
 if((c32_iterPreFacFadeOut ne 0) and (iteration.val ge c32_iterPreFacFadeOut),
  s32_preFacFadeOut = 0.7**(iteration.val - c32_iterPreFacFadeOut + 1);
 );

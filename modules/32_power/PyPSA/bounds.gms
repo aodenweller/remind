@@ -22,7 +22,7 @@ $endif
 
 * Read in curtailment at some point?
 $ifthen "%c32_pypsa_curtailment%" == "on"
-  v32_storloss.fx(tPy32,regPy32,tePyVRE32) = p32_PyPSA_Curtailment / sm_TWa_2_MWh;
+  v32_storloss.fx(tPy32,regPy32,tePyVRE32) = p32_PyPSA_Curtailment(tPy32,regPy32,tePyVRE32) / sm_TWa_2_MWh;
 $else
   v32_storloss.fx(tPy32,regPy32,tePy32) = 0;
 $endif
