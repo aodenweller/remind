@@ -129,20 +129,26 @@ $offtext
   !! Specific capital costs plus adjustment costs
   if ((c32_adjCost eq 0),
     !! No adjustment costs
-    p32_capCostwAdjCost(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = 
+    p32_capCostwAdjCost(t,regi,te)$(tPy32(t) and regPy32(regi) and (tePy32(te) or sameas(te,"elh2"))) = 
       vm_costTeCapital.l(t,regi,te);
   elseif (c32_adjCost eq 1),
     !! Average adjustment costs
-    p32_capCostwAdjCost(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = 
+    p32_capCostwAdjCost(t,regi,te)$(tPy32(t) and regPy32(regi) and (tePy32(te) or sameas(te,"elh2"))) = 
       max(0, vm_costTeCapital.l(t,regi,te) + o_avgAdjCostInv(t,regi,te)$( sum(te2rlf(te,rlf), vm_deltaCap.l(t,regi,te,rlf)) ge 1e-5 ));
   elseif (c32_adjCost eq 2),
     !! Marginal adjustment costs
-    p32_capCostwAdjCost(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = 
+    p32_capCostwAdjCost(t,regi,te)$(tPy32(t) and regPy32(regi) and (tePy32(te) or sameas(te,"elh2"))) = 
       max(0, vm_costTeCapital.l(t,regi,te) + o_margAdjCostInv(t,regi,te)$( sum(te2rlf(te,rlf), vm_deltaCap.l(t,regi,te,rlf)) ge 1e-5 ));
   );
 
+  !! Parameters to calculate weighted averages across technologies and regions in PyPSA
+  p32_weightGen(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te)) = v32_usableSeTeDisp.l(t,regi,"seel",te) + EPS;
+  p32_weightStor(t,regi,te)$(tPy32(t) AND regPy32(regi) AND sameas(te,"elh2")) = vm_prodSe.l(t,regi,"seel","seh2","elh2") + EPS;
+  p32_weightPEprice(t,regi,entyPe)$(tPy32(t) AND regPy32(regi) AND entyPePy32(entyPe)) = vm_prodPe.l(t,regi,entyPe) + EPS;
+  
   !! Export REMIND output data for PyPSA (REMIND2PyPSAEUR.gdx)
   !! Don't use fulldata.gdx so that we keep track of which variables are exported to PyPSA
+  option epsToZero=on;
   Execute_Unload "REMIND2PyPSAEUR.gdx",
     !! REMIND to PyPSA
     tPy32, regPy32, tePy32, !! General info: Coupled time steps, regions and technologies
@@ -151,9 +157,11 @@ $offtext
     pm_eta_conv, pm_dataeta, p32_PEPriceAvg, pe2se, p_priceCO2, fm_dataemiglob,  !! Marginal cost components
     p32_preInvCapAvg, !! Pre-investment capacities
     v32_usableSeTeDisp, !! For weighted averages
+    p32_weightGen, p32_weightStor, p32_weightPEprice, !! For weighted averages 
     !! PyPSA to REMIND
     v32_shSeElDisp  !! To downscale PyPSA generation shares to REMIND technologies
   ;
+  option epsToZero=off;
 
   !! Temporarily store and then set numeric round format and number of decimals
   sm_tmp  = logfile.nr;
