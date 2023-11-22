@@ -94,12 +94,12 @@ parameters
     p32_PyPSA_ValueFactor(ttot,all_regi,all_te)             "PyPSA import calc: Value factor = Market value / electricity price [1]"
     p32_iniCapPHS(all_regi,all_te)                          "PyPSA import/export calc: Initial capacity of pumped hydro storage [TW]"
     p32_iniProdPHS(all_regi,all_te)                         "PyPSA import/export calc: Initial production of pumped hydro storage [TWa]"
-    sm_PyPSA_eq                                             "PyPSA coupling: Boolean to turn on PyPSA coupling equations after PyPSA ran for the first time"
     p32_preFactor_CF(all_regi,all_te)                       "PyPSA coupling: Pre-factor for the capacity factor [1]"
     p32_preFactor_MV(all_regi,all_te)                       "PyPSA coupling: Pre-factor for the market value [1]"
-    s32_preFacFadeOut                                       "PyPSA coupling: Multiplicative factor to fade out pre-factors [1]"
-    s32_checkPrice                                          "PyPSA coupling: Boolean to check if PE prices are non-negative (0 = error, 1 = all good)"
+    sm_PyPSA_eq                                             "PyPSA coupling: Boolean to turn on PyPSA coupling equations after PyPSA ran for the first time"
+    s32_checkPrice                                          "PyPSA coupling: Boolean to check if budget equation is binding (1 = yes, 0 = no)"
     s32_checkPrice_iter(iteration)                          "PyPSA coupling: s32_checkPrices in iterations"
+    s32_preFacFadeOut                                       "PyPSA coupling: Multiplicative factor to fade out pre-factors [1]"
     p32_PeakResLoadShadowPrice(ttot,all_regi,all_te)        "PyPSA reporting: Shadow price of peak residual load constraint [T$/TWa]"
 ;
 

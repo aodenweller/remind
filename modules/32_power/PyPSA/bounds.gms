@@ -107,6 +107,9 @@ $ifthen "%c32_pypsa_capfac%" == "on"
 if ((sm_PyPSA_eq eq 1),
   vm_capFac.lo(tPy32,regPy32,tePy32) = 0;
   vm_capFac.up(tPy32,regPy32,tePy32) = 2;
+  !! Switch off CSP and geohdr for now
+  !!vm_deltaCap.fx(tPy32,regPy32,"csp",rlf) = 0;
+  !!vm_deltaCap.fx(tPy32,regPy32,"geohdr",rlf) = 0;
 );
 $endif
 

@@ -1174,6 +1174,11 @@ parameter
 c32_adjCost = 0;
 *' Include adjustment cost into capital costs for PyPSA
 *' 0 = off, 1 = average adjustment costs, 2 = marginal adjustment costs
+parameter
+  c32_checkPrice !! def = 0 !! regexp = 0|1
+;
+c32_checkPrice = 0;
+*' Switch whether to check for negative prices before running PyPSA
 
 ***-----------------------------------------------------------------------------
 *' ####                     FLAGS
