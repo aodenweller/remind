@@ -216,9 +216,10 @@ $offdigit
 *** turn profiling off (0) or on (1-3, different levels of detail)
 option profile = 0;
 
-*' @code
+*' @title{extrapage: "00_configuration"} Configuration
+*' @code{extrapage: "00_configuration"}
 *--------------------------------------------------------------------------
-*' #### Configuration - Settings for Scenarios:
+*' ### Configuration - Settings for Scenarios:
 *--------------------------------------------------------------------------
 
 ***---------------------    Run name and description    -------------------------
@@ -317,11 +318,8 @@ $setglobal fossil  grades2poly        !! def = grades2poly
 $setglobal power  PyPSA        !! def = IntC
 *'---------------------    33_CDR       ----------------------------------------
 *'
-*' * (off)        : no carbon dioxide removal technologies except BECCS
-*' * (weathering) : includes enhanced weathering
-*' * (DAC) :    includes direct air capture
-*' * (all) :    includes all CDR technologies
-$setglobal CDR  DAC        !! def = DAC
+*' * (portfolio) : CDR options added via switches: cm_33[option abbreviation]
+$setglobal CDR  portfolio        !! def = portfolio
 *'---------------------    35_transport    ----------------------------------------
 *'
 *' * (complex):  transport realization with aggregated transport demand (LDV, HDV, electric trains) via CES function with constrained choice on vehicle technologies
@@ -375,11 +373,8 @@ $setglobal emicapregi  none           !! def = none
 *' * (expoLinear): 5% exponential increase until c_expoLinear_yearStart, linear increase thereafter
 *' * (exogenous): carbon price is specified using an external input file or using the switch cm_regiExoPrice
 *' * (linear): linear increase over time of the tax level in 2020 set via cm_co2_tax_2020 (combined with emiscen eq 9 and cm_co2_tax_2020>0)
-*' * (diffPriceSameCost) ! experimental ! adjusts regional carbon prices until regional mitigation costs (in NPV GDP) are equal across regions. Use with iterative_adjust=2, emiscen=9. Experimental feature, you are responsible to check for convergence yourself (check that p45_mitiCostRel is about constant over iterations)
 *' * (temperatureNotToExceed): [test and verify before using it!] Find the optimal carbon carbon tax (set cm_emiscen=1"iterative_target_adj" = 9] curved convergence of CO2 prices between regions until cm_CO2priceRegConvEndYr; developed countries have linear path from 0 in 2010 through cm_co2_tax_2020 in 2020;
-*' * (NDC2constant): linearly phase in global constant price from NDC prices (default 2020-2040 phase-in)
 *' * (diffCurvPhaseIn2Lin): [REMIND 2.1 default for validation peakBudget runs, in combination with "iterative_target_adj" = 9] curved convergence of CO2 prices between regions until cm_CO2priceRegConvEndYr; developed countries have linear path from 0 in 2010 through cm_co2_tax_2020 in 2020;
-*' * (diffPhaseIn2Constant): !experimental! linearly phase in global constant price, with starting values differentiated by GDP/cap
 *' * (NDC): implements a carbon price trajectory consistent with the NDC targets (up to 2030) and a trajectory of comparable ambition post 2030 (1.25%/yr price increase and regional convergence of carbon price). Choose version using cm_NDC_version "2023_cond", "2023_uncond", or replace 2023 by 2022, 2021 or 2018 to get all NDC published until end of these years.
 *' * (NPi): National Policies Implemented, extrapolation of historical (until 2020) carbon prices
 $setglobal carbonprice  none           !! def = none
@@ -849,6 +844,16 @@ parameter
 *' * (1): the values from the gdx are read in (works only if the gdx has a parameter value) ATTENTION: make sure that the values from the gdx have the right structure (e.g. regionally differentiated or not)
 *'
 parameter
+  cm_33DAC                  "choose whether DAC (direct air capture) should be included into the CDR portfolio. 0 = DAC not used, 1 = used"
+;
+  cm_33DAC                 = 1;   !! def = 1
+*'
+parameter
+  cm_33EW                   "choose whether EW (enhanced weathering) should be included into the CDR portfolio. 0 = EW not used, 1 = used"
+;
+  cm_33EW                  = 0;   !! def = 0
+*'
+parameter
   cm_gs_ew                  "grain size (for enhanced weathering, CDR module) [micrometre]"
 ;
   cm_gs_ew                 = 20;     !! def = 20  !! regexp = is.numeric
@@ -980,7 +985,7 @@ parameter
   cm_taxCO2inc_after_peakBudgYr = 0; !! def = 0 . For weak targets (higher than 1100 Peak Budget), this value might need to increased to prevent continually increasing temperatures
 *'
 parameter
-  cm_CO2priceRegConvEndYr      "Year at which regional CO2 prices converge in module 45 realization diffPhaseIn2LinFlex"
+  cm_CO2priceRegConvEndYr      "Year at which regional CO2 prices converge in module 45 realization diffCurvPhaseIn2Lin"
 ;
   cm_CO2priceRegConvEndYr  = 2050;   !! def = 2050
 *'
