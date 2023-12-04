@@ -59,7 +59,9 @@ s32_checkPrice_iter(iteration) = s32_checkPrice;
 ***------------------------------------------------------------
 ***                  PyPSA-Eur coupling
 ***------------------------------------------------------------
-if ((iteration.val ge c32_startIter_PyPSA) AND (s32_checkPrice eq 1), !! (mod(iteration.val - c32_startIter_PyPSA, 1) eq 0)
+if (( iteration.val ge c32_startIter_PyPSA ) AND
+    ( mod(iteration.val - c32_startIter_PyPSA, c32_everyIter_PyPSA) eq 0 ) AND
+    ( s32_checkPrice eq 1 ),
   
   !! TODO: Shift pre-investment capacites and preInvCap_iter before loop so that values are available for all iterations (for averaging)
   !! Pre-investment capacities
@@ -75,9 +77,9 @@ if ((iteration.val ge c32_startIter_PyPSA) AND (s32_checkPrice eq 1), !! (mod(it
 *** (ii) PE prices
 *** The idea behind averaging follows three steps:
 *** (1) allow x iterations (until c32_startIter_PyPSA + x) without averaging so that variables can adjust/drift
+***     (this is not necessary if c32_startIter_PyPSA is large enough)
 *** (2) allow another y iterations (until c32_startIter + x + y) without averaging so that variables can start oscillating
 *** (3) afterwards (from c32_startIter + x + y) take the average of the previous y iterations, where y should be an even number
-*** Alternatively to (3) one could average over all iterations after c32_startIter + x, which would however lead to overdamping
 *** Currently set x to 3 and y to 4
 
   !! Implement step (1) and (2): Use non-averaged values always if c32_avg_rm2py = 0, or if iteration < c32_startIter_PyPSA + x + y - 1
@@ -95,19 +97,6 @@ if ((iteration.val ge c32_startIter_PyPSA) AND (s32_checkPrice eq 1), !! (mod(it
       p32_PEPriceAvg(t,regi,entyPe)$(tPy32(t) and regPy32(regi)) =
         sum(iteration2$(iteration2.val gt (iteration.val - 4)), max(0, p32_PEPrice_iter(iteration2,t,regi,entyPe))) / 4 + EPS;  !! Prevent negative PE prices
   );
-$ontext
-    !! Average pre-investment capacities over past y iterations
-    p32_preInvCapAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) =
-        sum(iteration2$(iteration2.val gt (iteration.val - 4)),
-            s32_checkPrice_iter(iteration2) * p32_preInvCap_iter(iteration2,t,regi,te))
-      / sum(iteration2$(iteration2.val gt (iteration.val - 4)),
-            s32_checkPrice_iter(iteration2));
-    p32_PEPriceAvg(t,regi,entyPe)$(tPy32(t) and regPy32(regi) and entyPePy32(entyPe)) =
-        sum(iteration2$(iteration2.val gt (iteration.val - 4)),
-            s32_checkPrice_iter(iteration2) * max(0, p32_PEPrice_iter(iteration2,t,regi,entyPe)))  !! Prevent negative PE prices
-      / sum(iteration2$(iteration2.val gt (iteration.val - 4)),
-            s32_checkPrice_iter(iteration2));
-$offtext
 
   !! Capital interest rate aggregated for all regions in regPy32
   p32_discountRate(ttot)$(tPy32(ttot) AND ttot.val gt 2005 and ttot.val le 2130) =
@@ -150,16 +139,23 @@ $offtext
   !! Don't use fulldata.gdx so that we keep track of which variables are exported to PyPSA
   option epsToZero=on;
   Execute_Unload "REMIND2PyPSAEUR.gdx",
-    !! REMIND to PyPSA
-    tPy32, regPy32, tePy32, !! General info: Coupled time steps, regions and technologies
-    v32_usableSeDisp, !! Load
-    p32_capCostwAdjCost, pm_data, p_r, p32_discountRate, !! Capital cost components
-    pm_eta_conv, pm_dataeta, p32_PEPriceAvg, pe2se, p_priceCO2, fm_dataemiglob,  !! Marginal cost components
-    p32_preInvCapAvg, !! Pre-investment capacities
-    !!v32_usableSeTeDisp, !! For weighted averages
-    p32_weightGen, p32_weightStor, p32_weightPEprice, !! For weighted averages 
-    !! PyPSA to REMIND
-    v32_shSeElDisp  !! To downscale PyPSA generation shares to REMIND technologies
+    !! -- REMIND to PyPSA-Eur --
+    !! Coupled time steps, regions and technologies
+    tPy32, regPy32, tePy32,
+    !! Total electricity load
+    v32_usableSeDisp,
+    !! Capital cost components
+    p32_capCostwAdjCost, pm_data, p32_discountRate,
+    !! Marginal cost components
+    pm_eta_conv, pm_dataeta, p32_PEPriceAvg, pe2se, p_priceCO2, fm_dataemiglob,
+    !! Weights to calculate weighted averages
+    p32_weightGen, p32_weightStor, p32_weightPEprice, 
+    !! Pre-investment capacities
+    p32_preInvCapAvg,
+    !! -- PyPSA-Eur to REMIND -- 
+    !! Generation shares in REMIND to downscale generation shares in PyPSA
+    !! (this is required to parametrise the pre-factor equations) 
+    v32_shSeElDisp
   ;
   option epsToZero=off;
 
@@ -169,12 +165,11 @@ $offtext
   logfile.nr = 1;
   logfile.nd = 0;
 
-  !! Start PyPSA-Eur
-  !! This executes a shell script (copied from scripts/iterative)
-  !! and starts the full coupling workflow:
-  !! 1) Copy REMIND2PyPSAEUR.gdx to PyPSA-Eur directory
-  !! 2) Start PyPSA-Eur
-  !! 3) Copy PyPSAEUR2REMIND.gdx to REMIND directory
+  !! Execute PyPSA-Eur
+  !! This executes a shell script (copied from scripts/iterative) and starts the full coupling workflow in snakemake:
+  !! (1) Copy REMIND2PyPSAEUR.gdx to PyPSA-Eur directory
+  !! (2) Start PyPSA-Eur, including all data processing steps
+  !! (3) Copy PyPSAEUR2REMIND.gdx to REMIND directory
   Put_utility logfile, "Exec" /
   "./RunPyPSA-Eur.sh %c32_pypsa_dir% " iteration.val:0:0;
 
@@ -196,8 +191,9 @@ $offtext
   p32_PyPSA_ElecPrice_iter(iteration,t,regi) = p32_PyPSA_ElecPrice(t,regi);
 
 *** PyPSA-Eur to REMIND: Calculate averages to reduce oscillations
-*** (i) Capacity factors
-*** (ii) Market values
+*** (1) Capacity factors
+*** (2) Market values
+*** (3) Electricity prices
 *** The idea behind averaging is the same as for REMIND to PyPSA-Eur. See above.
 *** Currently set x to 3 and y to 4
   if ((c32_avg_py2rm eq 0) or (iteration.val lt c32_startIter_PyPSA + 3 + 4 - 1),  !! c32_startIter_PYPSA + x + y - 1

@@ -1177,6 +1177,11 @@ parameter
 ;
 c32_checkPrice = 0;
 *' Switch whether to check for negative prices before running PyPSA
+parameter
+    c32_everyIter_PyPSA !! def = 1 !! regexp = [1-9]
+;
+*' Switch that specifies to run PyPSA every x-th iteration
+c32_everyIter_PyPSA = 1;
 
 ***-----------------------------------------------------------------------------
 *' ####                     FLAGS
