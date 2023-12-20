@@ -100,6 +100,7 @@ parameters
     s32_checkPrice                                          "PyPSA coupling: Boolean to check if budget equation is binding (1 = yes, 0 = no)"
     s32_checkPrice_iter(iteration)                          "PyPSA coupling: s32_checkPrices in iterations"
     s32_preFacFadeOut                                       "PyPSA coupling: Multiplicative factor to fade out pre-factors [1]"
+    s32_PyPSA_called(iteration)                             "PyPSA coupling: Boolean to track if PyPSA was called in the current iteration (1 = yes, 0 = no)"
     p32_PeakResLoadShadowPrice(ttot,all_regi,all_te)        "PyPSA reporting: Shadow price of peak residual load constraint [T$/TWa]"
 ;
 
