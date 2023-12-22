@@ -1144,47 +1144,47 @@ parameter
   c_changeProdCost = 5;  !! def = 5
 *'
 parameter
-  c32_startIter_PyPSA        "Starting iteration of PyPSA"
+  c32_startIter_PyPSA          "Starting iteration of PyPSA"
 *' Starting iteration of coupling with the power system model PyPSA
 ;
   c32_startIter_PyPSA = 1; !! def = 1
 *'
 parameter
-  c32_avg_rm2py
+  c32_avg_rm2py                "Average over iterations from REMIND to PyPSA (0 = off, 1 = on)"
 ;
 c32_avg_rm2py = 0;  !! def = 0  !! regexp = 0|1
 *' Pass iteration-averaged variables from REMIND to PyPSA (0 = off, 1 = on)
 parameter
-  c32_avg_py2rm
+  c32_avg_py2rm                "Average over iteration from PyPSA to REMIND (0 = off, 1 = on)"
 ;
 c32_avg_py2rm = 0; !! def = 0  !! regexp = 0|1
 *' Pass iteration-averaged variables from PyPSA to REMIND (0 = off, 1 = on)
 parameter
-  c32_PHSsubtract
+  c32_PHSsubtract              "Switch to subtract pumped hydro storage in capacity and production terms from variables passed to and from PyPSA"
 ;
-c32_PHSsubtract = 0;
+c32_PHSsubtract = 0; !! def = 0  !! regexp = 0|1
 *' Switch to subtract pumped hydro storage in capacity and production terms from variables passed to and from PyPSA
 parameter
-  c32_iterPreFacFadeOut !! def = 0
+  c32_iterPreFacFadeOut        "Iteration in which to activate PyPSA pre-factor fade out"
 ;
-c32_iterPreFacFadeOut = 0;
+c32_iterPreFacFadeOut = 0; !! def = 0
 *' Iteration in which PyPSA pre-factor fade out is activated, zero means it's never activated
 parameter
-  c32_adjCost !! def = 0  !! regexp = [0-2]
+  c32_adjCost                  "Include adjustment cost into capital costs for PyPSA"
 ;
-c32_adjCost = 0;
+c32_adjCost = 0; !! def = 0  !! regexp = [0-2]
 *' Include adjustment cost into capital costs for PyPSA
 *' 0 = off, 1 = average adjustment costs, 2 = marginal adjustment costs
 parameter
-  c32_checkPrice !! def = 0 !! regexp = 0|1
+  c32_checkPrice                "Switch whether to check for binding budget equation before running PyPSA"
 ;
-c32_checkPrice = 0;
+c32_checkPrice = 0; !! def = 0 !! regexp = 0|1
 *' Switch whether to check for negative prices before running PyPSA
 parameter
-    c32_everyIter_PyPSA !! def = 1 !! regexp = [1-9]
+    c32_everyIter_PyPSA         "Switch that specifies to run PyPSA every x-th iteration"
 ;
 *' Switch that specifies to run PyPSA every x-th iteration
-c32_everyIter_PyPSA = 1;
+c32_everyIter_PyPSA = 1;  !! def = 1 !! regexp = [1-5]
 
 ***-----------------------------------------------------------------------------
 *' ####                     FLAGS
@@ -1687,21 +1687,21 @@ $setglobal c_CO2priceDependent_AdjCosts    on   !! def = on
 *** c32_pypsa_dir
 *** Directory of PyPSA-Eur
 $setglobal c32_pypsa_dir /p/tmp/adrianod/pypsa-eur
-*** c32_pypsa_capfac
-*** Switch to enable capacity factor import from PyPSA-Eur
-$setglobal c32_pypsa_capfac on !! def = on !! regexp = off|on
-*** c32_pypsa_curtailment
-*** Switch to enable curtailment import from PyPSA-Eur
-$setglobal c32_pypsa_curtailment off !! def = off !! regexp = off|on
-*** c32_pypsa_peakcap
-*** Switch to enable peak capacity constraint
-$setglobal c32_pypsa_peakcap on !! def = on !! regexp = off|on
 *** c32_pypsa_multiregion
 *** Switch to enable PyPSA in multiple regions (changes PyPSA/sets.gms)
 $setglobal c32_pypsa_multiregion off !! def = off !! regexp = off|on
+*** c32_pypsa_capfac
+*** Switch to enable capacity factor import from PyPSA-Eur
+$setglobal c32_pypsa_capfac on !! def = on !! regexp = off|on
 *** cm_pypsa_markup
 *** Switch to enable markups/markdowns from PyPSA-Eur via tax module
-$setglobal cm_pypsa_markup off !! def = off !! regexp = off|on
+$setglobal cm_pypsa_markup on !! def = on !! regexp = off|on
+*** c32_pypsa_peakcap
+*** Switch to enable peak capacity constraint
+$setglobal c32_pypsa_peakcap on !! def = on !! regexp = off|on
+*** c32_pypsa_curtailment
+*** Switch to enable curtailment import from PyPSA-Eur
+$setglobal c32_pypsa_curtailment off !! def = off !! regexp = off|on
 *** c32_pypsa_preFac
 *** Switch to enable pre-factors
 $setglobal c32_pypsa_preFac on !! def = on !! regexp = off|on
