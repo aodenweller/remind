@@ -73,6 +73,9 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
     ( mod(iteration.val - c32_startIter_PyPSA, c32_everyIter_PyPSA) eq 0 ) AND  !! Only couple every c32_everyIter_PyPSA iterations
     ( s32_checkPrice eq 1 ),  !! Only couple if budget equation is binding
 
+  !! Track iterations in which PyPSA was executed
+  s32_PyPSA_called(iteration) = 1;
+
 *** REMIND to PyPSA-Eur: Calculate averages to reduce oscillations
 *** (i) Pre-investment capacities
 *** (ii) PE prices
@@ -220,9 +223,6 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
 
 *** Activate PyPSA equations if PyPSA ran once
 sm_PyPSA_eq = 1;
-
-*** Track iterations in which PyPSA was executed
-s32_PyPSA_called(iteration) = 1;
 );
 
 
