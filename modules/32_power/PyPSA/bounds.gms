@@ -31,6 +31,13 @@ $endif
 $ifthen "%cm_pypsa_markup%" == "on"
   p32_PyPSA_ValueFactor(tPy32,regPy32,tePy32) = p32_PyPSA_MVAvg(tPy32,regPy32,tePy32) / p32_PyPSA_ElecPriceAvg(tPy32,regPy32);
 $endif
+
+* Import electricity trade
+$ifthen "%c32_pypsa_trade%" == "on"
+  vm_Mport.fx(tPy32,regPy32,"seel") = sum(regPy32_1, p32_PyPSA_ElecTrade(tPy32,regPy32_1,regPy32)) / sm_TWa_2_MWh;
+  vm_Xport.fx(tPy32,regPy32,"seel") = sum(regPy32_1, p32_PyPSA_ElecTrade(tPy32,regPy32,regPy32_1)) / sm_TWa_2_MWh;
+$endif
+
 );
 
 ***------------------------------------------------------------
@@ -120,11 +127,13 @@ vm_PyPSAMarkup.fx(tPy32,regPy32,"hydro") = 0;
 $endif
 
 *** Disable some technologies for now
-*if ((sm_PyPSA_eq eq 1),
-*  vm_deltaCap.fx(tPy32,regPy32,"coalchp","1") = 1E-8;
-*  vm_deltaCap.fx(tPy32,regPy32,"gaschp","1") = 1E-8;
-*  vm_deltaCap.fx(tPy32,regPy32,"geohdr","1") = 1E-8;
-*  vm_deltaCap.fx(tPy32,regPy32,"csp","1") = 1E-8;
-*);
+if ((c32_deactivateTech eq 1 and sm_PyPSA_eq eq 1),
+    vm_shSeEl.fx(tPy32,regPy32,"csp") = 0;  !! Overwrite RP's hotfix above
+    vm_capFac.fx(tPy32,regPy32,"csp") = 0;
+    vm_capFac.fx(tPy32,regPy32,"geohdr") = 0;
+    vm_capFac.fx(tPy32,regPy32,"biochp") = 0;
+    vm_capFac.fx(tPy32,regPy32,"gaschp") = 0;
+    vm_capFac.fx(tPy32,regPy32,"coalchp") = 0;
+);
 
 *** EOF ./modules/32_power/PyPSA/bounds.gms

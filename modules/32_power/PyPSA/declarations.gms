@@ -92,6 +92,7 @@ parameters
     p32_PyPSA_PeakResLoadRel(ttot,all_regi)                 "PyPSA import: Peak residual load in relative terms [1]"
     p32_PyPSA_shSeEl(ttot,all_regi,all_te)                  "PyPSA import: Electricity generation share by technology [1]"
     p32_PyPSA_ValueFactor(ttot,all_regi,all_te)             "PyPSA import calc: Value factor = Market value / electricity price [1]"
+    p32_PyPSA_ElecTrade(ttot,all_regi,all_regi)             "PyPSA import: Electricity trade from region 1 to region 2 [MWh]"
     p32_iniCapPHS(all_regi,all_te)                          "PyPSA import/export calc: Initial capacity of pumped hydro storage [TW]"
     p32_iniProdPHS(all_regi,all_te)                         "PyPSA import/export calc: Initial production of pumped hydro storage [TWa]"
     p32_preFactor_CF(all_regi,all_te)                       "PyPSA coupling: Pre-factor for the capacity factor [1]"
