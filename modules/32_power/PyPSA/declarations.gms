@@ -76,6 +76,7 @@ parameters
     p32_capCostwAdjCost(ttot,all_regi,all_te)               "PyPSA export: Specific capital costs plus adjustment costs [T$/TW]"
     p32_PEPrice_iter(iteration,ttot,all_regi,all_enty)      "PyPSA export: PE price in iterations [T$/TWa, nuclear: T$/Mt]"
     p32_PEPriceAvg(ttot,all_regi,all_enty)                  "PyPSA export: PE price averaged over iterations [T$/TWa, nuclear: T$/Mt]"
+    p32_ElecH2Demand(ttot,all_regi)                         "PyPSA export: Electrolytic hydrogen demand outside the power sector [TWa]"
     p32_weightGen(ttot,all_regi,all_te)                     "PyPSA export: Weights for generation technologies [TWa]"
     p32_weightStor(ttot,all_regi,all_te)                    "PyPSA export: Weights for storage technologies, currently only electrolysis [TWa]"
     p32_weightPEprice(ttot,all_regi,all_enty)               "PyPSA export: Weights for primary energy prices [TWa]"
