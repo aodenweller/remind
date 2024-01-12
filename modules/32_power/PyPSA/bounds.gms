@@ -112,8 +112,8 @@ vm_cap.fx(t,regi,"elh2VRE",rlf) = 0;
 *** vm_capFac can be larger than 1 since it is used as a correction factor. Limit to between 0 and 2 here.
 $ifthen "%c32_pypsa_capfac%" == "on"
 if ((sm_PyPSA_eq eq 1),
-  vm_capFac.lo(tPy32,regPy32,tePy32) = 0;
-  vm_capFac.up(tPy32,regPy32,tePy32) = 2;
+  vm_capFac.lo(tPy32,regPy32,tePy32)$(not sameas(tePy32,"hydro")) = 0;
+  vm_capFac.up(tPy32,regPy32,tePy32)$(not sameas(tePy32,"hydro")) = 2;
 );
 $endif
 
