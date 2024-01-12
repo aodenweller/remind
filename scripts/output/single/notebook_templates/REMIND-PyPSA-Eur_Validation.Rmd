@@ -1950,7 +1950,7 @@ if (length(cfg$gms$c32_pypsa_trade) != 0) {
 ```{r net electricity trade}
 if (length(cfg$gms$c32_pypsa_trade) != 0) {
   if (cfg$gms$c32_pypsa_trade == "on") {
-    for (r in tail(regList(-1))) {
+    for (r in tail(regList,-1)) {
       dataImportPyPSAr <- dataTradePyPSA %>%
         filter(to %in% r) %>%
         mutate(value = exports / 1E6) %>%
