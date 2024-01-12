@@ -1870,7 +1870,132 @@ print(pPeakResLoadAbsYear)
 
 ### Electricity trade
 
-ToDo.
+```{r electricity trade}
+if (length(cfg$gms$c32_pypsa_trade) != 0) {
+  if (cfg$gms$c32_pypsa_trade == "on") {
+    dataImportREMIND <- readREMINDgdx(
+      paths = rmFiles,
+      gdxVar = "vm_Mport",
+      columns = c("tall" = "year", "all_regi" = "region", "all_enty" = "enty", "value" = "vm_Mport"),
+      colFilter = list("year" = years, "region" = regions, "enty" = "seel"),
+      restoreZeros = FALSE,
+      recalcUnit = twa2twh)
+
+    dataExportREMIND <- readREMINDgdx(
+      paths = rmFiles,
+      gdxVar = "vm_Xport",
+      columns = c("tall" = "year", "all_regi" = "region", "all_enty" = "enty", "value" = "vm_Xport"),
+      colFilter = list("year" = years, "region" = regions, "enty" = "seel"),
+      restoreZeros = FALSE,
+      recalcUnit = twa2twh)
+
+    dataTradePyPSA <- readPyPSAcsv(
+      paths = file.path(pyValidationDirs, "crossborder_flows.csv")) %>%
+      # Increment iteration by 1 to match REMIND
+      mutate(iteration = iteration + 1)
+
+    dataImportPyPSA <- dataTradePyPSA %>%
+      group_by(year, to, iteration) %>%
+      summarise(value = sum(exports) / 1E6) %>%
+      rename(region = to)
+
+    dataExportPyPSA <- dataTradePyPSA %>%
+      group_by(year, from, iteration) %>%
+      summarise(value = sum(exports) / 1E6) %>%
+      rename(region = from)
+
+    pImport <- ggplot() +
+      geom_line(data = dataImportREMIND, aes(x = year, y = vm_Mport, color = region)) +
+      geom_point(data = dataImportPyPSA, aes(x = year, y = value, color = region)) +
+      labs(x = "Year", y = "Electricity trade (TWh/yr)") +
+      ggtitle("Electricity imports over years") +
+      facet_wrap(~ iteration, scales = "free")
+
+    print(pImport)
+
+    pImportIter <- ggplot() +
+      geom_line(data = dataImportREMIND, aes(x = iteration, y = vm_Mport, color = region)) +
+      geom_point(data = dataImportPyPSA, aes(x = iteration, y = value, color = region)) +
+      labs(x = "Iteration", y = "Electricity trade (TWh/yr)") +
+      scale_x_continuous(breaks = integer_breaks()) +
+      ggtitle("Electricity imports over iterations") +
+      facet_wrap(~ year, scales = "free")
+
+    print(pImportIter)
+
+    pExport <- ggplot() +
+      geom_line(data = dataExportREMIND, aes(x = year, y = vm_Xport, color = region)) +
+      geom_point(data = dataExportPyPSA, aes(x = year, y = value, color = region)) +
+      labs(x = "Year", y = "Electricity trade (TWh/yr)") +
+      ggtitle("Electricity exports over years") +
+      facet_wrap(~ iteration, scales = "free")
+
+    print(pExport)
+
+    pExportIter <- ggplot() +
+      geom_line(data = dataExportREMIND, aes(x = iteration, y = vm_Xport, color = region)) +
+      geom_point(data = dataExportPyPSA, aes(x = iteration, y = value, color = region)) +
+      labs(x = "Iteration", y = "Electricity trade (TWh/yr)") +
+      scale_x_continuous(breaks = integer_breaks()) +
+      ggtitle("Electricity exports over iterations") +
+      facet_wrap(~ year, scales = "free")
+
+    print(pExportIter)
+  }
+}
+```
+
+#### Net electricity trade 
+
+```{r net electricity trade}
+if (length(cfg$gms$c32_pypsa_trade) != 0) {
+  if (cfg$gms$c32_pypsa_trade == "on") {
+    for (r in tail(regList(-1))) {
+      dataImportPyPSAr <- dataTradePyPSA %>%
+        filter(to %in% r) %>%
+        mutate(value = exports / 1E6) %>%
+        select(year, from, iteration, value)
+
+      dataExportPyPSAr <- dataTradePyPSA %>%
+        filter(from %in% r) %>%
+        mutate(value = -exports / 1E6) %>%
+        select(year, to, iteration, value)
+
+      dataNetPyPSAr <- dataTradePyPSA %>%
+        filter(from %in% r | to %in% r) %>%
+        mutate(exports = ifelse(from %in% r, -exports, exports)) %>%
+        group_by(year, iteration) %>%
+        summarise(value = sum(exports) / 1E6) 
+
+      p <- ggplot() + 
+        geom_bar(data = dataImportPyPSAr, aes(x = year, y = value, fill = from), stat = "identity") +
+        geom_bar(data = dataExportPyPSAr, aes(x = year, y = value, fill = to), stat = "identity") +
+        scale_fill_discrete(name = "To/From") +
+        geom_line(data = dataNetPyPSAr, aes(x = year, y = value, color = "Net")) +
+        scale_color_manual(name = NULL, values = "black") +
+        labs(x = "Year", y = "Imports (TWh/yr)") +
+        ggtitle("Net electricity imports over years", regSubtitle(r)) +
+        facet_wrap(~ iteration, scales = "free")
+
+      print(p)
+
+      pITer <- ggplot() + 
+        geom_bar(data = dataImportPyPSAr, aes(x = iteration, y = value, fill = from), stat = "identity") +
+        geom_bar(data = dataExportPyPSAr, aes(x = iteration, y = value, fill = to), stat = "identity") +
+        scale_fill_discrete(name = "To/From") +
+        geom_line(data = dataNetPyPSAr, aes(x = iteration, y = value, color = "Net")) +
+        scale_color_manual(name = NULL, values = "black") +
+        labs(x = "Iteration", y = "Imports (TWh/yr)") +
+        scale_x_continuous(breaks = integer_breaks()) +
+        ggtitle("Net electricity imports over iterations", regSubtitle(r)) +
+        facet_wrap(~ year, scales = "free")
+
+      print(pITer)
+    }
+  }
+}
+
+```
 
 # Convergence indicators
 
