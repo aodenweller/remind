@@ -137,6 +137,11 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
   !! Also export zeros for CO2 price
   p_priceCO2(t,regi)$(tPy32(t) AND regPy32(regi)) = p_priceCO2(t,regi) + EPS;
 
+  !! Additional electrolytic hydrogen demand
+  !! Use vm_prodSe.l (which is TWa of hydrogen), not vm_demSe.l (which is TWa of electricity)
+  !! This is due to the implementation in PyPSA-Eur, where the electrolyser efficiency is already taken into account
+  p32_ElecH2Demand(t,regi)$(tPy32(t) AND regPy32(regi)) = vm_prodSe.l(t,regi,"seel","seh2","elh2") + EPS;
+
   !! Export REMIND output data for PyPSA (REMIND2PyPSAEUR.gdx)
   !! Don't use fulldata.gdx so that we keep track of which variables are exported to PyPSA
   option epsToZero=on;
@@ -154,6 +159,8 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
     p32_weightGen, p32_weightStor, p32_weightPEprice, 
     !! Pre-investment capacities
     p32_preInvCapAvg,
+    !! Additional electrolytic hydrogen demand
+    p32_ElecH2Demand,
     !! -- PyPSA-Eur to REMIND -- 
     !! Generation shares in REMIND to downscale generation shares in PyPSA
     !! (this is required to parametrise the pre-factor equations) 
