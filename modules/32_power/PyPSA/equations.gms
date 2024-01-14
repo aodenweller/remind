@@ -294,7 +294,7 @@ q32_flexAdj(t,regi,te)$(teFlexTax(te))..
 ;
 
 ***------------------------------------------------------------
-***                  PyPSA equations
+***                  PyPSA coupling equations
 ***------------------------------------------------------------
 
 *** Calculate usable electricity generation in total
@@ -323,6 +323,38 @@ q32_shSeElDisp(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te))..
   =e=
   v32_usableSeTeDisp(t,regi,"seel",te)
 ;
+
+$ontext
+*** dev area
+q32_usableSeTeRegi(t,regi,entySe,te)$(tPy32(t) and regPy32(regi) and sameas(entySe,"seel") AND tePy32(te))..
+ 	v32_usableSeTeRegi(t,regi,entySe,te)
+ 	=e=
+ 	sum(pe2se(enty,entySe,te), vm_prodSe(t,regi,enty,entySe,te) )
+    - v32_storloss(t,regi,te)$(teVRE(te))
+    - p32_iniProdPHS(regi,te)
+;
+
+q32_usableSeRegi(t,regi,entySe)$(tPy32(t) and regPy32(regi) and sameas(entySe,"seel"))..
+    v32_usableSeRegi(t,regi,entySe)
+    =e=
+    sum(te$(tePy32(te)), v32_usableSeTeRegi(t,regi,entySe,te))
+;
+
+q32_usableSeRegiTrade(t,regi)$(tPy32(t) and regPy32(regi))..
+    v32_usableSeRegi(t,regi)
+    =e=
+    p32_Load(t,regi)
+    - vm_Mport(t,regi,"seel")
+    + vm_Xport(t,regi,"seel")
+;
+
+q32_shSeElRegi(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te))..
+    v32_shSeElRegi(t,regi,te) * v32_usableSeRegi(t,regi,"seel")
+    =e=
+    v32_usableSeTeRegi(t,regi,"seel",te)
+;
+***
+$offtext
 
 ***------------------------------------------------------------
 ***            PyPSA-Eur to REMIND: Capacity factors
@@ -405,19 +437,35 @@ q32_PeakResCap(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
 ;
 $endif
 
+***------------------------------------------------------------
+***            PyPSA-Eur to REMIND: Electricity trade
+***------------------------------------------------------------
+$ifthen "%c32_pypsa_trade%" == "on"
+* Pre-factor parametrisation for electricity trade
 $ontext
-***------------------------------------------------------------
-***            PyPSA cost penalty for divergence
-***------------------------------------------------------------
-*** Cost penalty if generation shares in REMIND and PyPSA-Eur diverge
-*** This is added to v_costInv in equation q_costInv (unit trillion $)
-$ifthen "%cm_pypsa_sharePenalty%" == "on"
-qm_sharePenaltyPyPSA(t,regi)$(tPy32(t) AND regPy32(regi) and (sm_PyPSA_eq eq 1))..
-  vm_sharePenaltyPyPSA(t,regi)
+q32_shSeElRegi(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
+  v32_shSeElRegi(t,regi) * sum(regPy32, v32_usableSeDisp(t,regPy32,"seel"))
   =e=
-  0.05 * sum(te, power(v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te), 2))
+  v32_usableSeDisp(t,regi,"seel")
+;
+$offtext
+* Alternatively: sum(regi2$(regPy32(regi2)), ...)
+
+* Electricity trade: Import
+q32_ElecTradeImport(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
+  vm_Mport(t,regi,"seel")
+  =e=
+  sum(regPy32, p32_PyPSA_ElecTrade(t,regPy32,regi)) / sm_TWa_2_MWh
+  !! * pre-factor (v32_shSeElRegi(t,regi) - p32_PyPSA_shSeElRegi(t,regi))
+;
+
+* Electricity trade: Export
+q32_ElecTradeExport(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
+  vm_Xport(t,regi,"seel")
+  =e=
+  sum(regPy32, p32_PyPSA_ElecTrade(t,regi,regPy32)) / sm_TWa_2_MWh
+  !! * pre-factor (v32_shSeElRegi(t,regi) - p32_PyPSA_shSeElRegi(t,regi))
 ;
 $endif
-$offtext
 
 *** EOF ./modules/32_power/PyPSA/equations.gms

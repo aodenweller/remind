@@ -35,6 +35,6 @@ $endif
         /peoil, pegas, pecoal, peur, pehyd, pewin, pesol, pebiolc/
 ;
 
-alias(regPy32,regPy32_1);
+alias(regPy32,regPy32_2);
 
 *** EOF ./modules/32_power/PyPSA/sets.gms

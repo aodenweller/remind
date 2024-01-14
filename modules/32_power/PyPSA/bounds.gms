@@ -32,12 +32,6 @@ $ifthen "%cm_pypsa_markup%" == "on"
   p32_PyPSA_ValueFactor(tPy32,regPy32,tePy32) = p32_PyPSA_MVAvg(tPy32,regPy32,tePy32) / p32_PyPSA_ElecPriceAvg(tPy32,regPy32);
 $endif
 
-* Import electricity trade
-$ifthen "%c32_pypsa_trade%" == "on"
-  vm_Mport.fx(tPy32,regPy32,"seel") = sum(regPy32_1, p32_PyPSA_ElecTrade(tPy32,regPy32_1,regPy32)) / sm_TWa_2_MWh;
-  vm_Xport.fx(tPy32,regPy32,"seel") = sum(regPy32_1, p32_PyPSA_ElecTrade(tPy32,regPy32,regPy32_1)) / sm_TWa_2_MWh;
-$endif
-
 );
 
 ***------------------------------------------------------------
@@ -121,6 +115,10 @@ $endif
 v32_shSeElDisp.lo(tPy32,regPy32,tePy32) = 0;
 v32_shSeElDisp.up(tPy32,regPy32,tePy32) = 1;
 
+*** Restrict v32_shSeElRegi between 0 and 1
+v32_shSeElRegi.lo(tPy32,regPy32) = 0;
+v32_shSeElRegi.up(tPy32,regPy32) = 1;
+
 *** Temporarily fix hydro markup to zero
 $ifthen "%cm_pypsa_markup%" == "on"
 vm_PyPSAMarkup.fx(tPy32,regPy32,"hydro") = 0;
@@ -135,5 +133,20 @@ if ((c32_deactivateTech eq 1 and sm_PyPSA_eq eq 1),
     vm_capFac.fx(tPy32,regPy32,"gaschp") = 0;
     vm_capFac.fx(tPy32,regPy32,"coalchp") = 0;
 );
+
+*** Electricity trade
+$ifthen "%c32_pypsa_trade%" == "on"
+if ((sm_PyPSA_eq eq 1),
+  !! Set bounds for vm_Mport and vm_Xport
+  vm_Mport.lo(tPy32,regPy32,"seel") = 0;
+  vm_Mport.up(tPy32,regPy32,"seel") = Inf;
+  vm_Xport.lo(tPy32,regPy32,"seel") = 0;
+  vm_Xport.up(tPy32,regPy32,"seel") = Inf;
+  !! Set starting values for vm_Mport and vm_Xport
+  !! This seems strictly necessary because otherwise the solver will simply set both to 0
+  vm_Mport.l(tPy32,regPy32,"seel") = sum(regPy32_2, p32_PyPSA_ElecTrade(tPy32,regPy32_2,regPy32)) / sm_TWa_2_MWh;
+  vm_Xport.l(tPy32,regPy32,"seel") = sum(regPy32_2, p32_PyPSA_ElecTrade(tPy32,regPy32,regPy32_2)) / sm_TWa_2_MWh;
+);
+$endif
 
 *** EOF ./modules/32_power/PyPSA/bounds.gms
