@@ -1715,6 +1715,9 @@ $setglobal c32_pypsa_dir /p/tmp/adrianod/pypsa-eur
 *** c32_pypsa_multiregion
 *** Switch to enable PyPSA in multiple regions (changes PyPSA/sets.gms)
 $setglobal c32_pypsa_multiregion off !! def = off !! regexp = off|on
+*** c32_pypsa_pathgdx
+*** Path to a PyPSAEUR2REMIND.gdx from which parameters are read in the beginning
+$setglobal c32_pypsa_pathgdx off  !! def = off
 *** c32_pypsa_capfac
 *** Switch to enable capacity factor import from PyPSA-Eur
 $setglobal c32_pypsa_capfac on !! def = on !! regexp = off|on
@@ -1735,7 +1738,7 @@ $setglobal c32_pypsa_preFac on !! def = on !! regexp = off|on
 $setglobal c32_pypsa_preFacManual off !! def = on !! regexp = off|on
 *** c32_pypsa_trade
 *** Switch to enable electricity trade
-$setglobal c32_pypsa_trade off !! def = off !! regexp = off|on
+$setglobal c32_pypsa_trade on !! def = off !! regexp = off|on
 *** set conopt version. Warning: conopt4 is in beta
 $setGlobal cm_conoptv  conopt3    !! def = conopt3
 *' c_empty_model  "Short-circuit the model, just use the input as solution"
