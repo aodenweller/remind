@@ -298,13 +298,16 @@ q32_flexAdj(t,regi,te)$(teFlexTax(te))..
 ***------------------------------------------------------------
 
 *** Calculate usable electricity generation in total
+*** This is used as total electricity load in PyPSA
 q32_usableSeDisp(t,regi,entySe)$(tPy32(t) and regPy32(regi) and sameas(entySe,"seel"))..
 	v32_usableSeDisp(t,regi,entySe)
 	=e=
 	sum(pe2se(enty,entySe,te)$(tePy32(te)), vm_prodSe(t,regi,enty,entySe,te))
 *	+ sum(se2se(enty,entySe,te)$(tePy32(te)), vm_prodSe(t,regi,enty,entySe,te))
 	- sum(te$(tePy32(te) and teVRE(te)), v32_storloss(t,regi,te) )
-  - p32_iniProdPHS(regi,"hydro")
+    - p32_iniProdPHS(regi,"hydro")
+    + vm_Mport(t,regi,entySe)  !! Add imports to load
+    - vm_Xport(t,regi,entySe)  !! Subtract exports from load
 ;
 
 *** Calculate usable electricity generation by technology
@@ -319,42 +322,15 @@ q32_usableSeTeDisp(t,regi,entySe,te)$(tPy32(t) and regPy32(regi) and sameas(enty
 
 *** Calculate electricity generation shares by technology
 q32_shSeElDisp(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te))..
-  v32_shSeElDisp(t,regi,te) * v32_usableSeDisp(t,regi,"seel")
+  v32_shSeElDisp(t,regi,te) *
+  ( v32_usableSeDisp(t,regi,"seel")
+  !! Subtract imports and add exports
+  !! The share should be based on total electricity generation without imports and exports
+  - vm_Mport(t,regi,"seel")
+  + vm_Xport(t,regi,"seel") )
   =e=
   v32_usableSeTeDisp(t,regi,"seel",te)
 ;
-
-$ontext
-*** dev area
-q32_usableSeTeRegi(t,regi,entySe,te)$(tPy32(t) and regPy32(regi) and sameas(entySe,"seel") AND tePy32(te))..
- 	v32_usableSeTeRegi(t,regi,entySe,te)
- 	=e=
- 	sum(pe2se(enty,entySe,te), vm_prodSe(t,regi,enty,entySe,te) )
-    - v32_storloss(t,regi,te)$(teVRE(te))
-    - p32_iniProdPHS(regi,te)
-;
-
-q32_usableSeRegi(t,regi,entySe)$(tPy32(t) and regPy32(regi) and sameas(entySe,"seel"))..
-    v32_usableSeRegi(t,regi,entySe)
-    =e=
-    sum(te$(tePy32(te)), v32_usableSeTeRegi(t,regi,entySe,te))
-;
-
-q32_usableSeRegiTrade(t,regi)$(tPy32(t) and regPy32(regi))..
-    v32_usableSeRegi(t,regi)
-    =e=
-    p32_Load(t,regi)
-    - vm_Mport(t,regi,"seel")
-    + vm_Xport(t,regi,"seel")
-;
-
-q32_shSeElRegi(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te))..
-    v32_shSeElRegi(t,regi,te) * v32_usableSeRegi(t,regi,"seel")
-    =e=
-    v32_usableSeTeRegi(t,regi,"seel",te)
-;
-***
-$offtext
 
 ***------------------------------------------------------------
 ***            PyPSA-Eur to REMIND: Capacity factors
@@ -449,7 +425,6 @@ q32_shSeElRegi(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
   v32_usableSeDisp(t,regi,"seel")
 ;
 $offtext
-* Alternatively: sum(regi2$(regPy32(regi2)), ...)
 
 * Electricity trade: Import
 q32_ElecTradeImport(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
