@@ -115,10 +115,6 @@ $endif
 v32_shSeElDisp.lo(tPy32,regPy32,tePy32) = 0;
 v32_shSeElDisp.up(tPy32,regPy32,tePy32) = 1;
 
-*** Restrict v32_shSeElRegi between 0 and 1
-v32_shSeElRegi.lo(tPy32,regPy32) = 0;
-v32_shSeElRegi.up(tPy32,regPy32) = 1;
-
 *** Temporarily fix hydro markup to zero
 $ifthen "%cm_pypsa_markup%" == "on"
 vm_PyPSAMarkup.fx(tPy32,regPy32,"hydro") = 0;
@@ -146,6 +142,9 @@ if ((sm_PyPSA_eq eq 1),
   !! This seems strictly necessary because otherwise the solver will simply set both to 0
   vm_Mport.l(tPy32,regPy32,"seel") = sum(regPy32_2, p32_PyPSA_ElecTrade(tPy32,regPy32_2,regPy32)) / sm_TWa_2_MWh;
   vm_Xport.l(tPy32,regPy32,"seel") = sum(regPy32_2, p32_PyPSA_ElecTrade(tPy32,regPy32,regPy32_2)) / sm_TWa_2_MWh;
+  !! Restrict v32_shSeElRegi between 0 and 1
+  v32_shSeElRegi.lo(tPy32,regPy32) = 0;
+  v32_shSeElRegi.up(tPy32,regPy32) = 1;
 );
 $endif
 
