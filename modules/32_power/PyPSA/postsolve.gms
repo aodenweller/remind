@@ -150,7 +150,7 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
     !! Coupled time steps, regions and technologies
     tPy32, regPy32, tePy32,
     !! Total electricity load
-    v32_usableSeDisp,
+    v32_usableSeDispNet,
     !! Capital cost components
     p32_capCostwAdjCost, pm_data, p32_discountRate,
     !! Marginal cost components

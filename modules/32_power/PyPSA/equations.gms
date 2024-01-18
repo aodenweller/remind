@@ -297,8 +297,7 @@ q32_flexAdj(t,regi,te)$(teFlexTax(te))..
 ***                  PyPSA coupling equations
 ***------------------------------------------------------------
 
-*** Calculate usable electricity generation in total
-*** This is used as total electricity load in PyPSA
+*** Calculate usable electricity generation in total, without imports or exports, i.e. only domestic generation
 q32_usableSeDisp(t,regi,entySe)$(tPy32(t) and regPy32(regi) and sameas(entySe,"seel"))..
 	v32_usableSeDisp(t,regi,entySe)
 	=e=
@@ -306,6 +305,14 @@ q32_usableSeDisp(t,regi,entySe)$(tPy32(t) and regPy32(regi) and sameas(entySe,"s
 *	+ sum(se2se(enty,entySe,te)$(tePy32(te)), vm_prodSe(t,regi,enty,entySe,te))
 	- sum(te$(tePy32(te) and teVRE(te)), v32_storloss(t,regi,te) )
     - p32_iniProdPHS(regi,"hydro")
+;
+
+*** Calculate usable electricity generation including imports and exports
+*** This is used as total electricity load in PyPSA-Eur
+q32_usableSeDispNet(t,regi,entySe)$(tPy32(t) and regPy32(regi) and sameas(entySe,"seel"))..
+    v32_usableSeDispNet(t,regi,entySe)
+    =e=
+    v32_usableSeDisp(t,regi,entySe)
     + vm_Mport(t,regi,entySe)  !! Add imports to load
     - vm_Xport(t,regi,entySe)  !! Subtract exports from load
 ;
@@ -317,17 +324,12 @@ q32_usableSeTeDisp(t,regi,entySe,te)$(tPy32(t) and regPy32(regi) and sameas(enty
  	sum(pe2se(enty,entySe,te), vm_prodSe(t,regi,enty,entySe,te) )
 *	+ sum(se2se(enty,entySe,te), vm_prodSe(t,regi,enty,entySe,te) )
  	- v32_storloss(t,regi,te)$(teVRE(te))
-  - p32_iniProdPHS(regi,te)
+    - p32_iniProdPHS(regi,te)
 ;
 
-*** Calculate electricity generation shares by technology
+*** Calculate electricity generation shares by technology, without imports/exports
 q32_shSeElDisp(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te))..
-  v32_shSeElDisp(t,regi,te) *
-  ( v32_usableSeDisp(t,regi,"seel")
-  !! Subtract imports and add exports
-  !! The share should be based on total electricity generation without imports and exports
-  - vm_Mport(t,regi,"seel")
-  + vm_Xport(t,regi,"seel") )
+  v32_shSeElDisp(t,regi,te) * v32_usableSeDisp(t,regi,"seel")
   =e=
   v32_usableSeTeDisp(t,regi,"seel",te)
 ;
@@ -399,7 +401,7 @@ $endif.cm_pypsa_markup
 ***            PyPSA-Eur to REMIND: Peak residual load
 ***------------------------------------------------------------
 *** Pre-factor equation to set the minimum dispatchable capacity to always cover peak residual load.
-*** This constraint is formulated relative to the average load, v32_usableSeDisp [TWa/a].
+*** This constraint is formulated relative to the average load, v32_usableSeDispNet [TWa/a].
 *** The pre-factor can be based on the following intuition:
 *** If the sum of VRE shares increases, peak residual load decreases.
 *** However, since VREs have a small capacity credit, this effect is also small.
@@ -409,7 +411,7 @@ q32_PeakResCap(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
   sum(tePyDisp32, vm_cap(t,regi,tePyDisp32, "1"))  !! TODO: Hydro included or not?
   =g=
     p32_PyPSA_PeakResLoadRel(t,regi) !!* ( 1 - 0.1 * ( sum(tePyVRE32, v32_shSeElDisp(t,regi,tePyVRE32) - p32_PyPSA_shSeEl(t,regi,tePyVRE32)) ) )
-  * v32_usableSeDisp(t,regi,"seel")
+  * v32_usableSeDispNet(t,regi,"seel")
 ;
 $endif
 
@@ -418,13 +420,11 @@ $endif
 ***------------------------------------------------------------
 $ifthen "%c32_pypsa_trade%" == "on"
 * Pre-factor parametrisation for electricity trade
-$ontext
 q32_shSeElRegi(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
   v32_shSeElRegi(t,regi) * sum(regPy32, v32_usableSeDisp(t,regPy32,"seel"))
   =e=
   v32_usableSeDisp(t,regi,"seel")
 ;
-$offtext
 
 * Electricity trade: Import
 q32_ElecTradeImport(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..

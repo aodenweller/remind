@@ -145,6 +145,9 @@ if ((sm_PyPSA_eq eq 1),
   !! Restrict v32_shSeElRegi between 0 and 1
   v32_shSeElRegi.lo(tPy32,regPy32) = 0;
   v32_shSeElRegi.up(tPy32,regPy32) = 1;
+  !! ToDO: Also get pm_MPortsPrice and pm_XPortsPrice from PyPSA-Eur
+  !! pm_MPortsPrice(tPy32,regPy32,"seel") = p32_PyPSA...;
+  !! pm_XPortsPrice(tPy32,regPy32,"seel") = p32_PyPSA...;
 );
 $endif
 

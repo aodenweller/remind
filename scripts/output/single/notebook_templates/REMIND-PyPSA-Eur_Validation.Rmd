@@ -407,7 +407,7 @@ Values used by PyPSA-EUR are also retrieved to cross-check (displayed as points)
 # Read REMIND data
 dataLoadREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "v32_usableSeDisp",
+    gdxVar = "v32_usableSeDispNet",
     columns = c("ttot" = "year", "all_regi" = "region", "all_enty" = "technology", "value" = "value"),
     colFilter = list("year" = years, "region" = regions, "technology" = "seel"),
     restoreZeros = FALSE,
@@ -1820,14 +1820,14 @@ dataDispCapSumREMIND <- dataCapREMIND %>%
 
 dataGenREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "v32_usableSeDisp",
-    columns = c("ttot" = "year", "all_regi" = "region", "value" = "v32_usableSeDisp"),
+    gdxVar = "v32_usableSeDispNet",
+    columns = c("ttot" = "year", "all_regi" = "region", "value" = "v32_usableSeDispNet"),
     colFilter = list("year" = years, "region" = regions),
     restoreZeros = FALSE)
 
 dataPeakResLoadREMIND <- dataDispCapSumREMIND %>%
   left_join(dataGenREMIND, by = c("year", "region", "iteration")) %>%
-  mutate(peakResLoad = dispCapSum / v32_usableSeDisp)
+  mutate(peakResLoad = dispCapSum / v32_usableSeDispNet)
 
 # PyPSA csv contains both absolute and relative
 dataPeakResLoadPyPSA <- readPyPSAcsv(
@@ -2297,8 +2297,8 @@ dataCapREMINDplot <- dataCapREMIND %>%
 # Calculate minimum required capacities in REMIND from peak residual load in PyPSA-Eur
 dataGenREMIND <- readREMINDgdx(
   paths = rmFiles,
-  gdxVar = "v32_usableSeDisp",
-  columns = c("ttot" = "year", "all_regi" = "region", "value" = "v32_usableSeDisp"),
+  gdxVar = "v32_usableSeDispNet",
+  columns = c("ttot" = "year", "all_regi" = "region", "value" = "v32_usableSeDispNet"),
   colFilter = list("year" = years, "region" = regions),
   restoreZeros = FALSE,
   recalcUnit = 1E3)  # TWa to GWa
@@ -2309,7 +2309,7 @@ dataPeakResLoadPyPSA <- readPyPSAcsv(
 
 dataPeakResLoadMinREMIND <- full_join(dataPeakResLoadPyPSA %>% mutate(iteration = iteration + everyIter),
                                       dataGenREMIND) %>%
-  mutate(minCap = relative * v32_usableSeDisp)
+  mutate(minCap = relative * v32_usableSeDispNet)
 
 # Read optimal capacities from the CSV files
 dataCapPyPSA <- readPyPSAcsv(
@@ -2617,7 +2617,7 @@ dataGenREMIND <- readREMINDgdx(
 # REMIND load in total
 dataLoadREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "v32_usableSeDisp",
+    gdxVar = "v32_usableSeDispNet",
     columns = c("ttot" = "year", "all_regi" = "region", "value" = "value"),
     colFilter = list("year" = years, "region" = regions),
     restoreZeros = FALSE,
@@ -3725,8 +3725,8 @@ dataCapREMINDplot <- dataCapREMIND %>%
 # Calculate minimum required capacities in REMIND from peak residual load in PyPSA-Eur
 dataGenREMIND <- readREMINDgdx(
   paths = rmFiles,
-  gdxVar = "v32_usableSeDisp",
-  columns = c("ttot" = "year", "all_regi" = "region", "value" = "v32_usableSeDisp"),
+  gdxVar = "v32_usableSeDispNet",
+  columns = c("ttot" = "year", "all_regi" = "region", "value" = "v32_usableSeDispNet"),
   colFilter = list("year" = years, "region" = regions),
   restoreZeros = FALSE,
   recalcUnit = 1E3)  # TWa to GWa
@@ -3737,7 +3737,7 @@ dataPeakResLoadPyPSA <- readPyPSAcsv(
 
 dataPeakResLoadMinREMIND <- full_join(dataPeakResLoadPyPSA %>% mutate(iteration = iteration + 1),
                                       dataGenREMIND) %>%
-  mutate(minCap = relative * v32_usableSeDisp)
+  mutate(minCap = relative * v32_usableSeDispNet)
 
 # Read optimal capacities from the CSV files
 dataCapPyPSA <- readPyPSAcsv(
@@ -3859,7 +3859,7 @@ dataGenREMIND <- readREMINDgdx(
 # REMIND load in total
 dataLoadREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "v32_usableSeDisp",
+    gdxVar = "v32_usableSeDispNet",
     columns = c("ttot" = "year", "all_regi" = "region", "value" = "value"),
     colFilter = list("year" = years, "region" = regions),
     restoreZeros = FALSE,
