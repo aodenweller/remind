@@ -12,12 +12,12 @@ mkdir -p ${1}/resources/${scenario}/i${2}
 cp REMIND2PyPSAEUR.gdx ${1}/resources/${scenario}/i${2}/REMIND2PyPSAEUR.gdx
 # Source micromamba environment
 # TODO: Remove hard-coded path and move micromamba away from personal directory
-export MAMBA_EXE='/p/tmp/jhampp/micromamba/micromamba'
-export MAMBA_ROOT_PREFIX='/p/tmp/jhampp/micromamba'
-source /p/tmp/jhampp/micromamba/etc/profile.d/micromamba.sh
+export MAMBA_EXE='/p/tmp/adrianod/software/micromamba_20240118/micromamba'
+export MAMBA_ROOT_PREFIX='/p/tmp/adrianod/software/micromamba_20240118'
+source /p/tmp/adrianod/software/micromamba_20240118/etc/profile.d/micromamba.sh
 # Add CPLEX to PATH if not already there
 # TODO: Remove hard-coded path and move CPLEX away from personal directory
-[[ ":$PATH:" != *":/p/tmp/jhampp/cplex/cplex/bin/x86-64_linux:"* ]] && PATH="/p/tmp/jhampp/cplex/cplex/bin/x86-64_linux:${PATH}"
+[[ ":$PATH:" != *":/p/tmp/adrianod/software/cplex_22.1.0/cplex/bin/x86-64_linux:"* ]] && PATH="/p/tmp/adrianod/software/cplex_22.1.0/cplex/bin/x86-64_linux:${PATH}"
 # Start PyPSA-Eur
 micromamba run --name pypsa-eur snakemake --profile ${1}/cluster_config/ -s ${1}/Snakefile_remind --directory ${1} results/${scenario}/i${2}/PyPSAEUR2REMIND.gdx
 # Copy PyPSAEUR2REMIND.gdx to REMIND scenario directory
