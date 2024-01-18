@@ -19,7 +19,7 @@ source /p/tmp/adrianod/software/micromamba_20240118/etc/profile.d/micromamba.sh
 # TODO: Remove hard-coded path and move CPLEX away from personal directory
 [[ ":$PATH:" != *":/p/tmp/adrianod/software/cplex_22.1.0/cplex/bin/x86-64_linux:"* ]] && PATH="/p/tmp/adrianod/software/cplex_22.1.0/cplex/bin/x86-64_linux:${PATH}"
 # Start PyPSA-Eur
-micromamba run --name pypsa-eur snakemake --profile ${1}/cluster_config/ -s ${1}/Snakefile_remind --directory ${1} results/${scenario}/i${2}/PyPSAEUR2REMIND.gdx
+micromamba run --name pypsa-eur-20240118 snakemake --profile ${1}/cluster_config/ -s ${1}/Snakefile_remind --directory ${1} results/${scenario}/i${2}/PyPSAEUR2REMIND.gdx
 # Copy PyPSAEUR2REMIND.gdx to REMIND scenario directory
 cp ${1}/results/${scenario}/i${2}/PyPSAEUR2REMIND.gdx PyPSAEUR2REMIND.gdx
 cp ${1}/results/${scenario}/i${2}/PyPSAEUR2REMIND.gdx PyPSAEUR2REMIND_${2}.gdx
