@@ -383,15 +383,15 @@ q32_MarkUp(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (sm_PyPSA_e
 $ifthen.c32_pypsa_preFac "%c32_pypsa_preFac%" == "on"
 $ifthen.c32_pypsa_preFacManual "%c32_pypsa_preFacManual%" == "on"
     (   p32_PyPSA_MVAvg(t,regi,te) * ( 1 + s32_preFacFadeOut * p32_preFactor_MV(regi,te) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
-      - p32_PyPSA_ElecPriceAvg(t,regi)
+      - p32_PyPSA_LoadPriceAvg(t,regi,"AC")
     )
 $elseif.c32_pypsa_preFacManual "%c32_pypsa_preFacManual%" == "off"
     (   p32_PyPSA_MVAvg(t,regi,te) * ( 1 - s32_preFacFadeOut * p32_PyPSA_ValueFactor(t,regi,te) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
-      - p32_PyPSA_ElecPriceAvg(t,regi)
+      - p32_PyPSA_LoadPriceAvg(t,regi,"AC")
     )
 $endif.c32_pypsa_preFacManual
 $elseif.c32_pypsa_preFac "%c32_pypsa_preFac%" == "off"
-    ( p32_PyPSA_MVAvg(t,regi,te) - p32_PyPSA_ElecPriceAvg(t,regi) )
+    ( p32_PyPSA_MVAvg(t,regi,te) - p32_PyPSA_LoadPriceAvg(t,regi,"AC") )
 $endif.c32_pypsa_preFac
   * sm_TWa_2_MWh / 1e12
 ;

@@ -1633,11 +1633,9 @@ for (r in regList) {
 }
 ```
 
-### Markups
+### Markups (supply side)
 
-Markups and markdowns are read into REMIND from PYPSA-Eur. Markup = Average market value - Average electricity price
-
-ToDO: Aggregation is not correct yet.
+Markups and markdowns are read into REMIND from PyPSA-Eur. Markup = Average market value - Average electricity price
 
 ```{r markup}
 # REMIND (pre-factor based)
@@ -1676,7 +1674,9 @@ dataMarketValuePyPSA <- readPyPSAcsv(
   quitte::order.levels(carrier = names(namesTech))
 
 dataElecPricePYPSA <- readPyPSAcsv(
-  paths = file.path(pyValidationDirs, "electricity_prices.csv")) %>%
+  paths = file.path(pyValidationDirs, "load_prices.csv")) %>%
+  filter(carrier == "AC") %>%
+  select(!carrier) %>%
   # Increment iteration by 1 to match REMIND
   mutate(iteration = iteration + 1)
 
@@ -1765,7 +1765,7 @@ for (r in regList) {
 }
 ```
 
-### Markup tax revenue
+### Markup tax revenue (supply side)
 
 Markups are implemented as a tax/subsidy in REMIND in order to manipulate a variable that is usually an outcome (Lagrangian multiplier of the optimisation) and not an input.
 
@@ -1791,12 +1791,16 @@ for (r in regList) {
   pMarkUpRevenue <- ggplot() +
     geom_line(data = dataMarkUpRevenuePlot, aes(x = year, y = value)) +
     labs(x = "Year", y = "Markup revenue (Million $/yr)") +
-    ggtitle("Markup revenue over years", regSubtitle(r)) +
+    ggtitle("Markup revenue over years (supply side)", regSubtitle(r)) +
     facet_wrap(~ iteration)
 
   print(pMarkUpRevenue)
 }
 ```
+
+### Markups (demand side)
+
+### Markup tax revenue (demand side)
 
 ### Peak residual load
 
@@ -1997,6 +2001,10 @@ if (length(cfg$gms$c32_pypsa_trade) != 0) {
 }
 
 ```
+
+### Electricity trade price
+
+In progress...
 
 # Convergence indicators
 
@@ -2938,7 +2946,9 @@ dataElecPriceREMIND <- readREMINDgdx(
 
 # PyPSA-Eur
 dataElecPricePyPSA <- readPyPSAcsv(
-  paths = file.path(pyValidationDirs, "electricity_prices.csv"))
+  paths = file.path(pyValidationDirs, "load_prices.csv")) %>%
+  filter(carrier == "AC") %>%
+  select(!carrier)
 
 pElecPriceYear <- ggplot() +
   geom_line(data = dataElecPriceREMIND,
@@ -3013,6 +3023,7 @@ This section contains a simple calculation of the LCOE for each technology. It d
 This means, for example, that we can use the annuity factor for investment costs.
 
 ```{r LCOE simple}
+if (FALSE) {
 # REMIND: 1) Investment costs in USD/MWh
 # Investment cost = Overnight cost (CAPEX) * annuity factor / (capfac * 8760h)
 
@@ -3304,6 +3315,7 @@ for (i in pyIterations) {
 
   print(p)
 }
+}
 ```
 
 ```{r lcoe pypsa}
@@ -3396,7 +3408,9 @@ dataMarketValuePyPSA <- readPyPSAcsv(
 
 # Electricity prices
 dataElecPricePyPSA <- readPyPSAcsv(
-  paths = file.path(pyValidationDirs, "electricity_prices.csv")) %>%
+  paths = file.path(pyValidationDirs, "load_prices.csv")) %>%
+  filter(carrier == "AC") %>%
+  select(!carrier) %>%
   tidyr::crossing(technology = unique(rm2genTech)) %>%
   select(year, region, technology, value, iteration) %>%
   mutate(type = "elec")
@@ -3502,7 +3516,9 @@ print(pMarketValueIter)
 ```{r price duration curves, warning = FALSE}
 if (FALSE){
 dataHourlyElecPricesPyPSA <- readPyPSAcsv(
-  paths = file.path(pyValidationDirs, "hourly_electricity_prices.csv")) %>%
+  paths = file.path(pyValidationDirs, "hourly_prices.csv")) %>%
+  filter(carrier == "AC") %>%
+  select(!carrier) %>%
   pivot_longer(cols = -c("year", "region", "carrier", "iteration"),
                names_to = "time",
                values_to = "value") %>%

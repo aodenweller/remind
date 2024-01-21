@@ -22,7 +22,7 @@ sm_PyPSA_eq = 0;
 s32_preFacFadeOut = 1;
 p32_PyPSA_CFAvg(tPy32,regPy32,tePy32) = 0;
 p32_PyPSA_MVAvg(tPy32,regPy32,tePy32) = 0;
-p32_PyPSA_ElecPriceAvg(tPy32,regPy32) = 0;
+p32_PyPSA_LoadPriceAvg(tPy32,regPy32,carrierPy32) = 0;
 p32_PyPSA_PeakResLoadRel(tPy32,regPy32) = 0;
 p32_PyPSA_ElecTrade(tPy32,regPy32,regPy32) = 0;
 p32_PyPSA_shSeEl(tPy32,regPy32,tePy32) = 0;
@@ -37,7 +37,7 @@ $ifthen not "%c32_pypsa_pathgdx%" == "off"
   Execute_Loadpoint "%c32_pypsa_pathgdx%", p32_PyPSA_CF=capacity_factor;
   Execute_Loadpoint "%c32_pypsa_pathgdx%", p32_PyPSA_shSeEl=generation_share;
   Execute_Loadpoint "%c32_pypsa_pathgdx%", p32_PyPSA_MV=market_value;
-  Execute_Loadpoint "%c32_pypsa_pathgdx%", p32_PyPSA_ElecPrice=electricity_price;
+  Execute_Loadpoint "%c32_pypsa_pathgdx%", p32_PyPSA_LoadPrice=load_price;
   Execute_Loadpoint "%c32_pypsa_pathgdx%", p32_PyPSA_Curtailment=curtailment;
   Execute_Loadpoint "%c32_pypsa_pathgdx%", p32_PyPSA_PeakResLoadRel=peak_residual_load_relative;
   Execute_Loadpoint "%c32_pypsa_pathgdx%", p32_PyPSA_ElecTrade=crossborder_flow;
@@ -46,7 +46,7 @@ $ifthen not "%c32_pypsa_pathgdx%" == "off"
   !! Non-averaged market values
   p32_PyPSA_MVAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_PyPSA_MV(t,regi,te);
   !! Non-averaged electricity prices
-  p32_PyPSA_ElecPriceAvg(t,regi)$(tPy32(t) and regPy32(regi)) = p32_PyPSA_ElecPrice(t,regi);
+  p32_PyPSA_LoadPriceAvg(t,regi,carrierPy32)$(tPy32(t) and regPy32(regi)) = p32_PyPSA_LoadPrice(t,regi,carrierPy32);
   !! Activate PyPSA equations
   sm_PyPSA_eq = 1;
 $endif

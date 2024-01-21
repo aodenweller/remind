@@ -33,6 +33,9 @@ $endif
 
     entyPePy32(all_enty)        "Primary energy carriers for which prices are coupled to PyPSA"
         /peoil, pegas, pecoal, peur, pehyd, pewin, pesol, pebiolc/
+
+    carrierPy32                 "Carrier from PyPSA"
+        /"AC", "H2 demand REMIND"/
 ;
 
 alias(regPy32,regPy32_2);
