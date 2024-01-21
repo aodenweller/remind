@@ -274,9 +274,9 @@ $ENDIF.WindOff
     apCarDiT        "Vehicles using final energy diesel (FEDIE) to produce heavy-duty useful energy (uedit, e.g. freight, busses, planes, ships)."
     apcarDiEffT     "More efficient vehicles using final energy diesel (FEDIE) and electricity (FEELT) to produce heavy-duty useful energy (uedit, e.g. freight, busses, planes, ships)."
     apcarDiEffH2T   "Even more efficient vehicles using final energy diesel (FEDIE), electricity (FEELT) and Hydrogen (FEH2T) to produce heavy-duty useful energy (uedit, e.g. freight, busses, planes, ships)."
-    apCarH2T        "Cars using final energy hydrogen for transport (FEH2T) to produce useful energy as hydrogen for transport (ESH2T)."
-        apCarElT        "Cars using final energy electricity (FEELT) to produce useful energy as electricity for transport (UEELT)"
-        apTrnElT        "Trains using final energy electricity (FEELT) to produce useful energy as electricity for transport (UEELT)"
+    apCarH2T        "Cars using final energy hydrogen for transport (FEH2T) to produce energy service (ESH2T)."
+        apCarElT        "Cars using final energy electricity (FEELT) to produce useful energy (UEELT)"
+        apTrnElT        "Trains using final energy electricity (FEELT) to produce useful energy (UEELT)"
 ***  appCarGaT  "Cars using FEGAT to produce ESGAT."  ???
         weathering      "enhanced weathering"
         dac             "direct air capture"
@@ -916,6 +916,7 @@ $endif.altFeEmiFac
 ***######################## R SECTION START (MODULES) ###############################
 *** THIS CODE IS CREATED AUTOMATICALLY, DO NOT MODIFY THESE LINES DIRECTLY
 *** ANY DIRECT MODIFICATION WILL BE LOST AFTER NEXT MODEL START
+*** CHANGES CAN BE DONE USING THE RESPECTIVE LINES IN scripts/start/prepare.R
 
 sets
 
@@ -955,7 +956,7 @@ sets
        codePerformance
        /
 
-      module2realisation(modules,*) "mapping of modules and active realisations" /
+module2realisation(modules,*) "mapping of modules and active realisations" /
        macro . %macro%
        welfare . %welfare%
        PE_FE_parameters . %PE_FE_parameters%
@@ -1301,7 +1302,7 @@ teRLDCDisp(all_te)     "RLDC Dispatchable technologies that produce seel"
 /
 /
 
-teLearn(all_te)     "Learning technologies (investment costs can be reduced)"
+teLearn(all_te)     "Learning technologies (for which investment costs are reduced endogenously through capacity deployment). Note: technologies without endogenous learning can also have decreasing (or increasing) capital cost over time, due to for example convergence to global value"
 /
         wind        "wind onshore power converters"
 $IFTHEN.WindOff %cm_wind_offshore% == "1"
