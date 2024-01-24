@@ -117,6 +117,9 @@ v32_shSeElDisp.up(tPy32,regPy32,tePy32) = 1;
 
 *** Temporarily fix hydro markup to zero
 $ifthen "%cm_pypsa_markup%" == "on"
+if ((sm_PyPSA_eq eq 1),
+  vm_PyPSAMarkup.l(tPy32,regPy32,tePy32) = ( p32_PyPSA_MVAvg(tPy32,regPy32,tePy32) - p32_PyPSA_LoadPriceAvg(tPy32,regPy32,"AC") ) * sm_TWa_2_MWh / 1e12;
+);
 vm_PyPSAMarkup.fx(tPy32,regPy32,"hydro") = 0;
 $endif
 
