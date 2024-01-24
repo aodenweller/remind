@@ -136,21 +136,39 @@ if ((c32_deactivateTech eq 1 and sm_PyPSA_eq eq 1),
 *** Electricity trade
 $ifthen "%c32_pypsa_trade%" == "on"
 if ((sm_PyPSA_eq eq 1),
-  !! Set bounds for vm_Mport and vm_Xport
+  !! Free bounds for vm_Mport and vm_Xport
   vm_Mport.lo(tPy32,regPy32,"seel") = 0;
   vm_Mport.up(tPy32,regPy32,"seel") = Inf;
   vm_Xport.lo(tPy32,regPy32,"seel") = 0;
   vm_Xport.up(tPy32,regPy32,"seel") = Inf;
   !! Set starting values for vm_Mport and vm_Xport
-  !! This seems strictly necessary because otherwise the solver will simply set both to 0
+  !! This is necessary because otherwise the solver will set both to 0, despite q32_ElecTradeImport and q32_ElecTradeExport
   vm_Mport.l(tPy32,regPy32,"seel") = sum(regPy32_2, p32_PyPSA_ElecTrade(tPy32,regPy32_2,regPy32)) / sm_TWa_2_MWh;
   vm_Xport.l(tPy32,regPy32,"seel") = sum(regPy32_2, p32_PyPSA_ElecTrade(tPy32,regPy32,regPy32_2)) / sm_TWa_2_MWh;
   !! Restrict v32_shSeElRegi between 0 and 1
   v32_shSeElRegi.lo(tPy32,regPy32) = 0;
   v32_shSeElRegi.up(tPy32,regPy32) = 1;
-  !! ToDO: Also get pm_MPortsPrice and pm_XPortsPrice from PyPSA-Eur
-  !! pm_MPortsPrice(tPy32,regPy32,"seel") = p32_PyPSA...;
-  !! pm_XPortsPrice(tPy32,regPy32,"seel") = p32_PyPSA...;
+  !! Set starting values for v32_shSeElRegi
+  !! Don't bother about checking that the denominator is not 0. If that happens, REMIND has crashed anyway.
+  v32_shSeElRegi.l(tPy32,regPy32) = v32_usableSeDisp.l(tPy32,regPy32,"seel") / sum(regPy32_2, v32_usableSeDisp.l(tPy32,regPy32_2,"seel"));
+  !! Read in electricity trade prices
+  !! These are weighted averages of the prices of the regions that are traded with
+  !! Remember to also change the seTrade set to include "seel" as otherwise the budget equation won't see these costs
+  pm_MPortsPrice(tPy32,regPy32,"seel") = 0;
+  pm_MPortsPrice(tPy32,regPy32,"seel")$(sum(regPy32_2, p32_PyPSA_ElecTrade(tPy32,regPy32_2,regPy32)) gt sm_eps) =
+      sum(regPy32_2, p32_PyPSA_ElecTradePrice(tPy32,regPy32_2,regPy32) * p32_PyPSA_ElecTrade(tPy32,regPy32_2,regPy32))
+    / sum(regPy32_2, p32_PyPSA_ElecTrade(tPy32,regPy32_2,regPy32)) * sm_TWa_2_MWh / 1e12;
+  pm_XPortsPrice(tPy32,regPy32,"seel") = 0;
+  pm_XPortsPrice(tPy32,regPy32,"seel")$(sum(regPy32_2, p32_PyPSA_ElecTrade(tPy32,regPy32,regPy32_2)) gt sm_eps) = 
+      sum(regPy32_2, p32_PyPSA_ElecTradePrice(tPy32,regPy32,regPy32_2) * p32_PyPSA_ElecTrade(tPy32,regPy32,regPy32_2))
+    / sum(regPy32_2, p32_PyPSA_ElecTrade(tPy32,regPy32,regPy32_2)) * sm_TWa_2_MWh / 1e12;
+  !! Restrict v32_shSeELTradeNet between -1 and 1
+  !! TODO: Does this make sense? Could be >1 or <-1 if there is a lot of trade?
+  !!v32_shSeELTradeNet.lo(tPy32,regPy32) = -1;
+  !!v32_shSeELTradeNet.up(tPy32,regPy32) = 1;
+  !! Set starting values for v32_shSeELTradeNet
+  !! Don't bother about checking that the denominator is not 0. If that happens, REMIND has crashed anyway.
+  v32_shSeELTradeNet.l(tPy32,regPy32) = ( vm_Mport.l(tPy32,regPy32,"seel") - vm_Xport.l(tPy32,regPy32,"seel") ) / v32_usableSeDispNet.l(tPy32,regPy32,"seel");
 );
 $endif
 

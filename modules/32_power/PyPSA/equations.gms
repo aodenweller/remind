@@ -421,25 +421,51 @@ $endif
 $ifthen "%c32_pypsa_trade%" == "on"
 * Pre-factor parametrisation for electricity trade
 q32_shSeElRegi(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
-  v32_shSeElRegi(t,regi) * sum(regPy32, v32_usableSeDisp(t,regPy32,"seel"))
+  v32_shSeElRegi(t,regi) * sum(regPy32_2, v32_usableSeDisp(t,regPy32_2,"seel"))
   =e=
   v32_usableSeDisp(t,regi,"seel")
 ;
 
-* Electricity trade: Import
+$ontext
+* Helper equation to force the sum of v32_shSeElRegi to be 1 for each time step
+* Not sure why this is necessary, but q32_shSeElRegi alone does not work
+q32_shSeElRegiSum(t)$(tPy32(t) AND (sm_PyPSA_eq eq 1))..
+  sum(regPy32_2, v32_shSeElRegi(t,regPy32_2))
+  =e=
+  1
+;
+$offtext
+
+*** Pre-factor equation to set electricity import
+*** The pre-factor is based on the following intuition:
+*** If the electricity generation share of a region (relative to the sum of generation in all regions) increases,
+*** the region has to import less electricity and will export more electricity.
+*** Assume that for each 1% increase in v32_shSeElRegi, vm_Mport decreases by 0.5% and vm_Xport increases by 0.5%.
+*** TODO: Probably it's better to formulate this all in relative terms, not absolute terms.
+
 q32_ElecTradeImport(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
   vm_Mport(t,regi,"seel")
   =e=
-  sum(regPy32, p32_PyPSA_ElecTrade(t,regPy32,regi)) / sm_TWa_2_MWh
-  !! * pre-factor (v32_shSeElRegi(t,regi) - p32_PyPSA_shSeElRegi(t,regi))
+    sum(regPy32, p32_PyPSA_ElecTrade(t,regPy32,regi))
+  * ( 1 - s32_preFacFadeOut * 0.5 * ( v32_shSeElRegi(t,regi) - p32_PyPSA_shSeElRegi(t,regi) ) )
+  / sm_TWa_2_MWh
 ;
 
 * Electricity trade: Export
 q32_ElecTradeExport(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
   vm_Xport(t,regi,"seel")
   =e=
-  sum(regPy32, p32_PyPSA_ElecTrade(t,regi,regPy32)) / sm_TWa_2_MWh
-  !! * pre-factor (v32_shSeElRegi(t,regi) - p32_PyPSA_shSeElRegi(t,regi))
+    sum(regPy32, p32_PyPSA_ElecTrade(t,regi,regPy32))
+  * ( 1 + s32_preFacFadeOut * 0.5 * ( v32_shSeElRegi(t,regi) - p32_PyPSA_shSeElRegi(t,regi) ) )
+  / sm_TWa_2_MWh
+;
+
+* Calculate share of net imports - exports in relation to total load
+* This could be used to impose a constraint on the maximum share of net imports - exports
+q32_shSeELTradeNet(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
+  v32_shSeELTradeNet(t,regi) * v32_usableSeDispNet(t,regi,"seel")
+  =e=
+  ( vm_Mport(t,regi,"seel") - vm_Xport(t,regi,"seel") )
 ;
 $endif
 

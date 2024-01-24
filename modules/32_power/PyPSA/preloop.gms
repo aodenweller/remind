@@ -25,10 +25,16 @@ p32_PyPSA_MVAvg(tPy32,regPy32,tePy32) = 0;
 p32_PyPSA_LoadPriceAvg(tPy32,regPy32,carrierPy32) = 0;
 p32_PyPSA_PeakResLoadRel(tPy32,regPy32) = 0;
 p32_PyPSA_ElecTrade(tPy32,regPy32,regPy32) = 0;
+p32_PyPSA_ElecTradePrice(tPy32,regPy32,regPy32) = 0;
 p32_PyPSA_shSeEl(tPy32,regPy32,tePy32) = 0;
+p32_PyPSA_shSeElRegi(tPy32,regPy32) = 0;
 p32_PyPSA_ValueFactor(tPy32,regPy32,tePy32) = 0;
 p32_PyPSA_Curtailment(tPy32,regPy32,tePyVRE32) = 0;
 s32_PyPSA_called(iteration) = 0;
+v32_usableSeDisp.l(tPy32,regPy32,"seel") = 0;
+v32_usableSeDispNet.l(tPy32,regPy32,"seel") = 0;
+vm_Mport.l(tPy32,regPy32,"seel") = 0;
+vm_Xport.l(tPy32,regPy32,"seel") = 0;
 
 *** If c32_pypsa_pathgdx is set to a directory, import PyPSA variables
 $ifthen not "%c32_pypsa_pathgdx%" == "off"
@@ -41,6 +47,8 @@ $ifthen not "%c32_pypsa_pathgdx%" == "off"
   Execute_Loadpoint "%c32_pypsa_pathgdx%", p32_PyPSA_Curtailment=curtailment;
   Execute_Loadpoint "%c32_pypsa_pathgdx%", p32_PyPSA_PeakResLoadRel=peak_residual_load_relative;
   Execute_Loadpoint "%c32_pypsa_pathgdx%", p32_PyPSA_ElecTrade=crossborder_flow;
+  Execute_Loadpoint "%c32_pypsa_pathgdx%", p32_PyPSA_ElecTradePrice=crossborder_price;
+  Execute_Loadpoint "%c32_pypsa_pathgdx%", p32_PyPSA_shSeElRegi=generation_region_share;
   !! Non-averaged capacity factors
   p32_PyPSA_CFAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_PyPSA_CF(t,regi,te);
   !! Non-averaged market values

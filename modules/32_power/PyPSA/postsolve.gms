@@ -91,6 +91,7 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
     p32_preInvCapAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_preInvCap(t,regi,te) + EPS;
     !! Non-averaged PE prices
     p32_PEPriceAvg(t,regi,entyPe)$(tPy32(t) and regPy32(regi)) = max(0, pm_PEPrice(t,regi,entyPe)) + EPS;  !! No negative PE prices
+    !! TODO add: and entyPePy32(entyPe) above
   !! Implement step (3): Use averaged values only if c32_avg_rm2py = 1 and (because of elseif) only if iteration >= c32_startIter_PyPSA + x + y - 1 
   elseif (c32_avg_rm2py eq 1),
       !! Average pre-investment capacities over past y iterations
@@ -194,6 +195,8 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Curtailment=curtailment;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_PeakResLoadRel=peak_residual_load_relative;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_ElecTrade=crossborder_flow;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_ElecTradePrice=crossborder_price;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_shSeElRegi=generation_region_share;
 
   !! Track capacity factors and market values in iterations
   p32_PyPSA_CF_iter(iteration,t,regi,te) = p32_PyPSA_CF(t,regi,te);

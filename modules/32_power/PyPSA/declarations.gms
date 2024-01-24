@@ -91,10 +91,11 @@ parameters
     p32_PyPSA_LoadPriceAvg(ttot,all_regi,carrierPy32)               "PyPSA import calc: Load prices averaged over iterations [$/MWh]"
     p32_PyPSA_Curtailment(ttot,all_regi,all_te)                     "PyPSA import: Curtailment by technology [MWh]"
     p32_PyPSA_PeakResLoadRel(ttot,all_regi)                         "PyPSA import: Peak residual load in relative terms [1]"
-    p32_PyPSA_shSeEl(ttot,all_regi,all_te)                          "PyPSA import: Electricity generation share by technology [1]"
+    p32_PyPSA_shSeEl(ttot,all_regi,all_te)                          "PyPSA import: Electricity generation share by technology within region [1]"
     p32_PyPSA_ValueFactor(ttot,all_regi,all_te)                     "PyPSA import calc: Value factor = Market value / electricity price [1]"
-    p32_PyPSA_ElecTrade(ttot,all_regi,all_regi)                     "PyPSA import: Electricity trade from region 1 to region 2 [MWh]"
-*    p32_PyPSA_ElecTradePrice(ttot,all_regi,all_regi)               "PyPSA import: Electricity trade price paid by region 2 to region 1 [$/MWh]"
+    p32_PyPSA_ElecTrade(ttot,all_regi,all_regi)                     "PyPSA import: Electricity exports from region 1 to region 2 [MWh]" 
+    p32_PyPSA_ElecTradePrice(ttot,all_regi,all_regi)                "PyPSA import: Price for electricity imports paid by region 2 to region 1 [$/MWh]"
+    p32_PyPSA_shSeElRegi(ttot,all_regi)                             "PyPSA import: Electricity generation share across coupled regions [1]"
     p32_iniCapPHS(all_regi,all_te)                                  "PyPSA import/export calc: Initial capacity of pumped hydro storage [TW]"
     p32_iniProdPHS(all_regi,all_te)                                 "PyPSA import/export calc: Initial production of pumped hydro storage [TWa]"
     p32_preFactor_CF(all_regi,all_te)                               "PyPSA coupling: Pre-factor for the capacity factor [1]"
@@ -107,16 +108,22 @@ parameters
     p32_PeakResLoadShadowPrice(ttot,all_regi,all_te)                "PyPSA reporting: Shadow price of peak residual load constraint, used for plotting LCOEs vs. market values [T$/TWa]"
 ;
 
+positive variables
+    v32_usableSeDisp(ttot,all_regi,all_enty)                        "PyPSA coupling: Domestic usable SE electricity generation, without own consumption, without imports/exports [TWa]"
+    v32_usableSeDispNet(ttot,all_regi,all_enty)                     "PyPSA export: Usable SE electricity, without own consumption, with imports/exports [TWa]"
+    v32_usableSeTeDisp(ttot,all_regi,all_enty,all_te)               "PyPSA export: Domestic usable SE electricity generation, without own consumption, without imports/exports, by technology [TWa]"
+    v32_shSeElDisp(ttot,all_regi,all_te)                            "PyPSA export/coupling: Share of domestic usable SE electricity generation, without own consumption, used for pre-factor equations [1]"
+$ifthen "%c32_pypsa_trade%" == "on"
+    v32_shSeElRegi(ttot,all_regi)                                   "PyPSA coupling: Share of usable SE electricity for dispatch without own consumption by region [1]"
+$endif
+;
+
 variables
-    v32_usableSeDisp(ttot,all_regi,all_enty)                        "PyPSA export: Usable SE electricity for dispatch without own consumption, without imports/exports [TWa]"
-    v32_usableSeDispNet(ttot,all_regi,all_enty)                     "PyPSA export: Usable SE electricity for dispatch without own consumption, net of imports/exports [TWa]"
-    v32_usableSeTeDisp(ttot,all_regi,all_enty,all_te)               "PyPSA export: Usable SE electricity for dispatch without own consumption by technology [TWa]"
-    v32_shSeElDisp(ttot,all_regi,all_te)                            "PyPSA export/coupling: Share of usable SE electricity for dispatch without own consumption, used for pre-factor equations [1]"
 $ifthen "%cm_pypsa_markup%" == "on"
     vm_PyPSAMarkup(ttot,all_regi,all_te)                            "PyPSA coupling: Markups for electricity technologies according to PyPSA-Eur [T$/TWa]"
 $endif
 $ifthen "%c32_pypsa_trade%" == "on"
-    v32_shSeElRegi(ttot,all_regi)                                   "PyPSA coupling: Share of usable SE electricity for dispatch without own consumption by region [1]" 
+    v32_shSeELTradeNet(ttot,all_regi)                               "PyPSA coupling: Ratio between electricity imports-exports and total consumption in [0,1] p.u."
 $endif
 ;
 
@@ -136,8 +143,10 @@ $ifthen "%c32_pypsa_peakcap%" == "on"
 $endif
 $ifthen "%c32_pypsa_trade%" == "on"
     q32_shSeElRegi(ttot,all_regi)                                   "PyPSA coupling: Calculate v32_shSeElRegi"
+*    q32_shSeElRegiSum(ttot)                                         "PyPSA coupling: Force sum of v32_shSeElRegi to be 1 in each time step"
     q32_ElecTradeImport(ttot,all_regi)                              "PyPSA coupling: Pre-factor equation for electricity trade import"
     q32_ElecTradeExport(ttot,all_regi)                              "PyPSA coupling: Pre-factor equation for electricity trade export"
+    q32_shSeELTradeNet(ttot,all_regi)                               "PyPSA coupling: Calculate v32_shSeELTradeNet"
 $endif
 ;
 
