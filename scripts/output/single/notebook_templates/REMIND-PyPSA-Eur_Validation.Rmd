@@ -1950,7 +1950,7 @@ if (length(cfg$gms$c32_pypsa_trade) != 0) {
 }
 ```
 
-#### Net electricity trade 
+#### Net electricity trade
 
 ```{r net electricity trade}
 if (length(cfg$gms$c32_pypsa_trade) != 0) {
@@ -1972,7 +1972,7 @@ if (length(cfg$gms$c32_pypsa_trade) != 0) {
         group_by(year, iteration) %>%
         summarise(value = sum(exports) / 1E6) 
 
-      p <- ggplot() + 
+      pYear <- ggplot() + 
         geom_bar(data = dataImportPyPSAr, aes(x = year, y = value, fill = from), stat = "identity") +
         geom_bar(data = dataExportPyPSAr, aes(x = year, y = value, fill = to), stat = "identity") +
         scale_fill_discrete(name = "To/From") +
@@ -1982,9 +1982,9 @@ if (length(cfg$gms$c32_pypsa_trade) != 0) {
         ggtitle("Net electricity imports over years", regSubtitle(r)) +
         facet_wrap(~ iteration, scales = "free")
 
-      print(p)
+      print(pYear)
 
-      pITer <- ggplot() + 
+      pIter <- ggplot() + 
         geom_bar(data = dataImportPyPSAr, aes(x = iteration, y = value, fill = from), stat = "identity") +
         geom_bar(data = dataExportPyPSAr, aes(x = iteration, y = value, fill = to), stat = "identity") +
         scale_fill_discrete(name = "To/From") +
@@ -1995,7 +1995,7 @@ if (length(cfg$gms$c32_pypsa_trade) != 0) {
         ggtitle("Net electricity imports over iterations", regSubtitle(r)) +
         facet_wrap(~ year, scales = "free")
 
-      print(pITer)
+      print(pIter)
     }
   }
 }
@@ -2004,7 +2004,115 @@ if (length(cfg$gms$c32_pypsa_trade) != 0) {
 
 ### Electricity trade price
 
-In progress...
+```{r electricity trade price}
+
+dataImportPriceREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "pm_MPortsPrice",
+    columns = c("tall" = "year", "all_regi" = "region", "tradeSe" = "tradeSe", "value" = "value"),
+    colFilter = list("year" = years, "region" = regions, "tradeSe" = "seel"),
+    restoreZeros = FALSE,
+    recalcUnit = trUSDpTWa2USDpMWh) %>%
+  select(!tradeSe)
+
+dataTradePricePyPSA <- readPyPSAcsv(
+    paths = file.path(pyValidationDirs, "crossborder_prices.csv")) %>%
+    # Increment iteration by 1 to match REMIND
+    mutate(iteration = iteration + 1)
+
+dataTradePyPSA <- readPyPSAcsv(
+    paths = file.path(pyValidationDirs, "crossborder_flows.csv")) %>%
+    # Increment iteration by 1 to match REMIND
+    mutate(iteration = iteration + 1)
+
+dataImportPricePyPSA <- full_join(dataTradePricePyPSA, dataTradePyPSA, by = c("year", "iteration", "from", "to")) %>%
+  group_by(year, to, iteration) %>%
+  summarise(priceImport = sum(price*exports)/sum(exports))
+
+dataExportPriceREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "pm_XPortsPrice",
+    columns = c("tall" = "year", "all_regi" = "region", "tradeSe" = "tradeSe", "value" = "value"),
+    colFilter = list("year" = years, "region" = regions, "tradeSe" = "seel"),
+    restoreZeros = FALSE,
+    recalcUnit = trUSDpTWa2USDpMWh) %>%
+  select(!tradeSe)
+
+dataExportPricePyPSA <- full_join(dataTradePricePyPSA, dataTradePyPSA, by = c("year", "iteration", "from", "to")) %>%
+  group_by(year, from, iteration) %>%
+  summarise(priceExport = sum(price*exports)/sum(exports))
+
+pImportPrice <- ggplot() +
+  geom_line(data = dataImportPriceREMIND, aes(x = year, y = value, color = region)) +
+  geom_point(data = dataImportPricePyPSA, aes(x = year, y = priceImport, color = to)) +
+  labs(x = "Year", y = "Electricity trade price ($/MWh)") +
+  ggtitle("Electricity import prices over years") +
+  facet_wrap(~ iteration, scales = "free")
+
+print(pImportPrice)
+
+pImportPriceIter <- ggplot() +
+  geom_line(data = dataImportPriceREMIND, aes(x = iteration, y = value, color = region)) +
+  geom_point(data = dataImportPricePyPSA, aes(x = iteration, y = priceImport, color = to)) +
+  labs(x = "Iteration", y = "Electricity trade price ($/MWh)") +
+  scale_x_continuous(breaks = integer_breaks()) +
+  ggtitle("Electricity import prices over iterations") +
+  facet_wrap(~ year, scales = "free")
+
+print(pImportPriceIter)
+
+pExportPrice <- ggplot() +
+  geom_line(data = dataExportPriceREMIND, aes(x = year, y = value, color = region)) +
+  geom_point(data = dataExportPricePyPSA, aes(x = year, y = priceExport, color = from)) +
+  labs(x = "Year", y = "Electricity trade price ($/MWh)") +
+  ggtitle("Electricity export prices over years") +
+  facet_wrap(~ iteration, scales = "free")
+
+print(pExportPrice)
+
+pExportPriceIter <- ggplot() +
+  geom_line(data = dataExportPriceREMIND, aes(x = iteration, y = value, color = region)) +
+  geom_point(data = dataExportPricePyPSA, aes(x = iteration, y = priceExport, color = from)) +
+  labs(x = "Iteration", y = "Electricity trade price ($/MWh)") +
+  scale_x_continuous(breaks = integer_breaks()) +
+  ggtitle("Electricity export prices over iterations") +
+  facet_wrap(~ year, scales = "free")
+
+print(pExportPriceIter)
+
+# Plot both import and export into one
+pTradePrice <- ggplot() +
+  geom_line(data = dataImportPriceREMIND, aes(x = year, y = value, color = region, linetype = "Imports")) +
+  geom_point(data = dataImportPricePyPSA, aes(x = year, y = priceImport, color = to, shape = "Imports")) +
+  geom_line(data = dataExportPriceREMIND, aes(x = year, y = value, color = region, linetype = "Exports")) +
+  geom_point(data = dataExportPricePyPSA, aes(x = year, y = priceExport, color = from, shape = "Exports")) +
+  scale_shape_manual(name = NULL,
+                     values = c("Imports" = 16, "Exports" = 17)) +
+  scale_linetype_manual(name = NULL,
+                        values = c("Imports" = "solid", "Exports" = "dashed")) +
+  labs(x = "Year", y = "Electricity trade price ($/MWh)") +
+  ggtitle("Electricity trade prices over years") +
+  facet_wrap(~ iteration, scales = "free")
+
+print(pTradePrice)
+
+pTradePriceIter <- ggplot() +
+  geom_line(data = dataImportPriceREMIND, aes(x = iteration, y = value, color = region, linetype = "Imports")) +
+  geom_point(data = dataImportPricePyPSA, aes(x = iteration, y = priceImport, color = to, shape = "Imports")) +
+  geom_line(data = dataExportPriceREMIND, aes(x = iteration, y = value, color = region, linetype = "Exports")) +
+  geom_point(data = dataExportPricePyPSA, aes(x = iteration, y = priceExport, color = from, shape = "Exports")) +
+  scale_shape_manual(name = NULL,
+                     values = c("Imports" = 16, "Exports" = 17)) +
+  scale_linetype_manual(name = NULL,
+                        values = c("Imports" = "solid", "Exports" = "dashed")) +
+  labs(x = "Iteration", y = "Electricity trade price ($/MWh)") +
+  scale_x_continuous(breaks = integer_breaks()) +
+  ggtitle("Electricity trade prices over iterations") +
+  facet_wrap(~ year, scales = "free")
+
+print(pTradePriceIter)
+
+```
 
 # Convergence indicators
 
@@ -2929,6 +3037,68 @@ for (r in regList) {
     print(pGenShareIter)
   }
 }
+```
+
+## Generation shares of REMIND regions
+
+The following plots show the generation shares of REMIND regions. They are not explicitly coupled between REMIND and PyPSA-Eur, but used to parametrise the pre-factor equations for electricity trade. If they don't converge, there is a always a distortion in the electricity trade volume passed from PyPSA-Eur to REMIND.
+
+```{r generation region shares}
+
+dataGenRegionShareREMIND <- readREMINDgdx(
+  paths = rmFiles,
+  gdxVar = "v32_shSeElRegi",
+  columns = c("ttot" = "year", "all_regi" = "region", "value" = "value"),
+  colFilter = list("year" = years, "region" = regions),
+  restoreZeros = FALSE)
+
+dataGenRegionSharePyPSA <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "generation_region_shares.csv"))
+
+p <- ggplot() +
+  geom_line(data = dataGenRegionShareREMIND, aes(x = year, y = value, color = "REMIND")) +
+  geom_line(data = dataGenRegionSharePyPSA, aes(x = year, y = value, color = "PyPSA-Eur")) +
+  scale_color_discrete(name = "Model") +
+  labs(x = "Year", y = "Generation share") +
+  ggtitle("Generation region shares over years") +
+  facet_grid(region ~ iteration, scales = "free")
+
+print(p)
+
+pIter <- ggplot() +
+  geom_line(data = dataGenRegionShareREMIND, aes(x = iteration, y = value, color = "REMIND")) +
+  geom_line(data = dataGenRegionSharePyPSA, aes(x = iteration, y = value, color = "PyPSA-Eur")) +
+  scale_color_discrete(name = "Model") +
+  labs(x = "Iteration", y = "Generation share") +
+  scale_x_continuous(breaks = integer_breaks()) +
+  ggtitle("Generation region shares over iterations") +
+  facet_grid(region ~ year, scales = "free")
+
+print(pIter)
+
+# Show whether REMIND generation region shares sum up to 1 using a stacked bar chart
+
+pREMIND <- ggplot() +
+  geom_bar(data = dataGenRegionShareREMIND, aes(x = year, y = value, fill = region),
+           stat = "identity") +
+  scale_fill_discrete(name = "Region") +
+  labs(x = "Year", y = "Generation share") +
+  ggtitle("REMIND generation region shares over years", "Useful to inspect whether shares add up to 1 as they should") +
+  facet_wrap(~ iteration)
+
+print(pREMIND)
+
+pREMINDiter <- ggplot() +
+  geom_bar(data = dataGenRegionShareREMIND, aes(x = iteration, y = value, fill = region),
+           stat = "identity") +
+  scale_fill_discrete(name = "Region") +
+  labs(x = "Iteration", y = "Generation share") +
+  scale_x_continuous(breaks = integer_breaks()) +
+  ggtitle("REMIND generation region shares over iterations", "Useful to inspect whether shares add up to 1 as they should") +
+  facet_wrap(~ year)
+
+print(pREMINDiter)
+
 ```
 
 ## Electricity price
