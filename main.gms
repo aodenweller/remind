@@ -763,16 +763,6 @@ parameter
 *' *  (4): so2 tax intermediary between 1 and 2, multiplying (1) tax by the ratio (3) and (2)
 *'
 parameter
-  cm_solwindenergyscen      "scenario for fluctuating renewables, 1 is reference, 2 is pessimistic with limits to fluctuating SE el share"
-;
-  cm_solwindenergyscen  = 1;         !! def = 1  !! regexp = [0-4]
-*' *  (0) advanced - cheap investment costs, higher learning rates for pv, csp and wind
-*' *  (1) reference - normal investment costs & learning rates for pv, csp and wind     EMF27-3nd round Adv scenario
-*' *  (2) pessimistic EMF27 and AWP 2 - share of PV, wind&CSP limited to 20%. Learning rates reduced by 20%, floor costs increased by 40%. EMF27-3nd round Cons scenario
-*' *  (3) frozen - no learning after 2010, share of PV, wind&CSP limited to 20%. EMF27-3rd round Frozen scenario
-*' *  (4) pessimistic SSP: pessimistic techno-economic assumptions
-*'
-parameter
   c_techAssumptScen         "scenario for assumptions of energy technologies based on SSP scenarios, 1: SSP2 (default), 2: SSP1, 3: SSP5"
 ;
   c_techAssumptScen     = 1;         !! def = 1  !! regexp = [1-3]
@@ -1366,6 +1356,13 @@ $setGlobal cm_vehiclesSubsidies  off !! def = off
 $setGlobal cm_implicitQttyTarget  off !! def = off
 *** cm_loadFromGDX_implicitQttyTargetTax "load p47_implicitQttyTargetTax values from gdx for first iteration. Usefull for policy runs."
 $setGlobal cm_loadFromGDX_implicitQttyTargetTax  off  !! def = off  !! regexp = off|on
+*** cm_implicitQttyTarget_delay "delay the start of the quantity target algorithm either to:
+***   (1) start only after iteration i, by setting "cm_implicitQttyTarget_delay = iteration i", or
+***   (2) start only after the emission targets converged for the model, for both "modules/45_carbonprice" and "modules/47_regipol", by setting "cm_implicitQttyTarget_delay = emiConv x", or
+***   (3) start only after regional emission target is close to convergence, by setting "cm_implicitQttyTarget_delay = emiRegiConv x", which forces the quantity target to start only after x times the cm_emiMktTarget_tolerance is achieved.
+***      e.g., if "cm_emiMktTarget_tolerance = 0.01", i.e. 1% of deviation, and "cm_implicitQttyTarget_delay = emiRegiConv 5", the quantity target algorithm will only start after the emission target achieved a number lower than 5% (0.01 * 5)."
+***      option 3 should only be used if the target is defined for a region that has its carbon pricing controlled by cm_emiMktTarget in the 47_regipol module.
+$setGlobal cm_implicitQttyTarget_delay  iteration 3  !! def = iteration 3, quantity targets only start after iteration 3  
 *** cm_implicitPriceTarget "define tax/subsidies to match FE prices defined in the pm_implicitPriceTarget parameter."
 ***   Acceptable values: "off", "Initial", "HighElectricityPrice", "HighGasandLiquidsPrice", "HighPrice", "LowPrice", "LowElectricityPrice"
 $setGlobal cm_implicitPriceTarget  off  !! def = off  !! regexp = off|Initial|HighElectricityPrice|HighGasandLiquidsPrice|HighPrice|LowPrice|LowElectricityPrice"
