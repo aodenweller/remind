@@ -1876,127 +1876,123 @@ print(pPeakResLoadAbsYear)
 ### Electricity trade
 
 ```{r electricity trade}
-if (length(cfg$gms$c32_pypsa_trade) != 0) {
-  if (cfg$gms$c32_pypsa_trade == "on") {
-    dataImportREMIND <- readREMINDgdx(
-      paths = rmFiles,
-      gdxVar = "vm_Mport",
-      columns = c("tall" = "year", "all_regi" = "region", "all_enty" = "enty", "value" = "vm_Mport"),
-      colFilter = list("year" = years, "region" = regions, "enty" = "seel"),
-      restoreZeros = FALSE,
-      recalcUnit = twa2twh)
+if (isTRUE(cfg$gms$c32_pypsa_trade == "on")) {
+  dataImportREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "vm_Mport",
+    columns = c("tall" = "year", "all_regi" = "region", "all_enty" = "enty", "value" = "vm_Mport"),
+    colFilter = list("year" = years, "region" = regions, "enty" = "seel"),
+    restoreZeros = FALSE,
+    recalcUnit = twa2twh)
 
-    dataExportREMIND <- readREMINDgdx(
-      paths = rmFiles,
-      gdxVar = "vm_Xport",
-      columns = c("tall" = "year", "all_regi" = "region", "all_enty" = "enty", "value" = "vm_Xport"),
-      colFilter = list("year" = years, "region" = regions, "enty" = "seel"),
-      restoreZeros = FALSE,
-      recalcUnit = twa2twh)
+  dataExportREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "vm_Xport",
+    columns = c("tall" = "year", "all_regi" = "region", "all_enty" = "enty", "value" = "vm_Xport"),
+    colFilter = list("year" = years, "region" = regions, "enty" = "seel"),
+    restoreZeros = FALSE,
+    recalcUnit = twa2twh)
 
-    dataTradePyPSA <- readPyPSAcsv(
-      paths = file.path(pyValidationDirs, "crossborder_flows.csv")) %>%
-      # Increment iteration by 1 to match REMIND
-      mutate(iteration = iteration + 1)
+  dataTradePyPSA <- readPyPSAcsv(
+    paths = file.path(pyValidationDirs, "crossborder_flows.csv")) %>%
+    # Increment iteration by 1 to match REMIND
+    mutate(iteration = iteration + 1)
 
-    dataImportPyPSA <- dataTradePyPSA %>%
-      group_by(year, to, iteration) %>%
-      summarise(value = sum(exports) / 1E6) %>%
-      rename(region = to)
+  dataImportPyPSA <- dataTradePyPSA %>%
+    group_by(year, to, iteration) %>%
+    summarise(value = sum(exports) / 1E6) %>%
+    rename(region = to)
 
-    dataExportPyPSA <- dataTradePyPSA %>%
-      group_by(year, from, iteration) %>%
-      summarise(value = sum(exports) / 1E6) %>%
-      rename(region = from)
+  dataExportPyPSA <- dataTradePyPSA %>%
+    group_by(year, from, iteration) %>%
+    summarise(value = sum(exports) / 1E6) %>%
+    rename(region = from)
 
-    pImport <- ggplot() +
-      geom_line(data = dataImportREMIND, aes(x = year, y = vm_Mport, color = region)) +
-      geom_point(data = dataImportPyPSA, aes(x = year, y = value, color = region)) +
-      labs(x = "Year", y = "Electricity trade (TWh/yr)") +
-      ggtitle("Electricity imports over years") +
-      facet_wrap(~ iteration, scales = "free")
+  pImport <- ggplot() +
+    geom_line(data = dataImportREMIND, aes(x = year, y = vm_Mport, color = region)) +
+    geom_point(data = dataImportPyPSA, aes(x = year, y = value, color = region)) +
+    labs(x = "Year", y = "Electricity trade (TWh/yr)") +
+    ggtitle("Electricity imports over years") +
+    facet_wrap(~ iteration, scales = "free")
 
-    print(pImport)
+  print(pImport)
 
-    pImportIter <- ggplot() +
-      geom_line(data = dataImportREMIND, aes(x = iteration, y = vm_Mport, color = region)) +
-      geom_point(data = dataImportPyPSA, aes(x = iteration, y = value, color = region)) +
-      labs(x = "Iteration", y = "Electricity trade (TWh/yr)") +
-      scale_x_continuous(breaks = integer_breaks()) +
-      ggtitle("Electricity imports over iterations") +
-      facet_wrap(~ year, scales = "free")
+  pImportIter <- ggplot() +
+    geom_line(data = dataImportREMIND, aes(x = iteration, y = vm_Mport, color = region)) +
+    geom_point(data = dataImportPyPSA, aes(x = iteration, y = value, color = region)) +
+    labs(x = "Iteration", y = "Electricity trade (TWh/yr)") +
+    scale_x_continuous(breaks = integer_breaks()) +
+    ggtitle("Electricity imports over iterations") +
+    facet_wrap(~ year, scales = "free")
 
-    print(pImportIter)
+  print(pImportIter)
 
-    pExport <- ggplot() +
-      geom_line(data = dataExportREMIND, aes(x = year, y = vm_Xport, color = region)) +
-      geom_point(data = dataExportPyPSA, aes(x = year, y = value, color = region)) +
-      labs(x = "Year", y = "Electricity trade (TWh/yr)") +
-      ggtitle("Electricity exports over years") +
-      facet_wrap(~ iteration, scales = "free")
+  pExport <- ggplot() +
+    geom_line(data = dataExportREMIND, aes(x = year, y = vm_Xport, color = region)) +
+    geom_point(data = dataExportPyPSA, aes(x = year, y = value, color = region)) +
+    labs(x = "Year", y = "Electricity trade (TWh/yr)") +
+    ggtitle("Electricity exports over years") +
+    facet_wrap(~ iteration, scales = "free")
 
-    print(pExport)
+  print(pExport)
 
-    pExportIter <- ggplot() +
-      geom_line(data = dataExportREMIND, aes(x = iteration, y = vm_Xport, color = region)) +
-      geom_point(data = dataExportPyPSA, aes(x = iteration, y = value, color = region)) +
-      labs(x = "Iteration", y = "Electricity trade (TWh/yr)") +
-      scale_x_continuous(breaks = integer_breaks()) +
-      ggtitle("Electricity exports over iterations") +
-      facet_wrap(~ year, scales = "free")
+  pExportIter <- ggplot() +
+    geom_line(data = dataExportREMIND, aes(x = iteration, y = vm_Xport, color = region)) +
+    geom_point(data = dataExportPyPSA, aes(x = iteration, y = value, color = region)) +
+    labs(x = "Iteration", y = "Electricity trade (TWh/yr)") +
+    scale_x_continuous(breaks = integer_breaks()) +
+    ggtitle("Electricity exports over iterations") +
+    facet_wrap(~ year, scales = "free")
 
-    print(pExportIter)
-  }
+  print(pExportIter)
 }
 ```
 
 #### Net electricity trade
 
 ```{r net electricity trade}
-if (length(cfg$gms$c32_pypsa_trade) != 0) {
-  if (cfg$gms$c32_pypsa_trade == "on") {
-    for (r in tail(regList,-1)) {
-      dataImportPyPSAr <- dataTradePyPSA %>%
-        filter(to %in% r) %>%
-        mutate(value = exports / 1E6) %>%
-        select(year, from, iteration, value)
+if (isTRUE(cfg$gms$c32_pypsa_trade == "on")) {
+  for (r in tail(regList,-1)) {
+    dataImportPyPSAr <- dataTradePyPSA %>%
+      filter(to %in% r) %>%
+      mutate(value = exports / 1E6) %>%
+      select(year, from, iteration, value)
 
-      dataExportPyPSAr <- dataTradePyPSA %>%
-        filter(from %in% r) %>%
-        mutate(value = -exports / 1E6) %>%
-        select(year, to, iteration, value)
+    dataExportPyPSAr <- dataTradePyPSA %>%
+      filter(from %in% r) %>%
+      mutate(value = -exports / 1E6) %>%
+      select(year, to, iteration, value)
 
-      dataNetPyPSAr <- dataTradePyPSA %>%
-        filter(from %in% r | to %in% r) %>%
-        mutate(exports = ifelse(from %in% r, -exports, exports)) %>%
-        group_by(year, iteration) %>%
-        summarise(value = sum(exports) / 1E6) 
+    dataNetPyPSAr <- dataTradePyPSA %>%
+      filter(from %in% r | to %in% r) %>%
+      mutate(exports = ifelse(from %in% r, -exports, exports)) %>%
+      group_by(year, iteration) %>%
+      summarise(value = sum(exports) / 1E6) 
 
-      pYear <- ggplot() + 
-        geom_bar(data = dataImportPyPSAr, aes(x = year, y = value, fill = from), stat = "identity") +
-        geom_bar(data = dataExportPyPSAr, aes(x = year, y = value, fill = to), stat = "identity") +
-        scale_fill_discrete(name = "To/From") +
-        geom_line(data = dataNetPyPSAr, aes(x = year, y = value, color = "Net")) +
-        scale_color_manual(name = NULL, values = "black") +
-        labs(x = "Year", y = "Imports (TWh/yr)") +
-        ggtitle("Net electricity imports over years", regSubtitle(r)) +
-        facet_wrap(~ iteration, scales = "free")
+    pYear <- ggplot() + 
+      geom_bar(data = dataImportPyPSAr, aes(x = year, y = value, fill = from), stat = "identity") +
+      geom_bar(data = dataExportPyPSAr, aes(x = year, y = value, fill = to), stat = "identity") +
+      scale_fill_discrete(name = "To/From") +
+      geom_line(data = dataNetPyPSAr, aes(x = year, y = value, color = "Net")) +
+      scale_color_manual(name = NULL, values = "black") +
+      labs(x = "Year", y = "Imports (TWh/yr)") +
+      ggtitle("Net electricity imports over years", regSubtitle(r)) +
+      facet_wrap(~ iteration, scales = "free")
 
-      print(pYear)
+    print(pYear)
 
-      pIter <- ggplot() + 
-        geom_bar(data = dataImportPyPSAr, aes(x = iteration, y = value, fill = from), stat = "identity") +
-        geom_bar(data = dataExportPyPSAr, aes(x = iteration, y = value, fill = to), stat = "identity") +
-        scale_fill_discrete(name = "To/From") +
-        geom_line(data = dataNetPyPSAr, aes(x = iteration, y = value, color = "Net")) +
-        scale_color_manual(name = NULL, values = "black") +
-        labs(x = "Iteration", y = "Imports (TWh/yr)") +
-        scale_x_continuous(breaks = integer_breaks()) +
-        ggtitle("Net electricity imports over iterations", regSubtitle(r)) +
-        facet_wrap(~ year, scales = "free")
+    pIter <- ggplot() + 
+      geom_bar(data = dataImportPyPSAr, aes(x = iteration, y = value, fill = from), stat = "identity") +
+      geom_bar(data = dataExportPyPSAr, aes(x = iteration, y = value, fill = to), stat = "identity") +
+      scale_fill_discrete(name = "To/From") +
+      geom_line(data = dataNetPyPSAr, aes(x = iteration, y = value, color = "Net")) +
+      scale_color_manual(name = NULL, values = "black") +
+      labs(x = "Iteration", y = "Imports (TWh/yr)") +
+      scale_x_continuous(breaks = integer_breaks()) +
+      ggtitle("Net electricity imports over iterations", regSubtitle(r)) +
+      facet_wrap(~ year, scales = "free")
 
-      print(pIter)
-    }
+    print(pIter)
   }
 }
 
@@ -2015,8 +2011,13 @@ dataImportPriceREMIND <- readREMINDgdx(
     recalcUnit = trUSDpTWa2USDpMWh) %>%
   select(!tradeSe)
 
-dataTradePricePyPSA <- readPyPSAcsv(
-    paths = file.path(pyValidationDirs, "crossborder_prices.csv")) %>%
+dataImportPricePyPSA <- readPyPSAcsv(
+    paths = file.path(pyValidationDirs, "crossborder_prices_import.csv")) %>%
+    # Increment iteration by 1 to match REMIND
+    mutate(iteration = iteration + 1)
+
+dataExportPricePyPSA <- readPyPSAcsv(
+    paths = file.path(pyValidationDirs, "crossborder_prices_export.csv")) %>%
     # Increment iteration by 1 to match REMIND
     mutate(iteration = iteration + 1)
 
@@ -2025,7 +2026,7 @@ dataTradePyPSA <- readPyPSAcsv(
     # Increment iteration by 1 to match REMIND
     mutate(iteration = iteration + 1)
 
-dataImportPricePyPSA <- full_join(dataTradePricePyPSA, dataTradePyPSA, by = c("year", "iteration", "from", "to")) %>%
+dataImportPricePyPSA <- full_join(dataImportPricePyPSA, dataTradePyPSA, by = c("year", "iteration", "from", "to")) %>%
   group_by(year, to, iteration) %>%
   summarise(priceImport = sum(price*exports)/sum(exports))
 
@@ -2038,7 +2039,7 @@ dataExportPriceREMIND <- readREMINDgdx(
     recalcUnit = trUSDpTWa2USDpMWh) %>%
   select(!tradeSe)
 
-dataExportPricePyPSA <- full_join(dataTradePricePyPSA, dataTradePyPSA, by = c("year", "iteration", "from", "to")) %>%
+dataExportPricePyPSA <- full_join(dataExportPricePyPSA, dataTradePyPSA, by = c("year", "iteration", "from", "to")) %>%
   group_by(year, from, iteration) %>%
   summarise(priceExport = sum(price*exports)/sum(exports))
 
@@ -2120,9 +2121,9 @@ This section includes variables that are not exchanged directly between REMIND a
 
 ## Capacities
 
-### Optimal capacities in REMIND
+### Optimal capacities line charts
 
-```{r optimal capacities in REMIND}
+```{r optimal capacities line charts}
 #dataCapREMIND <- readREMINDgdx(
 #    paths = rmFiles,
 #    gdxVar = "vm_cap",
@@ -2140,6 +2141,15 @@ dataPHScapREMIND <- readREMINDgdx(
     restoreZeros = TRUE,
     recalcUnit = 1e3)  # TW to GW
 
+dataCapPyPSA <- readPyPSAcsv(
+    paths = file.path(pyValidationDirs, "optimal_capacities.csv")) %>%
+  filter(type == "Generator") %>%
+  group_by(year,region,carrier,iteration) %>%
+  revalue.levels(carrier = py2genTech) %>%
+  mutate(value = value / 1e3) %>%  # Convert MW to GW
+  select(!type) %>%
+  rename(technology = carrier)
+
 for (r in regList) {
 
   dataCapREMINDplot <- left_join(dataCapREMIND %>% mutate(vm_cap = 1E3*vm_cap), dataPHScapREMIND) %>%
@@ -2150,20 +2160,30 @@ for (r in regList) {
     summarise(cap = sum(cap)) %>%
     order.levels(technology = names(colorsTech))
 
+  dataCapPyPSAplot <- dataCapPyPSA %>%
+    filter(region %in% r) %>%
+    group_by(year, technology, iteration) %>%
+    summarise(cap = sum(value)) %>%
+    order.levels(technology = names(colorsTech))
+
   pYear <- ggplot() +
-    geom_line(data = dataCapREMINDplot, aes(x = year, y = cap, color = technology)) +
+    geom_line(data = dataCapREMINDplot, aes(x = year, y = cap, color = technology, linetype = "REMIND")) +
+    geom_line(data = dataCapPyPSAplot, aes(x = year, y = cap, color = technology, linetype = "PyPSA-Eur")) +
     scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
+    scale_linetype_manual(name = NULL, values = c("REMIND" = "solid", "PyPSA-Eur" = "dashed")) +
     labs(x = "Year", y = "Capacity (GW)") +
-    ggtitle("Optimal capacities in REMIND over years", regSubtitle(r))
+    ggtitle("Optimal capacities over years", regSubtitle(r))
   
   print(pYear + facet_wrap(~ iteration))
 
   pIter <- ggplot() +
-    geom_line(data = dataCapREMINDplot, aes(x = iteration, y = cap, color = technology)) +
+    geom_line(data = dataCapREMINDplot, aes(x = iteration, y = cap, color = technology, linetype = "REMIND")) +
+    geom_line(data = dataCapPyPSAplot, aes(x = iteration, y = cap, color = technology, linetype = "PyPSA-Eur")) +
     scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
+    scale_linetype_manual(name = NULL, values = c("REMIND" = "solid", "PyPSA-Eur" = "dashed")) +
     labs(x = "Iteration", y = "Capacity (GW)") +
     scale_x_continuous(breaks = integer_breaks()) +
-    ggtitle("Optimal capacities in REMIND over iterations", regSubtitle(r))
+    ggtitle("Optimal capacities over iterations", regSubtitle(r))
 
   print(pIter + facet_wrap(~ year, scales = "free"))
 
@@ -2175,13 +2195,13 @@ for (r in regList) {
 }
 ```
 
-### Pre-investment capacities and capacity expansion over years
+### Pre-investment capacities and investment decision
 
 The following plots contain the pre-investment capacities and each model's capacity expansion decision.
 Pre-investment capacities are determined in REMIND and passed to PyPSA-Eur as "free capacity", i.e. capacity for which PyPSA-Eur does not have to pay any CAPEX.
 PyPSA-Eur should therefore only start investing into new capacity once the free pre-investment capacity has been fully used. PyPSA-Eur does not have to use all of the pre-investment capacity.
 
-```{r capacity expansion over years}
+```{r pre-investment capacities and investment decision}
 
 # Read REMIND data
 dataPreInvCapREMIND <- readREMINDgdx(
@@ -2331,8 +2351,6 @@ for (r in regList) {
 }
 ```
 
-### Pre-investment capacities and capacity expansion over iterations
-
 ```{r capacity expansion over iterations, fig.height = 3.5}
 if (FALSE) {
 for (r in regList){
@@ -2391,9 +2409,9 @@ for (r in regList){
 }
 ```
 
-### Optimal capacity over years
+### Optimal capacity bar charts side-by-side
 
-```{r optimal capacity over years}
+```{r optimal capacity bar charts side-by-side}
 # REMIND
 #dataCapREMIND <- readREMINDgdx(
 #  paths = rmFiles,
@@ -2571,110 +2589,11 @@ for (r in regList){
 }
 ```
 
-### Optimal capacity over iterations
-
-```{r optimal capacity over iterations, fig.show = "hold", fig.width = 5, fig.height = 3.5}
-if (FALSE) {
-for (r in regList) {
-  for (y in years) {
-    dataCapREMINDploty <- dataCapREMINDplot %>%
-      filter(region %in% r,
-             year == y) %>%
-      group_by(iteration, technology) %>%
-      summarise(value = sum(value))
-
-    dataCapREMINDplotytot <- dataCapREMINDploty %>%
-      group_by(iteration) %>%
-      summarise(value = sum(value))
-
-    dataCapPyPSAploty <- dataCapPyPSAplot %>%
-      filter(region %in% r,
-             year == y) %>%
-      group_by(iteration, technology) %>%
-      summarise(value = sum(value))
-
-    dataCapPyPSAplotytot <- dataCapPyPSAploty %>%
-      group_by(iteration) %>%
-      summarise(value = sum(value))
-
-    dataPeakResLoadMinREMINDplot <- dataPeakResLoadMinREMIND %>%
-      filter(region %in% r,
-             year == y) %>%
-      group_by(iteration) %>%
-      summarise(minCap = sum(minCap))
-
-    dataPeakResLoadPyPSAplot <- dataPeakResLoadPyPSA %>%
-      filter(region %in% r,
-             year == y) %>%
-      group_by(iteration) %>%
-      summarise(minCap = sum(absolute))
-
-    pCapComp <- ggplot() +
-      geom_bar(data = dataCapREMINDploty,
-              mapping = aes(x = iteration, y = value, fill = technology),
-              stat = "identity",
-              position = position_stacknudge(x = -0.2),
-              width = 0.25) +
-      geom_bar(data = dataCapREMINDplotytot,
-              mapping = aes(x = iteration, y = value, linetype = "REMIND"),
-              stat = "identity",
-              position = position_nudge(x = -0.2),
-              width = 0.25,
-              linewidth = 0.25,
-              color = "black",
-              fill = NA) +
-      geom_bar(data = dataCapPyPSAploty,
-              mapping = aes(x = iteration, y = value, fill = technology),
-              stat = "identity",
-              position = position_stacknudge(x = 0.2),
-              width = 0.25) +
-      geom_bar(data = dataCapPyPSAplotytot,
-              mapping = aes(x = iteration, y = value, linetype = "PyPSA-Eur"),
-              stat = "identity",
-              position = position_nudge(x = 0.2),
-              width = 0.25,
-              linewidth = 0.25,
-              color = "black",
-              fill = NA) +
-      geom_point(data = dataPeakResLoadMinREMINDplot,
-                mapping = aes(x = iteration, y = minCap, shape = "Peak residual load"),
-                position = position_nudge(x = -0.2),
-                fill = "white") +
-      geom_point(data = dataPeakResLoadPyPSAplot,
-                mapping = aes(x = iteration, y = minCap, shape = "Peak residual load"),
-                position = position_nudge(x = 0.2),
-                fill = "white") +
-      scale_fill_manual(
-        name = "Technology",
-        values = colorsTech,
-        labels = namesTech,
-      ) +
-      scale_linetype_manual(
-        name = "Model",
-        values = c("REMIND" = "solid", "PyPSA-Eur" = "dashed"),
-      ) +
-      scale_shape_manual(
-        name = NULL,
-        values = c("Peak residual load" = 23),
-      ) +
-      labs(x = "Iteration", y = "Capacity (GW)") +
-      scale_x_continuous(breaks = rmIterations) +
-      ggtitle(paste("Capacity over iterations, year", y), regSubtitle(r)) +
-      theme(legend.position = "none")  # Don't show legend for now
-
-    print(pCapComp)
-  }
-}
-}
-```
-
 ## Generation
 
-### Generation in REMIND
+### Generation line charts
 
-The following plots are mostly useful to identify oscillations.
-
-```{r generation in REMIND}
+```{r generation line charts}
 dataGenREMIND <- readREMINDgdx(
     paths = rmFiles,
     gdxVar = "v32_usableSeTeDisp",
@@ -2687,36 +2606,57 @@ dataGenREMIND <- readREMINDgdx(
   summarise(value = sum(value)) %>%
   order.levels(technology = names(colorsTech))
 
+dataGenPyPSA <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "generations.csv")) %>%
+  filter(component == "Generator") %>%
+  select(!component) %>%
+  mutate(value = value / 1e6) %>%  # MWh to TWh
+  rename(technology = carrier) %>%
+  revalue.levels(technology = py2genTech)
+
 for (r in regList) {
   dataGenREMINDplot <- dataGenREMIND %>%
     filter(region %in% r) %>%
     group_by(year, technology, iteration) %>%
     summarise(value = sum(value))
 
-  pGenYear <- ggplot() +
-    geom_line(data = dataGenREMINDplot, aes(x = year, y = value, color = technology)) +
-    scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
-    labs(x = "Year", y = "Generation (TWh)") +
-    ggtitle("Generation in REMIND over years", regSubtitle(r)) +
-    facet_wrap(~ iteration)
+  dataGenPyPSAplot <- dataGenPyPSA %>%
+    filter(region %in% r) %>%
+    group_by(year, technology, iteration) %>%
+    summarise(value = sum(value))
 
-  print(pGenYear)
+  pGenYear <- ggplot() +
+    geom_line(data = dataGenREMINDplot, aes(x = year, y = value, color = technology, linetype = "REMIND")) +
+    geom_line(data = dataGenPyPSAplot, aes(x = year, y = value, color = technology, linetype = "PyPSA-Eur")) +
+    scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
+    scale_linetype_manual(name = NULL, values = c("REMIND" = "solid", "PyPSA-Eur" = "dashed")) +
+    labs(x = "Year", y = "Generation (TWh)") +
+    ggtitle("Generation over years", regSubtitle(r))
+
+  print(pGenYear + facet_wrap(~ iteration))
 
   pGenIter <- ggplot() +
-    geom_line(data = dataGenREMINDplot, aes(x = iteration, y = value, color = technology)) +
+    geom_line(data = dataGenREMINDplot, aes(x = iteration, y = value, color = technology, linetype = "REMIND")) +
+    geom_line(data = dataGenPyPSAplot, aes(x = iteration, y = value, color = technology, linetype = "PyPSA-Eur")) +
     scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
+    scale_linetype_manual(name = NULL, values = c("REMIND" = "solid", "PyPSA-Eur" = "dashed")) +
     labs(x = "Iteration", y = "Generation (TWh)") +
     scale_x_continuous(breaks = rmIterations) +
-    ggtitle("Generation in REMIND over iterations", regSubtitle(r)) +
-    facet_wrap(~ year)
+    ggtitle("Generation over iterations", regSubtitle(r))
 
-  print(pGenIter)
+  print(pGenIter + facet_wrap(~ year))
+
+  print(pGenYear + facet_grid(technology ~ iteration, scales = "free", labeller = labeller(technology = namesTech)) +
+          theme(legend.position = "none"))
+
+  print(pGenIter + facet_grid(technology ~ year, scales = "free", labeller = labeller(technology = namesTech)) +
+          theme(legend.position = "none"))
 }
 ```
 
-### Generation over years
+### Generation and trade bar charts side-by-side
 
-```{r generation over years}
+```{r generation bar charts side-by-side}
 # REMIND generation by technology
 dataGenREMIND <- readREMINDgdx(
     paths = rmFiles,
@@ -2761,8 +2701,25 @@ for (r in regList) {
       group_by(year, technology) %>%
       summarise(value = sum(value))
 
-    dataGenREMINDplotitot <- dataGenREMINDploti %>%
-      group_by(year) %>%
+    dataImportREMINDploti <- dataImportREMIND %>%
+      filter(region %in% r,
+             iteration == i) %>%
+      mutate(technology = "Import") %>%
+      group_by(year, technology) %>%
+      summarise(value = sum(vm_Mport))
+
+    dataExportREMINDploti <- dataExportREMIND %>%
+      filter(region %in% r,
+             iteration == i) %>%
+      mutate(technology = "Export") %>%
+      group_by(year, technology) %>%
+      summarise(value = - sum(vm_Xport))
+
+    dataGenTradeREMINDploti <- bind_rows(dataGenREMINDploti, dataImportREMINDploti, dataExportREMINDploti) %>%
+      order.levels(technology = c("Import", names(colorsTech), "Export"))
+
+    dataGenTradeREMINDplotitot <- dataGenTradeREMINDploti %>%
+      group_by(year, technology == "Import", technology == "Export") %>%
       summarise(value = sum(value))
 
     dataLoadREMINDploti <- dataLoadREMIND %>%
@@ -2777,8 +2734,27 @@ for (r in regList) {
       group_by(year, technology) %>%
       summarise(value = sum(value))
 
-    dataGenPyPSAplotitot <- dataGenPyPSAploti %>%
-      group_by(year) %>%
+    dataImportPyPSAploti <- dataImportPyPSA %>%
+      mutate(iteration = iteration - 1) %>%
+      filter(region %in% r,
+             iteration == i) %>%
+      mutate(technology = "Import") %>%
+      group_by(year, technology) %>%
+      summarise(value = sum(value))
+
+    dataExportPyPSAploti <- dataExportPyPSA %>%
+      mutate(iteration = iteration - 1) %>%
+      filter(region %in% r,
+             iteration == i) %>%
+      mutate(technology = "Export") %>%
+      group_by(year, technology) %>%
+      summarise(value = - sum(value))
+
+    dataGenTradePyPSAploti <- bind_rows(dataGenPyPSAploti, dataImportPyPSAploti, dataExportPyPSAploti) %>%
+      order.levels(technology = c("Import", names(colorsTech), "Export"))
+
+    dataGenTradePyPSAplotitot <- dataGenTradePyPSAploti %>%
+      group_by(year, technology == "Import", technology == "Export") %>%
       summarise(value = sum(value))
 
     dataLoadPyPSAploti <- dataLoadPyPSA %>%
@@ -2788,32 +2764,28 @@ for (r in regList) {
       summarise(value = sum(value))
 
     pGenComp <- ggplot() +
-      geom_bar(data = dataGenREMINDploti,
-              mapping = aes(x = year, y = value, fill = technology),
-              stat = "identity",
-              position = position_stacknudge(x = -1.2),
-              width = 2) +
-      geom_bar(data = dataGenREMINDplotitot,
-              mapping = aes(x = year, y = value, linetype = "REMIND"),
-              stat = "identity",
-              position = position_nudge(x = -1.2),
-              width = 2,
-              linewidth = 0.25,
-              color = "black",
-              fill = NA) +
+      geom_col(data = dataGenTradeREMINDploti,
+               mapping = aes(x = year, y = value, fill = technology),
+               position = position_stacknudge(x = -1.2),
+               width = 2) +
+      geom_col(data = dataGenTradeREMINDplotitot,
+               mapping = aes(x = year, y = value, linetype = "REMIND"),
+               position = position_stacknudge(x = -1.2),
+               width = 2,
+               linewidth = 0.25,
+               color = "black",
+               fill = NA) +
       geom_point(data = dataLoadREMINDploti,
                  mapping = aes(x = year, y = value, color = "Load"),
                  position = position_nudge(x = -1.2),
                  shape = 4) +
-      geom_bar(data = dataGenPyPSAploti,
+      geom_col(data = dataGenTradePyPSAploti,
               mapping = aes(x = year, y = value, fill = technology),
-              stat = "identity",
               position = position_stacknudge(x = 1.2),
               width = 2) +
-      geom_bar(data = dataGenPyPSAplotitot,
+      geom_col(data = dataGenTradePyPSAplotitot,
               mapping = aes(x = year, y = value, linetype = "PyPSA-Eur"),
-              stat = "identity",
-              position = position_nudge(x = 1.2),
+              position = position_stacknudge(x = 1.2),
               width = 2,
               linewidth = 0.25,
               color = "black",
@@ -2823,39 +2795,54 @@ for (r in regList) {
                  position = position_nudge(x = 1.2),
                  shape = 4) +
       scale_fill_manual(
-        name = "Technology",
-        values = colorsTech,
-        labels = namesTech) +
+        name = "Domestic generation",
+        values = c("Import" = "#99E8A5", colorsTech, "Export" = "#EBBAA7"),
+        breaks = names(colorsTech),
+        labels = namesTech,
+        guide = guide_legend(order = 4)) +
       scale_linetype_manual(
         name = "Model",
         values = c("REMIND" = "solid", "PyPSA-Eur" = "dashed"),
+        guide = guide_legend(order = 2)
       ) +
       scale_color_manual(
         name = NULL,
         values = c("Load" = "black"),
+        guide = guide_legend(order = 1)
+      ) +
+      # Add fake data for legend
+      new_scale_fill() +
+      geom_col(data = dataGenTradeREMINDploti %>%
+                  filter(year == 2025, technology %in% c("Import", "Export")) %>%
+                  mutate(value = 0),
+               mapping = aes(x = year, y = value, fill = technology)) +
+      scale_fill_manual(
+        name = "Trade",
+        values = c("Import" = "#99E8A5", "Export" = "#EBBAA7"),
+        guide = guide_legend(order = 3)
       ) +
       scale_x_continuous(breaks = years) +
       labs(x = "Year", y = "Generation (TWh)") +
-      ggtitle(paste("Generation over years, iteration", i), regSubtitle(r))
+      ggtitle(paste("Generation and trade, iteration", i), regSubtitle(r))
 
     # Plot relative differences
-    dataGenDiffplot <- full_join(dataGenREMINDploti, dataGenPyPSAploti,
+    dataGenTradeDiffplot <- full_join(dataGenTradeREMINDploti, dataGenTradePyPSAploti,
                       by = c("year", "technology")) %>%
       mutate(relDiff = 100 * (value.x - value.y) / sum(value.x))
 
     pGenDiff <- ggplot() + 
-      geom_bar(data = dataGenDiffplot,
+      geom_bar(data = dataGenTradeDiffplot,
                mapping = aes(x = year, y = relDiff, fill = technology),
                stat = "identity") +
       scale_x_continuous(breaks = years) +
       coord_cartesian(ylim = c(-30,30)) +
       scale_fill_manual(
         name = "Technology",
-        values = colorsTech,
+        values = c("Import" = "#99E8A5", colorsTech, "Export" = "#EBBAA7"),
         labels = namesTech
       ) +
       labs(x = "Year", y = "Relative difference (%)") +
-      ggtitle("Relative difference w.r.t total generation in REMIND")
+      ggtitle("Relative difference w.r.t total load in REMIND")
 
     leg <- get_legend(pGenComp)
 
@@ -2879,105 +2866,9 @@ for (r in regList) {
 }
 ```
 
-### Generation over iterations
+## Pre-factor/anticipation parametrisation
 
-```{r generation over iterations, fig.show = "hold", fig.width = 5, fig.height = 3.5}
-if (FALSE) {
-for (r in regList) {
-  for (y in years) {
-
-    dataGenREMINDploty <- dataGenREMIND %>%
-      filter(region %in% r,
-             year == y) %>%
-      group_by(iteration, technology) %>%
-      summarise(value = sum(value))
-
-    dataGenREMINDplotytot <- dataGenREMINDploty %>%
-      group_by(iteration) %>%
-      summarise(value = sum(value))
-
-    dataLoadREMINDploty <- dataLoadREMIND %>%
-      filter(region %in% r,
-             year == y) %>%
-      group_by(iteration) %>%
-      summarise(value = sum(value))
-
-    dataGenPyPSAploty <- dataGenPyPSA %>%
-      filter(region %in% r,
-             year == y) %>%
-      group_by(iteration, technology) %>%
-      summarise(value = sum(value))
-
-    dataGenPyPSAplotytot <- dataGenPyPSAploty %>%
-      group_by(iteration) %>%
-      summarise(value = sum(value))
-
-    dataLoadPyPSAploty <- dataLoadPyPSA %>%
-      filter(region %in% r,
-             year == y) %>%
-      group_by(iteration) %>%
-      summarise(value = sum(value))
-
-    pGenComp <- ggplot() +
-      geom_bar(data = dataGenREMINDploty,
-              mapping = aes(x = iteration, y = value, fill = technology),
-              stat = "identity",
-              position = position_stacknudge(x = -0.2),
-              width = 0.25) +
-      geom_bar(data = dataGenREMINDplotytot,
-              mapping = aes(x = iteration, y = value, linetype = "REMIND"),
-              stat = "identity",
-              position = position_nudge(x = -0.2),
-              width = 0.25,
-              linewidth = 0.25,
-              color = "black",
-              fill = NA) +
-      geom_point(data = dataLoadREMINDploty,
-                 mapping = aes(x = iteration, y = value, color = "Load"),
-                 position = position_nudge(x = -0.2),
-                 shape = 4) +
-      geom_bar(data = dataGenPyPSAploty,
-              mapping = aes(x = iteration, y = value, fill = technology),
-              stat = "identity",
-              position = position_stacknudge(x = 0.2),
-              width = 0.25) +
-      geom_bar(data = dataGenPyPSAplotytot,
-              mapping = aes(x = iteration, y = value, linetype = "PyPSA-Eur"),
-              stat = "identity",
-              position = position_nudge(x = 0.2),
-              width = 0.25,
-              linewidth = 0.25,
-              color = "black",
-              fill = NA) +
-      geom_point(data = dataLoadPyPSAploty,
-                 mapping = aes(x = iteration, y = value, color = "Load"),
-                 position = position_nudge(x = 0.2),
-                 shape = 4) +
-      scale_fill_manual(
-        name = "Technology",
-        values = colorsTech,
-        labels = namesTech,
-      ) +
-      scale_linetype_manual(
-        name = "Model",
-        values = c("REMIND" = "solid", "PyPSA-Eur" = "dashed"),
-      ) +
-      scale_color_manual(
-        name = NULL,
-        values = c("Load" = "black"),
-      ) +
-      labs(x = "Iteration", y = "Generation (TWh)") +
-      scale_x_continuous(breaks = rmIterations) +
-      ggtitle(paste("Generation over iterations, year", y), regSubtitle(r)) +
-      theme(legend.position = "none")  # Don't show legend for now
-
-    print(pGenComp)
-  }
-}
-}
-```
-
-## Generation shares of REMIND technologies
+### Generation shares of REMIND technologies
 
 Generation shares are not explicitly coupled between REMIND and PyPSA-Eur, but used to parametrise the pre-factor equations to avoid oscillations. If they don't converge, there is a always a distortion in the variables passed from PyPSA-Eur to REMIND.
 
@@ -3039,7 +2930,7 @@ for (r in regList) {
 }
 ```
 
-## Generation shares of REMIND regions
+### Generation shares of REMIND regions
 
 The following plots show the generation shares of REMIND regions. They are not explicitly coupled between REMIND and PyPSA-Eur, but used to parametrise the pre-factor equations for electricity trade. If they don't converge, there is a always a distortion in the electricity trade volume passed from PyPSA-Eur to REMIND.
 
@@ -3101,9 +2992,11 @@ print(pREMINDiter)
 
 ```
 
-## Electricity price
+## Electricity prices
 
-```{r electricity price over years}
+### Electricity price only
+
+```{r electricity price}
 # REMIND
 dataElecPriceREMIND <- readREMINDgdx(
     paths = rmFiles,
@@ -3156,6 +3049,60 @@ if (length(regions) > 1) {
 }
 
 print(pElecPriceIter)
+```
+
+### Electricity and trade prices
+
+```{r electricity and trade prices}
+
+dataImportPricePyPSA <- dataImportPricePyPSA %>%
+  rename(region = to)
+
+dataExportPricePyPSA <- dataExportPricePyPSA %>%
+  rename(region = from)
+
+if (isTRUE(cfg$gms$c32_pypsa_trade == "on")) {
+  for (r in tail(regList,-1)) {
+
+    pPricesYear <- ggplot() +
+      geom_line(data = dataElecPriceREMIND %>% filter(region == r),
+                mapping = aes(x = year, y = pm_SEPrice, color = "REMIND")) +
+      geom_line(data = dataElecPricePyPSA %>% filter(region == r),
+                mapping = aes(x = year, y = value, color = "PyPSA-Eur")) +
+      geom_line(data = dataImportPricePyPSA %>% filter(region == r),
+                mapping = aes(x = year, y = priceImport, color = "Import price (PyPSA-Eur)")) +
+      geom_line(data = dataExportPricePyPSA %>% filter(region == r),
+                mapping = aes(x = year, y = priceExport, color = "Export price (PyPSA-Eur)")) +
+      scale_color_discrete(name = NULL,
+                          breaks = c("PyPSA-Eur", "REMIND", "Import price (PyPSA-Eur)", "Export price (PyPSA-Eur)")) +
+      labs(x = "Year", y = "Electricity price ($/MWh)") +
+      scale_y_continuous(limits = c(0, NA)) +
+      ggtitle("Electricity price over years", regSubtitle(r)) +
+      facet_wrap(~ iteration, scales = "free")
+
+    print(pPricesYear)
+
+    pPricesIter <- ggplot() +
+      geom_line(data = dataElecPriceREMIND %>% filter(region == r),
+                mapping = aes(x = iteration, y = pm_SEPrice, color = "REMIND")) +
+      geom_line(data = dataElecPricePyPSA %>% filter(region == r),
+                mapping = aes(x = iteration, y = value, color = "PyPSA-Eur")) +
+      geom_line(data = dataImportPricePyPSA %>% filter(region == r),
+                mapping = aes(x = iteration, y = priceImport, color = "Import price (PyPSA-Eur)")) +
+      geom_line(data = dataExportPricePyPSA %>% filter(region == r),
+                mapping = aes(x = iteration, y = priceExport, color = "Export price (PyPSA-Eur)")) +
+      scale_color_discrete(name = NULL,
+                          breaks = c("PyPSA-Eur", "REMIND", "Import price (PyPSA-Eur)", "Export price (PyPSA-Eur)")) +
+      labs(x = "Iteration", y = "Electricity price ($/MWh)") +
+      scale_x_continuous(breaks = rmIterations) +
+      scale_y_continuous(limits = c(0, NA)) +
+      ggtitle("Electricity price over iterations") +
+      facet_wrap(~ year, scales = "free")
+    
+    print(pPricesIter)
+  }
+}
+
 ```
 
 ## LCOEs
@@ -3780,7 +3727,33 @@ dataVREpotPyPSA <- readPyPSAcsv(paths = file.path(pyValidationDirs, "potentials.
   filter(!is.na(value),
          !is.infinite(value)) %>%
   rename(technology = carrier) %>%
+revalue.levels(technology = py2genTech) %>%
   order.levels(technology = names(colorsTech))
+
+for (r in tail(regList, -1)) {
+
+  dataVREpotREMINDplot <- dataVREpotREMIND %>%
+    filter(region == r)
+
+  dataVREpotPyPSAplot <- dataVREpotPyPSA %>%
+    filter(region == r)
+
+  pVREpot <- ggplot() +
+    geom_line(data = dataVREpotREMINDplot,
+              mapping = aes(x = year, y = value, color = technology)) +
+    geom_point(data = dataVREpotPyPSAplot,
+              mapping = aes(x = year, y = value, color = technology)) +
+    scale_color_manual(
+      name = "Technology",
+      values = colorsTech,
+      labels = namesTech,
+    ) +
+    labs(x = "Year", y = "VRE potential (GW)") +
+    ggtitle("VRE potentials", regSubtitle(r)) +
+    facet_grid(technology ~ iteration, scales = "free", labeller = labeller(technology = namesTech))
+
+  print(pVREpot)
+}
 
 pVREpot <- ggplot() +
   geom_line(data = dataVREpotREMIND,
