@@ -32,7 +32,7 @@ $endif
         /windoff, wind, hydro, spv/
 
     entyPePy32(all_enty)        "Primary energy carriers for which prices are coupled to PyPSA"
-        /peoil, pegas, pecoal, peur, pehyd, pewin, pesol, pebiolc/
+        /peoil, pegas, pecoal, peur, pehyd, pewin, pesol, pebiolc/ !! TODO: Remove pehyd, pewin, pesol
 
     carrierPy32                 "Carrier from PyPSA"
         /"AC", "H2 demand REMIND"/

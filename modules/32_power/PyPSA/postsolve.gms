@@ -143,6 +143,9 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
   !! This is due to the implementation in PyPSA-Eur, where the electrolyser efficiency is already taken into account
   p32_ElecH2Demand(t,regi)$(tPy32(t) AND regPy32(regi)) = vm_prodSe.l(t,regi,"seel","seh2","elh2") + EPS;
 
+  !! Save v32_usableSeDispNet for next iteration's electricity trade implementation
+  p32_usableSeDispNet0(t,regi,"seel")$(tPy32(t) AND regPy32(regi)) = v32_usableSeDispNet.l(t,regi,"seel");
+
   !! Export REMIND output data for PyPSA (REMIND2PyPSAEUR.gdx)
   !! Don't use fulldata.gdx so that we keep track of which variables are exported to PyPSA
   option epsToZero=on;
@@ -194,8 +197,9 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_LoadPrice=load_price;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Curtailment=curtailment;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_PeakResLoadRel=peak_residual_load_relative;
-  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_ElecTrade=crossborder_flow;
-  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_ElecTradePrice=crossborder_price;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Trade=crossborder_flow;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_TradePriceImport=crossborder_price_import;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_TradePriceExport=crossborder_price_export;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_shSeElRegi=generation_region_share;
 
   !! Track capacity factors and market values in iterations
