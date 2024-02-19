@@ -1698,7 +1698,7 @@ $setglobal c32_pypsa_preFac on !! def = on !! regexp = off|on
 $setglobal c32_pypsa_preFacManual off !! def = on !! regexp = off|on
 *** c32_pypsa_trade
 *** Switch to enable electricity trade
-$setglobal c32_pypsa_trade on !! def = off !! regexp = off|on
+$setglobal c32_pypsa_trade off !! def = off !! regexp = off|on
 *** c32_pypsa_trade_quantities
 *** Switch to include electricity trade quantities from PyPSA
 *** (abs = absolute, rel = relative to load)
@@ -1710,6 +1710,12 @@ $setglobal c32_pypsa_trade_prices abs !! def = abs !! regexp = abs|diff
 *** c32_pypsa_trade_anticipation
 *** Switch to enable anticipation of trade
 $setglobal c32_pypsa_trade_anticipation off !! def = off !! regexp = off|on
+*** c32_pypsa_potentials
+*** Switch to enable reading in VRE potentials from PyPSA (in terms of capacity, not generation)
+$setglobal c32_pypsa_potentials off !! def = off !! regexp = off|on
+*** c32_windoffFree
+*** Switch to enable free wind offshore deployment
+$setglobal c32_windoffFree off !! def = off !! regexp = off|on
 *** set conopt version. Warning: conopt4 is in beta
 $setGlobal cm_conoptv  conopt3    !! def = conopt3
 *' c_empty_model  "Short-circuit the model, just use the input as solution"

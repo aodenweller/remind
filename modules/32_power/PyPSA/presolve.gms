@@ -35,7 +35,7 @@ if ((sm_PyPSA_eq eq 1),
   q32_h2turbVREcapfromTestor.l(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
   q32_h2turbVREcapfromTestor.m(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
   q32_h2turbVREcapfromTestorUp.l(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
-  q32_h2turbVREcapfromTestor.m(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
+  q32_h2turbVREcapfromTestorUp.m(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
   q32_limitCapTeGrid.l(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
   q32_limitCapTeGrid.m(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
   q32_shStor.l(t,regi,teVRE)$(tPy32(t) and regPy32(regi)) = 0;
@@ -48,6 +48,16 @@ if ((sm_PyPSA_eq eq 1),
   q32_shAddIntCostTotVRE.m(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
   q32_operatingReserve.l(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
   q32_operatingReserve.m(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
+$ifthen.c32_pypsa_potentials %c32_pypsa_potentials% == "on"
+  q_limitProd.l(t,regi,te,rlf)$(tPy32(t) and regPy32(regi) and (tePyVRE32(te) AND NOT sameas(te,"hydro"))) = 0;
+  q_limitProd.m(t,regi,te,rlf)$(tPy32(t) and regPy32(regi) and (tePyVRE32(te) AND NOT sameas(te,"hydro"))) = 0;
+$endif.c32_pypsa_potentials
+$ifthen.c32_windoffFree %c32_windoffFree% == "on"
+  q_windoff_low.l(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
+  q_windoff_low.m(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
+  q_windoff_high.l(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
+  q_windoff_high.m(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
+$endif.c32_windoffFree
 );
 
 *** Fade out pre-factor if configured

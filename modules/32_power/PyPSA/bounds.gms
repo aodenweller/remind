@@ -171,4 +171,13 @@ $endif.c32_pypsa_trade_prices
 );
 $endif.c32_pypsa_trade
 
+*** VRE potentials from PyPSA-Eur (in terms of capacity, not generation)
+$ifthen.c32_pypsa_potentials "%c32_pypsa_potentials%" == "on"
+if ((sm_PyPSA_eq eq 1),
+  !! Set upper bound for vm_cap for VRE technologies
+  vm_cap.up(t,regi,te,"1")$(tPy32(t) AND regPy32(regi) AND tePyVRE32(te) AND NOT sameas(te, "hydro")) =
+    p32_PyPSA_Potential(t,regi,te) / 1E6;  !! MW to TW
+);
+$endif.c32_pypsa_potentials
+
 *** EOF ./modules/32_power/PyPSA/bounds.gms

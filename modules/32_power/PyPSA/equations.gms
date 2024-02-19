@@ -174,7 +174,7 @@ q32_storloss(t,regi,teVRE)$(t.val ge 2020)..
   * vm_usableSeTe(t,regi,"seel",teVRE)
 ;
 
-q32_TotVREshare(t,regi)$( ( ( regPy32(regi) AND ( sm_PyPSA_eq eq 0 OR ( sm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) ) )..
+q32_TotVREshare(t,regi)$( ( regPy32(regi) AND ( sm_PyPSA_eq eq 0 OR ( sm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) )..
   v32_TotVREshare(t,regi)
   =e=
   sum(teVRE, 
@@ -469,14 +469,16 @@ $endif
 
 $endif.c32_pypsa_trade_quantities
 
-* Calculate share of imports in relation to domestic production
+*** Calculate share of imports in relation to domestic production
+* This can be used to limit the share of imports in the electricity mix or to parametrise anticipation for electricity imports
 q32_shSeELTradeImport(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
   v32_shSeELTradeImport(t,regi) * v32_usableSeDisp(t,regi,"seel")
   =e=
   vm_Mport(t,regi,"seel")
 ;
 
-* Calculate share of exports in relation to domestic production
+*** Calculate share of exports in relation to domestic production
+* This can be used to limit the share of exports in the electricity mix or to parametrise anticipation for electricity exports
 q32_shSeELTradeExport(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
   v32_shSeELTradeExport(t,regi) * v32_usableSeDisp(t,regi,"seel")
   =e=

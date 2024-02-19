@@ -31,6 +31,7 @@ p32_PyPSA_shSeEl(tPy32,regPy32,tePy32) = 0;
 p32_PyPSA_shSeElRegi(tPy32,regPy32) = 0;
 p32_PyPSA_ValueFactor(tPy32,regPy32,tePy32) = 0;
 p32_PyPSA_Curtailment(tPy32,regPy32,tePyVRE32) = 0;
+p32_PyPSA_Potential(tPy32,regPy32,tePy32) = 0;
 s32_PyPSA_called(iteration) = 0;
 p32_usableSeDispNet0(tPy32,regPy32,"seel") = 0;
 v32_usableSeDisp.l(tPy32,regPy32,"seel") = 0;

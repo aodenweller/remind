@@ -349,13 +349,21 @@ q_capTotal(t,regi,entyPe,entySe)$( capTotal(entyPe,entySe))..
 *'
 ***---------------------------------------------------------------------------
 $IFTHEN.WindOff %cm_wind_offshore% == "1"
+$IFTHEN.c32_windoffFree %c32_windoffFree% == "on"
+q_windoff_low(t,regi)$(t.val > 2020 AND ( ( regPy32(regi) AND ( sm_PyPSA_eq eq 0 OR ( sm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) ) )..
+$ELSE.c32_windoffFree
 q_windoff_low(t,regi)$(t.val > 2020)..
+$ENDIF.c32_windoffFree
    sum(rlf, vm_deltaCap(t,regi,"windoff",rlf))
    =g=
    pm_shareWindOff(t,regi) * pm_shareWindPotentialOff2On(regi) * 0.5 * sum(rlf, vm_deltaCap(t,regi,"wind",rlf))
 ;
 
+$IFTHEN.c32_windoffFree %c32_windoffFree% == "on"
+q_windoff_high(t,regi)$(t.val > 2020 AND ( ( regPy32(regi) AND ( sm_PyPSA_eq eq 0 OR ( sm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) ) )..
+$ELSE.c32_windoffFree
 q_windoff_high(t,regi)$(t.val > 2020)..
+$ENDIF.c32_windoffFree
    sum(rlf, vm_deltaCap(t,regi,"windoff",rlf))
    =l=
    pm_shareWindOff(t,regi) * pm_shareWindPotentialOff2On(regi) * 2 * sum(rlf, vm_deltaCap(t,regi,"wind",rlf))
@@ -405,7 +413,11 @@ qm_fuel2pe(t,regi,peRicardian(enty))..
 *' Definition of resource constraints for renewable energy types:
 ***---------------------------------------------------------------------------
 *ml* assuming maxprod to be technical potential
+$IFTHEN.c32_pypsa_potentials "%c32_pypsa_potentials%" == "on"
+q_limitProd(t,regi,teRe2rlfDetail(teReNoBio(te),rlf))$( ( regPy32(regi) AND ( sm_PyPSA_eq eq 0 OR ( sm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) OR ( NOT tePyVRE32(te) OR sameas(te,"hydro") ) )..
+$ELSE.c32_pypsa_potentials
 q_limitProd(t,regi,teRe2rlfDetail(teReNoBio(te),rlf))..
+$ENDIF.c32_pypsa_potentials
   pm_dataren(regi,"maxprod",rlf,te)
   =g=
   ( 1$teRLDCDisp(te) +  pm_dataren(regi,"nur",rlf,te)$(NOT teRLDCDisp(te)) ) * vm_capFac(t,regi,te) * vm_capDistr(t,regi,te,rlf);

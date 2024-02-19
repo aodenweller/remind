@@ -2001,7 +2001,7 @@ if (isTRUE(cfg$gms$c32_pypsa_trade == "on")) {
 ### Electricity trade price
 
 ```{r electricity trade price}
-
+if (isTRUE(cfg$gms$c32_pypsa_trade == "on")) {
 dataImportPriceREMIND <- readREMINDgdx(
     paths = rmFiles,
     gdxVar = "pm_MPortsPrice",
@@ -2112,7 +2112,50 @@ pTradePriceIter <- ggplot() +
   facet_wrap(~ year, scales = "free")
 
 print(pTradePriceIter)
+}
+```
 
+### Potentials
+
+```{r potentials}
+if (isTRUE(cfg$gms$c32_pypsa_potentials == "on")) {
+
+  dataPotentialsPyPSA <- readPyPSAcsv(
+      paths = file.path(pyValidationDirs, "potentials.csv")) %>%
+      mutate(value = value / 1e3) %>%  # Convert MW to GW
+      rename(technology = carrier) %>%
+    revalue.levels(technology = rm2genTech) %>%
+    group_by(year, region, technology) %>%
+    summarise(value = unique(value))
+
+  dataPotentialsREMIND <- readREMINDgdx(
+      paths = rmFiles,
+      gdxVar = "vm_cap",
+      columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "rlf" = "grade", "value" = "value"),
+      colFilter = list("year" = years, "region" = regions, "grade" = 1, "technology" = names(rm2genTech)),
+      restoreZeros = FALSE,
+      field = "up",
+      recalcUnit = 1e3) %>%  # TW to GW
+    revalue.levels(technology = rm2genTech) %>%
+    filter(technology %in% unique(dataPotentialsPyPSA$technology),
+           !is.infinite(value)) %>%
+    group_by(year, region, technology) %>%
+    summarise(value = unique(value))
+
+  p <- ggplot() +
+    geom_line(data = dataPotentialsREMIND, aes(x = year, y = value, color = technology)) +
+    geom_point(data = dataPotentialsPyPSA, aes(x = year, y = value, color = technology)) +
+    scale_color_manual(
+      name = "Technology",
+      values = colorsTech,
+      labels = namesTech,
+    ) +
+    labs(x = "Year", y = "Potential (GW)") +
+    ggtitle("Potentials over years") +
+    facet_grid(technology ~ region, scales = "free", labeller = labeller(technology = namesTech))
+
+  print(p)
+}
 ```
 
 # Convergence indicators
@@ -2307,21 +2350,21 @@ for (r in regList) {
       geom_bar(data = dataCapInvestREMINDplot,
               mapping = aes(x = year, y = value, alpha = variable, fill = technology, linetype = "REMIND"),
               stat = "identity",
-              position = position_stacknudge(x = -1.2),
+              position = position_stacknudge(x = -1.1),
               color = "black",
               linewidth = 0.25,
-              width = 2) +
+              width = 1.8) +
       geom_bar(data = dataCapInvestPyPSAplot,
               mapping = aes(x = year, y = value, alpha = variable, fill = technology, linetype = "PyPSA-Eur"),
               stat = "identity",
-              position = position_stacknudge(x = 1.2),
+              position = position_stacknudge(x = 1.1),
               color = "black",
               linewidth = 0.25,
-              width = 2) +
+              width = 1.8) +
       geom_point(data = dataPreInvCapAvgREMINDplot,
                 mapping = aes(x = year, y = p32_preInvCapAvg, fill = technology, shape = "Averaged"),
                 color = "black",
-                position = position_nudge(x = -1.2),
+                position = position_nudge(x = -1.1),
                 size = 1) +
       scale_shape_manual(name = NULL,
                          values = c("Averaged" = 4),
@@ -2499,36 +2542,36 @@ for (r in regList){
       geom_bar(data = dataCapREMINDploti,
               mapping = aes(x = year, y = value, fill = technology),
               stat = "identity",
-              position = position_stacknudge(x = -1.2),
-              width = 2) +
+              position = position_stacknudge(x = -1.1),
+              width = 1.8) +
       geom_bar(data = dataCapREMINDplotitot,
               mapping = aes(x = year, y = value, linetype = "REMIND"),
               stat = "identity",
-              position = position_nudge(x = -1.2),
-              width = 2,
+              position = position_nudge(x = -1.1),
+              width = 1.8,
               linewidth = 0.25,
               color = "black",
               fill = NA) +
       geom_bar(data = dataCapPyPSAploti,
               mapping = aes(x = year, y = value, fill = technology),
               stat = "identity",
-              position = position_stacknudge(x = 1.2),
-              width = 2) +
+              position = position_stacknudge(x = 1.1),
+              width = 1.8) +
       geom_bar(data = dataCapPyPSAplotitot,
               mapping = aes(x = year, y = value, linetype = "PyPSA-Eur"),
               stat = "identity",
-              position = position_nudge(x = 1.2),
-              width = 2,
+              position = position_nudge(x = 1.1),
+              width = 1.8,
               linewidth = 0.25,
               color = "black",
               fill = NA) +
       geom_point(data = dataPeakResLoadMinREMINDplot,
                 mapping = aes(x = year, y = minCap, shape = "Peak residual load"),
-                position = position_nudge(x = -1.2),
+                position = position_nudge(x = -1.1),
                 fill = "white") +
       geom_point(data = dataPeakResLoadPyPSAplot,
                 mapping = aes(x = year, y = minCap, shape = "Peak residual load"),
-                position = position_nudge(x = 1.2),
+                position = position_nudge(x = 1.1),
                 fill = "white") +
       scale_fill_manual(
         name = "Technology",
@@ -2692,176 +2735,306 @@ dataLoadPyPSA <- readPyPSAcsv(
   paths = file.path(pyValidationDirs, "electricity_loads.csv")) %>%
   mutate(value = value / 1e6)  # Convert MWh to TWh
 
-for (r in regList) {
-  for (i in rmIterations){
+if (isTRUE(cfg$gms$c32_pypsa_trade == "off")) {
+  for (r in regList) {
+    for (i in rmIterations){
 
-    dataGenREMINDploti <- dataGenREMIND %>%
-      filter(region %in% r,
-             iteration == i) %>%
-      group_by(year, technology) %>%
-      summarise(value = sum(value))
+      dataGenREMINDploti <- dataGenREMIND %>%
+        filter(region %in% r,
+              iteration == i) %>%
+        group_by(year, technology) %>%
+        summarise(value = sum(value))
 
-    dataImportREMINDploti <- dataImportREMIND %>%
-      filter(region %in% r,
-             iteration == i) %>%
-      mutate(technology = "Import") %>%
-      group_by(year, technology) %>%
-      summarise(value = sum(vm_Mport))
+      dataGenREMINDplotitot <- dataGenREMINDploti %>%
+        group_by(year) %>%
+        summarise(value = sum(value))
 
-    dataExportREMINDploti <- dataExportREMIND %>%
-      filter(region %in% r,
-             iteration == i) %>%
-      mutate(technology = "Export") %>%
-      group_by(year, technology) %>%
-      summarise(value = - sum(vm_Xport))
+      dataLoadREMINDploti <- dataLoadREMIND %>%
+        filter(region %in% r,
+              iteration == i) %>%
+        group_by(year) %>%
+        summarise(value = sum(value))
 
-    dataGenTradeREMINDploti <- bind_rows(dataGenREMINDploti, dataImportREMINDploti, dataExportREMINDploti) %>%
-      order.levels(technology = c("Import", names(colorsTech), "Export"))
+      dataGenPyPSAploti <- dataGenPyPSA %>%
+        filter(region %in% r,
+              iteration == i) %>%
+        group_by(year, technology) %>%
+        summarise(value = sum(value))
 
-    dataGenTradeREMINDplotitot <- dataGenTradeREMINDploti %>%
-      group_by(year, technology == "Import", technology == "Export") %>%
-      summarise(value = sum(value))
+      dataGenPyPSAplotitot <- dataGenPyPSAploti %>%
+        group_by(year) %>%
+        summarise(value = sum(value))
 
-    dataLoadREMINDploti <- dataLoadREMIND %>%
-      filter(region %in% r,
-             iteration == i) %>%
-      group_by(year) %>%
-      summarise(value = sum(value))
+      dataLoadPyPSAploti <- dataLoadPyPSA %>%
+        filter(region %in% r,
+              iteration == i) %>%
+        group_by(year) %>%
+        summarise(value = sum(value))
 
-    dataGenPyPSAploti <- dataGenPyPSA %>%
-      filter(region %in% r,
-             iteration == i) %>%
-      group_by(year, technology) %>%
-      summarise(value = sum(value))
+      pGenComp <- ggplot() +
+        geom_bar(data = dataGenREMINDploti,
+                mapping = aes(x = year, y = value, fill = technology),
+                stat = "identity",
+                position = position_stacknudge(x = -1.1),
+                width = 1.8) +
+        geom_bar(data = dataGenREMINDplotitot,
+                mapping = aes(x = year, y = value, linetype = "REMIND"),
+                stat = "identity",
+                position = position_nudge(x = -1.1),
+                width = 1.8,
+                linewidth = 0.25,
+                color = "black",
+                fill = NA) +
+        geom_point(data = dataLoadREMINDploti,
+                  mapping = aes(x = year, y = value, color = "Load"),
+                  position = position_nudge(x = -1.1),
+                  shape = 4) +
+        geom_bar(data = dataGenPyPSAploti,
+                mapping = aes(x = year, y = value, fill = technology),
+                stat = "identity",
+                position = position_stacknudge(x = 1.1),
+                width = 1.8) +
+        geom_bar(data = dataGenPyPSAplotitot,
+                mapping = aes(x = year, y = value, linetype = "PyPSA-Eur"),
+                stat = "identity",
+                position = position_nudge(x = 1.1),
+                width = 1.8,
+                linewidth = 0.25,
+                color = "black",
+                fill = NA) +
+        geom_point(data = dataLoadPyPSAploti,
+                  mapping = aes(x = year, y = value, color = "Load"),
+                  position = position_nudge(x = 1.1),
+                  shape = 4) +
+        scale_fill_manual(
+          name = "Technology",
+          values = colorsTech,
+          labels = namesTech) +
+        scale_linetype_manual(
+          name = "Model",
+          values = c("REMIND" = "solid", "PyPSA-Eur" = "dashed"),
+        ) +
+        scale_color_manual(
+          name = NULL,
+          values = c("Load" = "black"),
+        ) +
+        scale_x_continuous(breaks = years) +
+        labs(x = "Year", y = "Generation (TWh)") +
+        ggtitle(paste("Generation over years, iteration", i), regSubtitle(r))
 
-    dataImportPyPSAploti <- dataImportPyPSA %>%
-      mutate(iteration = iteration - 1) %>%
-      filter(region %in% r,
-             iteration == i) %>%
-      mutate(technology = "Import") %>%
-      group_by(year, technology) %>%
-      summarise(value = sum(value))
+      # Plot relative differences
+      dataGenDiffplot <- full_join(dataGenREMINDploti, dataGenPyPSAploti,
+                        by = c("year", "technology")) %>%
+        mutate(relDiff = 100 * (value.x - value.y) / sum(value.x))
 
-    dataExportPyPSAploti <- dataExportPyPSA %>%
-      mutate(iteration = iteration - 1) %>%
-      filter(region %in% r,
-             iteration == i) %>%
-      mutate(technology = "Export") %>%
-      group_by(year, technology) %>%
-      summarise(value = - sum(value))
+      pGenDiff <- ggplot() + 
+        geom_bar(data = dataGenDiffplot,
+                mapping = aes(x = year, y = relDiff, fill = technology),
+                stat = "identity") +
+        scale_x_continuous(breaks = years) +
+        coord_cartesian(ylim = c(-30,30)) +
+        scale_fill_manual(
+          name = "Technology",
+          values = colorsTech,
+          labels = namesTech
+        ) +
+        labs(x = "Year", y = "Relative difference (%)") +
+        ggtitle("Relative difference w.r.t total generation in REMIND")
 
-    dataGenTradePyPSAploti <- bind_rows(dataGenPyPSAploti, dataImportPyPSAploti, dataExportPyPSAploti) %>%
-      order.levels(technology = c("Import", names(colorsTech), "Export"))
+      leg <- get_legend(pGenComp)
 
-    dataGenTradePyPSAplotitot <- dataGenTradePyPSAploti %>%
-      group_by(year, technology == "Import", technology == "Export") %>%
-      summarise(value = sum(value))
+      pGenPlot <- plot_grid(
+        pGenComp + theme(legend.position = "none"),
+        pGenDiff + theme(legend.position = "none"),
+        ncol = 1,
+        rel_heights = c(1, 0.5),
+        labels = "auto",
+        label_size = font.size)
 
-    dataLoadPyPSAploti <- dataLoadPyPSA %>%
-      filter(region %in% r,
-             iteration == i) %>%
-      group_by(year) %>%
-      summarise(value = sum(value))
+      pGen <- plot_grid(
+        pGenPlot,
+        leg,
+        ncol = 2,
+        rel_widths = c(1, 0.2)
+      )
 
-    pGenComp <- ggplot() +
-      geom_col(data = dataGenTradeREMINDploti,
-               mapping = aes(x = year, y = value, fill = technology),
-               position = position_stacknudge(x = -1.2),
-               width = 2) +
-      geom_col(data = dataGenTradeREMINDplotitot,
-               mapping = aes(x = year, y = value, linetype = "REMIND"),
-               position = position_stacknudge(x = -1.2),
-               width = 2,
-               linewidth = 0.25,
-               color = "black",
-               fill = NA) +
-      geom_point(data = dataLoadREMINDploti,
-                 mapping = aes(x = year, y = value, color = "Load"),
-                 position = position_nudge(x = -1.2),
-                 shape = 4) +
-      geom_col(data = dataGenTradePyPSAploti,
-              mapping = aes(x = year, y = value, fill = technology),
-              position = position_stacknudge(x = 1.2),
-              width = 2) +
-      geom_col(data = dataGenTradePyPSAplotitot,
-              mapping = aes(x = year, y = value, linetype = "PyPSA-Eur"),
-              position = position_stacknudge(x = 1.2),
-              width = 2,
-              linewidth = 0.25,
-              color = "black",
-              fill = NA) +
-      geom_point(data = dataLoadPyPSAploti,
-                 mapping = aes(x = year, y = value, color = "Load"),
-                 position = position_nudge(x = 1.2),
-                 shape = 4) +
-      scale_fill_manual(
-        name = "Domestic generation",
-        values = c("Import" = "#99E8A5", colorsTech, "Export" = "#EBBAA7"),
-        breaks = names(colorsTech),
-        labels = namesTech,
-        guide = guide_legend(order = 4)) +
-      scale_linetype_manual(
-        name = "Model",
-        values = c("REMIND" = "solid", "PyPSA-Eur" = "dashed"),
-        guide = guide_legend(order = 2)
-      ) +
-      scale_color_manual(
-        name = NULL,
-        values = c("Load" = "black"),
-        guide = guide_legend(order = 1)
-      ) +
-      # Add fake data for legend
-      new_scale_fill() +
-      geom_col(data = dataGenTradeREMINDploti %>%
-                  filter(year == 2025, technology %in% c("Import", "Export")) %>%
-                  mutate(value = 0),
-               mapping = aes(x = year, y = value, fill = technology)) +
-      scale_fill_manual(
-        name = "Trade",
-        values = c("Import" = "#99E8A5", "Export" = "#EBBAA7"),
-        guide = guide_legend(order = 3)
-      ) +
-      scale_x_continuous(breaks = years) +
-      labs(x = "Year", y = "Generation (TWh)") +
-      ggtitle(paste("Generation and trade, iteration", i), regSubtitle(r))
+      print(pGen)
+    }
+  }
+}
 
-    # Plot relative differences
-    dataGenTradeDiffplot <- full_join(dataGenTradeREMINDploti, dataGenTradePyPSAploti,
-                      by = c("year", "technology")) %>%
-      mutate(relDiff = 100 * (value.x - value.y) / sum(value.x))
+if (isTRUE(cfg$gms$c32_pypsa_trade == "on")) {
+  for (r in regList) {
+    for (i in rmIterations){
 
-    pGenDiff <- ggplot() + 
-      geom_bar(data = dataGenTradeDiffplot,
-               mapping = aes(x = year, y = relDiff, fill = technology),
-               stat = "identity") +
-      scale_x_continuous(breaks = years) +
-      coord_cartesian(ylim = c(-30,30)) +
-      scale_fill_manual(
-        name = "Technology",
-        values = c("Import" = "#99E8A5", colorsTech, "Export" = "#EBBAA7"),
-        labels = namesTech
-      ) +
-      labs(x = "Year", y = "Relative difference (%)") +
-      ggtitle("Relative difference w.r.t total load in REMIND")
+      dataGenREMINDploti <- dataGenREMIND %>%
+        filter(region %in% r,
+              iteration == i) %>%
+        group_by(year, technology) %>%
+        summarise(value = sum(value))
 
-    leg <- get_legend(pGenComp)
+      dataImportREMINDploti <- dataImportREMIND %>%
+        filter(region %in% r,
+              iteration == i) %>%
+        mutate(technology = "Import") %>%
+        group_by(year, technology) %>%
+        summarise(value = sum(vm_Mport))
 
-    pGenPlot <- plot_grid(
-      pGenComp + theme(legend.position = "none"),
-      pGenDiff + theme(legend.position = "none"),
-      ncol = 1,
-      rel_heights = c(1, 0.5),
-      labels = "auto",
-      label_size = font.size)
+      dataExportREMINDploti <- dataExportREMIND %>%
+        filter(region %in% r,
+              iteration == i) %>%
+        mutate(technology = "Export") %>%
+        group_by(year, technology) %>%
+        summarise(value = - sum(vm_Xport))
 
-    pGen <- plot_grid(
-      pGenPlot,
-      leg,
-      ncol = 2,
-      rel_widths = c(1, 0.2)
-    )
+      dataGenTradeREMINDploti <- bind_rows(dataGenREMINDploti, dataImportREMINDploti, dataExportREMINDploti) %>%
+        order.levels(technology = c("Import", names(colorsTech), "Export"))
 
-    print(pGen)
+      dataGenTradeREMINDplotitot <- dataGenTradeREMINDploti %>%
+        group_by(year, technology == "Import", technology == "Export") %>%
+        summarise(value = sum(value))
+
+      dataLoadREMINDploti <- dataLoadREMIND %>%
+        filter(region %in% r,
+              iteration == i) %>%
+        group_by(year) %>%
+        summarise(value = sum(value))
+
+      dataGenPyPSAploti <- dataGenPyPSA %>%
+        filter(region %in% r,
+              iteration == i) %>%
+        group_by(year, technology) %>%
+        summarise(value = sum(value))
+
+      dataImportPyPSAploti <- dataImportPyPSA %>%
+        mutate(iteration = iteration - 1) %>%
+        filter(region %in% r,
+              iteration == i) %>%
+        mutate(technology = "Import") %>%
+        group_by(year, technology) %>%
+        summarise(value = sum(value))
+
+      dataExportPyPSAploti <- dataExportPyPSA %>%
+        mutate(iteration = iteration - 1) %>%
+        filter(region %in% r,
+              iteration == i) %>%
+        mutate(technology = "Export") %>%
+        group_by(year, technology) %>%
+        summarise(value = - sum(value))
+
+      dataGenTradePyPSAploti <- bind_rows(dataGenPyPSAploti, dataImportPyPSAploti, dataExportPyPSAploti) %>%
+        order.levels(technology = c("Import", names(colorsTech), "Export"))
+
+      dataGenTradePyPSAplotitot <- dataGenTradePyPSAploti %>%
+        group_by(year, technology == "Import", technology == "Export") %>%
+        summarise(value = sum(value))
+
+      dataLoadPyPSAploti <- dataLoadPyPSA %>%
+        filter(region %in% r,
+              iteration == i) %>%
+        group_by(year) %>%
+        summarise(value = sum(value))
+
+      pGenComp <- ggplot() +
+        geom_col(data = dataGenTradeREMINDploti,
+                mapping = aes(x = year, y = value, fill = technology),
+                position = position_stacknudge(x = -1.1),
+                width = 1.8) +
+        geom_col(data = dataGenTradeREMINDplotitot,
+                mapping = aes(x = year, y = value, linetype = "REMIND"),
+                position = position_stacknudge(x = -1.1),
+                width = 1.8,
+                linewidth = 0.25,
+                color = "black",
+                fill = NA) +
+        geom_point(data = dataLoadREMINDploti,
+                  mapping = aes(x = year, y = value, color = "Load"),
+                  position = position_nudge(x = -1.1),
+                  shape = 4) +
+        geom_col(data = dataGenTradePyPSAploti,
+                mapping = aes(x = year, y = value, fill = technology),
+                position = position_stacknudge(x = 1.1),
+                width = 1.8) +
+        geom_col(data = dataGenTradePyPSAplotitot,
+                mapping = aes(x = year, y = value, linetype = "PyPSA-Eur"),
+                position = position_stacknudge(x = 1.1),
+                width = 1.8,
+                linewidth = 0.25,
+                color = "black",
+                fill = NA) +
+        geom_point(data = dataLoadPyPSAploti,
+                  mapping = aes(x = year, y = value, color = "Load"),
+                  position = position_nudge(x = 1.1),
+                  shape = 4) +
+        scale_fill_manual(
+          name = "Domestic generation",
+          values = c("Import" = "#99E8A5", colorsTech, "Export" = "#EBBAA7"),
+          breaks = names(colorsTech),
+          labels = namesTech,
+          guide = guide_legend(order = 4)) +
+        scale_linetype_manual(
+          name = "Model",
+          values = c("REMIND" = "solid", "PyPSA-Eur" = "dashed"),
+          guide = guide_legend(order = 2)
+        ) +
+        scale_color_manual(
+          name = NULL,
+          values = c("Load" = "black"),
+          guide = guide_legend(order = 1)
+        ) +
+        # Add fake data for legend
+        new_scale_fill() +
+        geom_col(data = dataGenTradeREMINDploti %>%
+                    filter(year == 2025, technology %in% c("Import", "Export")) %>%
+                    mutate(value = 0),
+                mapping = aes(x = year, y = value, fill = technology)) +
+        scale_fill_manual(
+          name = "Trade",
+          values = c("Import" = "#99E8A5", "Export" = "#EBBAA7"),
+          guide = guide_legend(order = 3)
+        ) +
+        scale_x_continuous(breaks = years) +
+        labs(x = "Year", y = "Generation (TWh)") +
+        ggtitle(paste("Generation and trade, iteration", i), regSubtitle(r))
+
+      # Plot relative differences
+      dataGenTradeDiffplot <- full_join(dataGenTradeREMINDploti, dataGenTradePyPSAploti,
+                        by = c("year", "technology")) %>%
+        mutate(relDiff = 100 * (value.x - value.y) / sum(value.x))
+
+      pGenDiff <- ggplot() + 
+        geom_bar(data = dataGenTradeDiffplot,
+                mapping = aes(x = year, y = relDiff, fill = technology),
+                stat = "identity") +
+        scale_x_continuous(breaks = years) +
+        coord_cartesian(ylim = c(-30,30)) +
+        scale_fill_manual(
+          name = "Technology",
+          values = c("Import" = "#99E8A5", colorsTech, "Export" = "#EBBAA7"),
+          labels = namesTech
+        ) +
+        labs(x = "Year", y = "Relative difference (%)") +
+        ggtitle("Relative difference w.r.t total load in REMIND")
+
+      leg <- get_legend(pGenComp)
+
+      pGenPlot <- plot_grid(
+        pGenComp + theme(legend.position = "none"),
+        pGenDiff + theme(legend.position = "none"),
+        ncol = 1,
+        rel_heights = c(1, 0.5),
+        labels = "auto",
+        label_size = font.size)
+
+      pGen <- plot_grid(
+        pGenPlot,
+        leg,
+        ncol = 2,
+        rel_widths = c(1, 0.2)
+      )
+
+      print(pGen)
+    }
   }
 }
 ```
@@ -3952,36 +4125,36 @@ pCapComp <- ggplot() +
   geom_bar(data = dataCapREMINDploti,
           mapping = aes(x = year, y = value, fill = technology),
           stat = "identity",
-          position = position_stacknudge(x = -1.2),
-          width = 2) +
+          position = position_stacknudge(x = -1.1),
+          width = 1.8) +
   geom_bar(data = dataCapREMINDplotitot,
           mapping = aes(x = year, y = value, linetype = "REMIND"),
           stat = "identity",
-          position = position_nudge(x = -1.2),
-          width = 2,
+          position = position_nudge(x = -1.1),
+          width = 1.8,
           linewidth = 0.25,
           color = "black",
           fill = NA) +
   geom_bar(data = dataCapPyPSAploti,
           mapping = aes(x = year, y = value, fill = technology),
           stat = "identity",
-          position = position_stacknudge(x = 1.2),
-          width = 2) +
+          position = position_stacknudge(x = 1.1),
+          width = 1.8) +
   geom_bar(data = dataCapPyPSAplotitot,
           mapping = aes(x = year, y = value, linetype = "PyPSA-Eur"),
           stat = "identity",
-          position = position_nudge(x = 1.2),
-          width = 2,
+          position = position_nudge(x = 1.1),
+          width = 1.8,
           linewidth = 0.25,
           color = "black",
           fill = NA) +
   geom_point(data = dataPeakResLoadMinREMINDplot,
             mapping = aes(x = year, y = minCap, shape = "Peak residual load"),
-            position = position_nudge(x = -1.2),
+            position = position_nudge(x = -1.1),
             fill = "white") +
   geom_point(data = dataPeakResLoadPyPSAplot,
             mapping = aes(x = year, y = minCap, shape = "Peak residual load"),
-            position = position_nudge(x = 1.2),
+            position = position_nudge(x = 1.1),
             fill = "white") +
   scale_fill_manual(
     name = "Technology",
@@ -4076,36 +4249,36 @@ pGenComp <- ggplot() +
   geom_bar(data = dataGenREMINDploti,
           mapping = aes(x = year, y = value, fill = technology),
           stat = "identity",
-          position = position_stacknudge(x = -1.2),
-          width = 2) +
+          position = position_stacknudge(x = -1.1),
+          width = 1.8) +
   geom_bar(data = dataGenREMINDplotitot,
           mapping = aes(x = year, y = value, linetype = "REMIND"),
           stat = "identity",
-          position = position_nudge(x = -1.2),
-          width = 2,
+          position = position_nudge(x = -1.1),
+          width = 1.8,
           linewidth = 0.25,
           color = "black",
           fill = NA) +
   geom_point(data = dataLoadREMINDploti,
               mapping = aes(x = year, y = value, color = "Load"),
-              position = position_nudge(x = -1.2),
+              position = position_nudge(x = -1.1),
               shape = 4) +
   geom_bar(data = dataGenPyPSAploti,
           mapping = aes(x = year, y = value, fill = technology),
           stat = "identity",
-          position = position_stacknudge(x = 1.2),
-          width = 2) +
+          position = position_stacknudge(x = 1.1),
+          width = 1.8) +
   geom_bar(data = dataGenPyPSAplotitot,
           mapping = aes(x = year, y = value, linetype = "PyPSA-Eur"),
           stat = "identity",
-          position = position_nudge(x = 1.2),
-          width = 2,
+          position = position_nudge(x = 1.1),
+          width = 1.8,
           linewidth = 0.25,
           color = "black",
           fill = NA) +
   geom_point(data = dataLoadPyPSAploti,
               mapping = aes(x = year, y = value, color = "Load"),
-              position = position_nudge(x = 1.2),
+              position = position_nudge(x = 1.1),
               shape = 4) +
   scale_fill_manual(
     name = "Technology",

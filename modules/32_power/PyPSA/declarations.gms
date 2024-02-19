@@ -95,6 +95,7 @@ parameters
     p32_PyPSA_Trade(ttot,all_regi,all_regi)                         "PyPSA import: Electricity exports from region 1 to region 2 [MWh]" 
     p32_PyPSA_TradePriceImport(ttot,all_regi,all_regi)              "PyPSA import: Price for electricity imports paid by region 2 due to trade with region 1 [$/MWh]"
     p32_PyPSA_TradePriceExport(ttot,all_regi,all_regi)              "PyPSA import: Price for electricity exports received by region 1 due to trade with region 2 [$/MWh]"
+    p32_PyPSA_Potential(ttot,all_regi,all_te)                      "PyPSA import: VRE potentials by technology within region [MW]"
     p32_PyPSA_shSeElRegi(ttot,all_regi)                             "PyPSA import: Electricity generation share across coupled regions [1]"
     p32_iniCapPHS(all_regi,all_te)                                  "PyPSA import/export calc: Initial capacity of pumped hydro storage [TW]"
     p32_iniProdPHS(all_regi,all_te)                                 "PyPSA import/export calc: Initial production of pumped hydro storage [TWa]"
