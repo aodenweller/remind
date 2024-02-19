@@ -1454,13 +1454,6 @@ dataUsableSeTeDispREMIND <- readREMINDgdx(
     restoreZeros = FALSE) %>%
   select(-secarrier)
 
-dataPHScapREMIND <- readREMINDgdx(
-    paths = rmFiles,
-    gdxVar = "p32_iniCapPHS",
-    columns = c("all_regi" = "region", "all_te" = "technology", "value" = "p32_iniCapPHS"),
-    colFilter = list("region" = regions),
-    restoreZeros = TRUE)
-
 # REMIND averaged capacity factors
 dataCapFacAvgREMIND <- readREMINDgdx(
     paths = rmFiles,
@@ -1491,7 +1484,7 @@ for (r in regList){
            vm_cap != 0) %>%
     group_by(year, technology, iteration) %>%
     # First calculate capacity factor for each REMIND technology across all regions
-    summarise(capfac = sum(v32_usableSeTeDisp) / sum(vm_cap - p32_iniCapPHS),
+    summarise(capfac = sum(v32_usableSeTeDisp) / sum(vm_cap),
               v32_usableSeTeDispRegSum = sum(v32_usableSeTeDisp)) %>%
     revalue.levels(technology = rm2genTech) %>%
     group_by(year, technology, iteration) %>%
@@ -2176,14 +2169,6 @@ This section includes variables that are not exchanged directly between REMIND a
 #    recalcUnit = 1e3) %>%   # TW to GW
 #  select(-grade)  # Remove grade column
 
-dataPHScapREMIND <- readREMINDgdx(
-    paths = rmFiles,
-    gdxVar = "p32_iniCapPHS",
-    columns = c("all_regi" = "region", "all_te" = "technology", "value" = "p32_iniCapPHS"),
-    colFilter = list("region" = regions),
-    restoreZeros = TRUE,
-    recalcUnit = 1e3)  # TW to GW
-
 dataCapPyPSA <- readPyPSAcsv(
     paths = file.path(pyValidationDirs, "optimal_capacities.csv")) %>%
   filter(type == "Generator") %>%
@@ -2196,7 +2181,7 @@ dataCapPyPSA <- readPyPSAcsv(
 for (r in regList) {
 
   dataCapREMINDplot <- left_join(dataCapREMIND %>% mutate(vm_cap = 1E3*vm_cap), dataPHScapREMIND) %>%
-    mutate(cap = vm_cap - p32_iniCapPHS) %>%
+    mutate(cap = vm_cap) %>%
     filter(region %in% r) %>%
     revalue.levels(technology = rm2genTech) %>%
     group_by(year, technology, iteration) %>%
@@ -2266,14 +2251,6 @@ dataPreInvCapAvgREMIND <- readREMINDgdx(
   group_by(year, region, technology, iteration) %>%
   summarise(p32_preInvCapAvg = sum(p32_preInvCapAvg))
   
-dataPHScapREMIND <- readREMINDgdx(
-    paths = rmFiles,
-    gdxVar = "p32_iniCapPHS",
-    columns = c("all_regi" = "region", "all_te" = "technology", "value" = "p32_iniCapPHS"),
-    colFilter = list("region" = regions),
-    restoreZeros = TRUE,
-    recalcUnit = 1e3)  # TW to GW
-
 dataCapREMIND <- readREMINDgdx(
     paths = rmFiles,
     gdxVar = "vm_cap",
@@ -2285,7 +2262,7 @@ dataCapREMIND <- readREMINDgdx(
 
 dataCapInvestREMIND <- left_join(dataPreInvCapREMIND, dataPHScapREMIND) %>%
   full_join(dataCapREMIND) %>%
-  mutate(vm_cap = vm_cap - p32_iniCapPHS,
+  mutate(vm_cap = vm_cap,
          deltaCap = vm_cap - p32_preInvCap) %>%
   revalue.levels(technology = rm2genTech) %>%
   group_by(year, region, technology, iteration) %>%

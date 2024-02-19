@@ -60,8 +60,7 @@ p32_PEPrice_iter(iteration,ttot,regi,entyPe) = pm_PEPrice(ttot,regi,entyPe);
 *** Calculate pre-investment capacities
 p32_preInvCap(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te)) =
   max((vm_cap.l(t,regi,te,"1")
-     - vm_deltaCap.l(t,regi,te,"1") * pm_ts(t) * ( 1 - vm_capEarlyReti.l(t,regi,te) )
-     - p32_iniCapPHS(regi,te)),
+     - vm_deltaCap.l(t,regi,te,"1") * pm_ts(t) * ( 1 - vm_capEarlyReti.l(t,regi,te) )),
     0);
 *** Track pre-investment capacities over iterations
 p32_preInvCap_iter(iteration,t,regi,te) = p32_preInvCap(t,regi,te);

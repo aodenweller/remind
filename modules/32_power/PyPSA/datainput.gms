@@ -103,16 +103,6 @@ p32_PriceDurSlope(regi,"elh2") = cm_PriceDurSlope_elh2;
 ***                  PyPSA-Eur
 ***------------------------------------------------------------
 
-*** Hydro: Pumped hydro storage (PHS) capacity and generation values in 2020
-*** This is necessary because PyPSA doesn't include PHS as a generation technology
-if (c32_PHSsubtract eq 1,
-  p32_iniCapPHS("DEU","hydro") = 5.3E-3;  !! 5.3 GW 
-  p32_iniProdPHS("DEU","hydro") = 6.1/8760;  !! 6.1 TWh/yr
-elseif (c32_PHSsubtract eq 0),
-  p32_iniCapPHS("DEU", "hydro") = 0;
-  p32_iniProdPHS("DEU", "hydro") = 0;
-);
-
 *** Technology-specific pre-factor values for capacity factors
 p32_preFactor_CF("DEU","biochp") = 2;
 p32_preFactor_CF("DEU","bioigcc") = 2;

@@ -295,7 +295,6 @@ q32_usableSeDisp(t,regi,entySe)$(tPy32(t) and regPy32(regi) and sameas(entySe,"s
 	sum(pe2se(enty,entySe,te)$(tePy32(te)), vm_prodSe(t,regi,enty,entySe,te))
 *	+ sum(se2se(enty,entySe,te)$(tePy32(te)), vm_prodSe(t,regi,enty,entySe,te))
 	- sum(te$(tePy32(te) and teVRE(te)), v32_storloss(t,regi,te) )
-    - p32_iniProdPHS(regi,"hydro")
 ;
 
 *** Calculate usable electricity generation including imports and exports
@@ -315,7 +314,6 @@ q32_usableSeTeDisp(t,regi,entySe,te)$(tPy32(t) and regPy32(regi) and sameas(enty
  	sum(pe2se(enty,entySe,te), vm_prodSe(t,regi,enty,entySe,te) )
 *	+ sum(se2se(enty,entySe,te), vm_prodSe(t,regi,enty,entySe,te) )
  	- v32_storloss(t,regi,te)$(teVRE(te))
-    - p32_iniProdPHS(regi,te)
 ;
 
 *** Calculate electricity generation shares by technology, without imports/exports
@@ -340,7 +338,7 @@ $ifthen.c32_pypsa_capfac "%c32_pypsa_capfac%" == "on"
 q32_capFac(t,regi,te)$(tPy32(t) and regPy32(regi) AND tePy32(te) AND (sm_PyPSA_eq eq 1) AND NOT sameas(te, "hydro"))..
   v32_usableSeTeDisp(t,regi,"seel",te)
   =e=
-    ( vm_cap(t,regi,te,"1") - p32_iniCapPHS(regi,te) )
+    vm_cap(t,regi,te,"1")
 $ifthen.c32_pypsa_preFac "%c32_pypsa_preFac%" == "on"
 $ifthen.c32_pypsa_preFacManual "%c32_pypsa_preFacManual%" == "on"
   * p32_PyPSA_CFAvg(t,regi,te) * ( 1 + s32_preFacFadeOut * p32_preFactor_CF(regi,te) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
