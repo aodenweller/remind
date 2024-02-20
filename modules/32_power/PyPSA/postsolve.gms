@@ -58,12 +58,20 @@ s32_checkPrice_iter(iteration) = s32_checkPrice;
 p32_PEPrice_iter(iteration,ttot,regi,entyPe) = pm_PEPrice(ttot,regi,entyPe);
 
 *** Calculate pre-investment capacities
-p32_preInvCap(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te)) =
+p32_preInvCap(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND NOT sameas(te, "hydro")) =
   max((vm_cap.l(t,regi,te,"1")
      - vm_deltaCap.l(t,regi,te,"1") * pm_ts(t) * ( 1 - vm_capEarlyReti.l(t,regi,te) )),
     0);
+
 *** Track pre-investment capacities over iterations
 p32_preInvCap_iter(iteration,t,regi,te) = p32_preInvCap(t,regi,te);
+
+*** Special treatment for hydro: Don't use pre-investment capacity, but post-investment capacity instead
+*** Also pass hydro generation to PyPSA, this is used to force PyPSA to REMIND's capacity factor
+p32_hydroCap(t,regi)$(tPy32(t) AND regPy32(regi)) =
+  max(vm_cap.l(t,regi,"hydro","1"), 0);
+p32_hydroGen(t,regi)$(tPy32(t) AND regPy32(regi)) =
+  max(v32_usableSeTeDisp.l(t,regi,"seel","hydro"), 0);
 
 ***------------------------------------------------------------
 ***                  PyPSA-Eur coupling
@@ -164,6 +172,8 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
     p32_preInvCapAvg,
     !! Additional electrolytic hydrogen demand
     p32_ElecH2Demand,
+    !! Hydro capacities and generation
+    p32_hydroCap, p32_hydroGen,
     !! -- PyPSA-Eur to REMIND -- 
     !! Generation shares in REMIND to downscale generation shares in PyPSA
     !! (this is required to parametrise the pre-factor equations) 

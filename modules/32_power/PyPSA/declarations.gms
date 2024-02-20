@@ -67,6 +67,11 @@ v32_flexPriceShareMin(tall,all_regi,all_te)         "possible minimum of share o
 ***                  Declarations for PyPSA
 ***------------------------------------------------------------
 
+*** Parameters for the PyPSA coupling. These include the following categories:
+*** (1) PyPSA export parameters: Parameters that are written to REMIND2PyPSAEUR.gdx in postsolve.gms
+*** (2) PyPSA import parameters: Parameters that are read from PyPSAEUR2REMIND.gdx in postsolve.gms (import calc parameters are derived from these)
+*** (3) PyPSA coupling parameters: Parameters that are used within the coupling, mostly in equations.gms
+*** (4) PyPSA reporting parameters: Parameters that are calculated for reporting and plotting
 parameters
     p32_preInvCap(ttot,all_regi,all_te)                             "PyPSA export: Pre-investment capacities [TW]"
     p32_preInvCap_iter(iteration,ttot,all_regi,all_te)              "PyPSA export: Pre-investment capacities in iterations [TW]"
@@ -79,6 +84,8 @@ parameters
     p32_weightGen(ttot,all_regi,all_te)                             "PyPSA export: Weights for generation technologies [TWa]"
     p32_weightStor(ttot,all_regi,all_te)                            "PyPSA export: Weights for storage technologies, currently only electrolysis [TWa]"
     p32_weightPEprice(ttot,all_regi,all_enty)                       "PyPSA export: Weights for primary energy prices [TWa]"
+    p32_hydroCap(ttot,all_regi)                                     "PyPSA export: Hydro capacity [TW]"
+    p32_hydroGen(ttot,all_regi)                                     "PyPSA export: Hydro generation [TWa]"
     p32_PyPSA_CF(ttot,all_regi,all_te)                              "PyPSA import: Capacity factors [1]"
     p32_PyPSA_CF_iter(iteration,ttot,all_regi,all_te)               "PyPSA import calc: Capacity factors in iterations [1]"
     p32_PyPSA_CFAvg(ttot,all_regi,all_te)                           "PyPSA import calc: Capacity factors averaged over iterations [1]"
@@ -95,7 +102,7 @@ parameters
     p32_PyPSA_Trade(ttot,all_regi,all_regi)                         "PyPSA import: Electricity exports from region 1 to region 2 [MWh]" 
     p32_PyPSA_TradePriceImport(ttot,all_regi,all_regi)              "PyPSA import: Price for electricity imports paid by region 2 due to trade with region 1 [$/MWh]"
     p32_PyPSA_TradePriceExport(ttot,all_regi,all_regi)              "PyPSA import: Price for electricity exports received by region 1 due to trade with region 2 [$/MWh]"
-    p32_PyPSA_Potential(ttot,all_regi,all_te)                      "PyPSA import: VRE potentials by technology within region [MW]"
+    p32_PyPSA_Potential(ttot,all_regi,all_te)                       "PyPSA import: VRE potentials by technology within region [MW]"
     p32_PyPSA_shSeElRegi(ttot,all_regi)                             "PyPSA import: Electricity generation share across coupled regions [1]"
     p32_preFactor_CF(all_regi,all_te)                               "PyPSA coupling: Pre-factor for the capacity factor [1]"
     p32_preFactor_MV(all_regi,all_te)                               "PyPSA coupling: Pre-factor for the market value [1]"
@@ -109,6 +116,7 @@ parameters
     p32_PeakResLoadShadowPrice(ttot,all_regi,all_te)                "PyPSA reporting: Shadow price of peak residual load constraint, used for plotting LCOEs vs. market values [T$/TWa]"
 ;
 
+*** Positive variables for the PyPSA coupling
 positive variables
     v32_usableSeDisp(ttot,all_regi,all_enty)                        "PyPSA coupling: Domestic usable SE electricity generation, without own consumption, without imports/exports [TWa]"
     v32_usableSeDispNet(ttot,all_regi,all_enty)                     "PyPSA export: Usable SE electricity, without own consumption, with imports/exports [TWa]"
@@ -121,12 +129,14 @@ $ifthen "%c32_pypsa_trade%" == "on"
 $endif
 ;
 
+*** Variables for the PyPSA coupling
 $ifthen "%cm_pypsa_markup%" == "on"
 variables
     vm_PyPSAMarkup(ttot,all_regi,all_te)                            "PyPSA coupling: Markups for electricity technologies according to PyPSA-Eur [T$/TWa]"
 ;
 $endif
 
+*** Equations for the PyPSA coupling
 equations
     q32_usableSeDisp(ttot,all_regi,all_enty)                        "PyPSA coupling: Calculate v32_usableSeDisp"
     q32_usableSeDispNet(ttot,all_regi,all_enty)                     "PyPSA coupling: Calculate v32_usableSeDispNet"
