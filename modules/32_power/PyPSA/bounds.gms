@@ -32,6 +32,8 @@ $ifthen "%cm_pypsa_markup%" == "on"
   p32_PyPSA_ValueFactor(tPy32,regPy32,tePy32) = p32_PyPSA_MVAvg(tPy32,regPy32,tePy32) / p32_PyPSA_LoadPriceAvg(tPy32,regPy32,"AC");
 $endif
 
+  p32_hydroCorrectionFactor(tPy32,regPy32)$(p32_PyPSA_CF(tPy32,regPy32,"hydro") gt sm_eps) = p32_PyPSA_AF(tPy32,regPy32,"hydro") / p32_PyPSA_CF(tPy32,regPy32,"hydro");
+
 );
 
 ***------------------------------------------------------------
@@ -101,6 +103,10 @@ vm_cap.fx(t,regi,"elh2VRE",rlf) = 0;
 ***                  PyPSA-Eur coupling (bounds)
 ***------------------------------------------------------------
 
+*** Assume that total electricity load per region cannot go down below 80% of the 2025 value
+*** This should never be binding, but might prevent the solver from setting the load to 0
+*v32_usableSeDispNet.lo(tPy32,regPy32,"seel") = 0.8 * v32_usableSeDispNet.l("2025",regPy32,"seel");
+
 *** All capacity factors come from PyPSA-Eur.
 *** Set vm_capFac free here, so that REMIND can adjust it freely to match the capacity factor from PyPSA-Eur (equation q32_capFac).
 *** vm_capFac can be larger than 1 since it is used as a correction factor. Limit to between 0 and 2 here.
@@ -115,12 +121,13 @@ $endif
 v32_shSeElDisp.lo(tPy32,regPy32,tePy32) = 0;
 v32_shSeElDisp.up(tPy32,regPy32,tePy32) = 1;
 
-*** Temporarily fix hydro markup to zero
+*** Set starting values for vm_PyPSAMarkup and limit to between -200 and 200 EUR/MWh
 $ifthen "%cm_pypsa_markup%" == "on"
 if ((sm_PyPSA_eq eq 1),
   vm_PyPSAMarkup.l(tPy32,regPy32,tePy32) = ( p32_PyPSA_MVAvg(tPy32,regPy32,tePy32) - p32_PyPSA_LoadPriceAvg(tPy32,regPy32,"AC") ) * sm_TWa_2_MWh / 1e12;
+  vm_PyPSAMarkup.lo(tPy32,regPy32,tePy32) = -200 * sm_TWa_2_MWh / 1E12;
+  vm_PyPSAMarkup.up(tPy32,regPy32,tePy32) = +200 * sm_TWa_2_MWh / 1E12;
 );
-vm_PyPSAMarkup.fx(tPy32,regPy32,"hydro") = 0;
 $endif
 
 *** Disable some technologies for now
@@ -131,6 +138,9 @@ if ((c32_deactivateTech eq 1 and sm_PyPSA_eq eq 1),
     vm_capFac.fx(tPy32,regPy32,"biochp") = 0;
     vm_capFac.fx(tPy32,regPy32,"gaschp") = 0;
     vm_capFac.fx(tPy32,regPy32,"coalchp") = 0;
+    vm_capFac.fx(tPy32,regPy32,"bioigccc") = 0;
+    vm_capFac.fx(tPy32,regPy32,"igccc") = 0;
+    vm_capFac.fx(tPy32,regPy32,"ngccc") = 0;
 );
 
 *** Electricity trade
@@ -174,10 +184,23 @@ $endif.c32_pypsa_trade
 *** VRE potentials from PyPSA-Eur (in terms of capacity, not generation)
 $ifthen.c32_pypsa_potentials "%c32_pypsa_potentials%" == "on"
 if ((sm_PyPSA_eq eq 1),
-  !! Set upper bound for vm_cap for VRE technologies
+  !! Set upper bound for vm_cap for VRE technologies (other than hydro)
   vm_cap.up(t,regi,te,"1")$(tPy32(t) AND regPy32(regi) AND tePyVRE32(te) AND NOT sameas(te, "hydro")) =
     p32_PyPSA_Potential(t,regi,te) / 1E6;  !! MW to TW
 );
 $endif.c32_pypsa_potentials
+
+$ontext
+*** Hydro bounds if capacity factor comes from PyPSA
+if ((sm_PyPSA_eq eq 1),
+  !! First, set lower bound on capacity instead of production (as in core/bounds.gms) so that hydro plants in 2005 always get replaced by new ones
+  vm_cap.lo(t,regi,"hydro","1")$(tPy32(t) AND regPy32(regi)) = 0.99 * vm_cap.l("2005",regi,"hydro","1");
+  !! Second, set upper bound on capacity in addition to production (as in q_limitProd) so that hydro plants cannot be expanded beyond capacity equivalent to production limit
+  !! This is necessary because q_limitProd doesn't limit capacity expansion if the capacity factor comes from PyPSA-Eur
+  !! ISSUE: This is overwritten in p40_techpol
+  vm_cap.up(t,regi,"hydro","1")$(tPy32(t) AND regPy32(regi)) =
+    sum(rlf$(pm_dataren(regi,"nur",rlf,"hydro") gt sm_eps), pm_dataren(regi,"maxprod",rlf,"hydro") / pm_dataren(regi,"nur",rlf,"hydro"));
+);
+$offtext
 
 *** EOF ./modules/32_power/PyPSA/bounds.gms

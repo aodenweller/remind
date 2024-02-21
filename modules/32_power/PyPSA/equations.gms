@@ -366,7 +366,7 @@ $endif.c32_pypsa_capfac
 *** (1) For peaker technologies (high value factor): When the share increases, market values decrease to a large extent.
 *** (2) For VRE technologies (low value factor): When the share increases, market values decrease to a smaller extent.
 $ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
-q32_MarkUp(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (sm_PyPSA_eq eq 1) AND NOT sameas(te, "hydro"))..
+q32_MarkUp(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (sm_PyPSA_eq eq 1))..
 	vm_PyPSAMarkup(t,regi,te)
 	=e=
 $ifthen.c32_pypsa_preFac "%c32_pypsa_preFac%" == "on"

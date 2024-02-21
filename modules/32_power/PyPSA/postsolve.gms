@@ -68,10 +68,15 @@ p32_preInvCap_iter(iteration,t,regi,te) = p32_preInvCap(t,regi,te);
 
 *** Special treatment for hydro: Don't use pre-investment capacity, but post-investment capacity instead
 *** Also pass hydro generation to PyPSA, this is used to force PyPSA to REMIND's capacity factor
-p32_hydroCap(t,regi)$(tPy32(t) AND regPy32(regi)) =
-  max(vm_cap.l(t,regi,"hydro","1"), 0);
-p32_hydroGen(t,regi)$(tPy32(t) AND regPy32(regi)) =
-  max(v32_usableSeTeDisp.l(t,regi,"seel","hydro"), 0);
+p32_hydroCap(t,regi)$(tPy32(t) AND regPy32(regi)) = vm_cap.l(t,regi,"hydro","1");
+$ontext
+*** Only calculate hydro generation if PyPSA is not executed yet because this determines the availability factor (not the capacity factor)
+*** As the capacity factor (< availability factor) is returned from PyPSA this would otherwise trigger a downward spiral
+if (sm_PyPSA_eq eq 0,
+  p32_hydroGen(t,regi)$(tPy32(t) AND regPy32(regi)) = v32_usableSeTeDisp.l(t,regi,"seel","hydro");
+);
+$offtext
+p32_hydroGen(t,regi)$(tPy32(t) AND regPy32(regi)) = v32_usableSeTeDisp.l(t,regi,"seel","hydro") * p32_hydroCorrectionFactor(t,regi);
 
 ***------------------------------------------------------------
 ***                  PyPSA-Eur coupling
@@ -96,31 +101,31 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
   if (( c32_avg_rm2py eq 0 ) or ( iteration.val lt max(c32_startIter_PyPSA, 3) + 4 - 1 ),  !! c32_startIter_PYPSA + x + y - 1
     !! Non-averaged pre-investment capacities
     p32_preInvCapAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_preInvCap(t,regi,te) + EPS;
-    !! Non-averaged PE prices
-    p32_PEPriceAvg(t,regi,entyPe)$(tPy32(t) and regPy32(regi)) = max(0, pm_PEPrice(t,regi,entyPe)) + EPS;  !! No negative PE prices
-    !! TODO add: and entyPePy32(entyPe) above
+    !! Non-averaged PE prices, limited to 0 and 200 EUR/MWh (for uranium 200 T$/Mt corresponds to 1752 $/kg)
+    p32_PEPriceAvg(t,regi,entyPe)$(tPy32(t) and regPy32(regi) and entyPePy32(entyPe)) = 
+        min(200 * sm_TWa_2_MWh/1E12, max(0, pm_PEPrice(t,regi,entyPe))) + EPS;
   !! Implement step (3): Use averaged values only if c32_avg_rm2py = 1 and (because of elseif) only if iteration >= c32_startIter_PyPSA + x + y - 1 
   elseif (c32_avg_rm2py eq 1),
       !! Average pre-investment capacities over past y iterations
       p32_preInvCapAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) =
         sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2) * p32_preInvCap_iter(iteration2,t,regi,te)) /
         sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2)) + EPS;
-      !! Average non-negative PE prices over past y iterations
-      p32_PEPriceAvg(t,regi,entyPe)$(tPy32(t) and regPy32(regi)) =
-        sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2) * max(0, p32_PEPrice_iter(iteration2,t,regi,entyPe))) /
+      !! Average non-negative PE prices over past y iterations, limited to 0 and 200 EUR/MWh (for uranium 200 T$/Mt corresponds to 1752 $/kg)
+      p32_PEPriceAvg(t,regi,entyPe)$(tPy32(t) and regPy32(regi) and entyPePy32(entyPe)) =
+        sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2) * min(200 * sm_TWa_2_MWh/1E12, max(0, p32_PEPrice_iter(iteration2,t,regi,entyPe)))) /
         sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2)) + EPS;
   );
 
-  !! Capital interest rate aggregated for all regions in regPy32
+  !! Capital interest rate aggregated for all regions in regPy32, similar to calculation of p_r
   p32_discountRate(ttot)$(tPy32(ttot) AND ttot.val gt 2005 and ttot.val le 2130) =
-    max(0.03,  !! Require minimum value of 0.03
+    min(0.1, max(0.03,  !! Limit between 3% and 10%
     ( (  ( sum(regPy32(regi), vm_cons.l(ttot+1,regi)) / sum(regPy32(regi), pm_pop(ttot+1,regi)) )
        / ( sum(regPy32(regi), vm_cons.l(ttot-1,regi)) / sum(regPy32(regi), pm_pop(ttot-1,regi)) )
       )
       ** ( 1 / ( pm_ttot_val(ttot+1)- pm_ttot_val(ttot-1) ) )
       - 1
     )
-    + sum(regPy32(regi), pm_prtp(regi)) / card(regPy32))
+    + sum(regPy32(regi), pm_prtp(regi)) / card(regPy32)))
   ;
   !! Set the interest rate to 0.05 after 2100
   p32_discountRate(ttot)$(ttot.val gt 2100) = 0.05;
@@ -137,6 +142,11 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
       max(0, vm_costTeCapital.l(t,regi,te) + o_margAdjCostInv(t,regi,te)$( sum(te2rlf(te,rlf), vm_deltaCap.l(t,regi,te,rlf)) ge 1e-5 )) + EPS;
   );
 
+  !! Hack: Disincentivise oil by increasing their capital costs by factor 2
+  !! Oil is sometimes used by PyPSA in 2025 only, which doesn't make sense as the investment wouldn't be profitable
+  p32_capCostwAdjCost(t,regi,te)$(tPy32(t) and regPy32(regi) and sameas(te,"dot")) = 
+      2 * p32_capCostwAdjCost(t,regi,te) + EPS;
+
   !! Parameters to calculate weighted averages across technologies and regions in PyPSA
   p32_weightGen(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te)) = v32_usableSeTeDisp.l(t,regi,"seel",te) + EPS;
   p32_weightStor(t,regi,te)$(tPy32(t) AND regPy32(regi) AND sameas(te,"elh2")) = vm_prodSe.l(t,regi,"seel","seh2","elh2") + EPS;
@@ -149,9 +159,6 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
   !! Use vm_prodSe.l (which is TWa of hydrogen), not vm_demSe.l (which is TWa of electricity)
   !! This is due to the implementation in PyPSA-Eur, where the electrolyser efficiency is already taken into account
   p32_ElecH2Demand(t,regi)$(tPy32(t) AND regPy32(regi)) = vm_prodSe.l(t,regi,"seel","seh2","elh2") + EPS;
-
-  !! Save v32_usableSeDispNet for next iteration's electricity trade implementation
-  p32_usableSeDispNet0(t,regi,"seel")$(tPy32(t) AND regPy32(regi)) = v32_usableSeDispNet.l(t,regi,"seel");
 
   !! Export REMIND output data for PyPSA (REMIND2PyPSAEUR.gdx)
   !! Don't use fulldata.gdx so that we keep track of which variables are exported to PyPSA
@@ -211,6 +218,7 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_TradePriceExport=crossborder_price_export;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_shSeElRegi=generation_region_share;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Potential=potential;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_AF=availability_factor;
 
   !! Track capacity factors and market values in iterations
   p32_PyPSA_CF_iter(iteration,t,regi,te) = p32_PyPSA_CF(t,regi,te);
@@ -245,6 +253,9 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
       sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2) * p32_PyPSA_LoadPrice_iter(iteration2,t,regi,carrierPy32)) /
       sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2));
   );
+
+  !! Save v32_usableSeDispNet for next iteration's electricity trade implementation
+  p32_usableSeDispNet0(t,regi,"seel")$(tPy32(t) AND regPy32(regi)) = v32_usableSeDispNet.l(t,regi,"seel");
 
 *** Activate PyPSA equations if PyPSA ran once
 sm_PyPSA_eq = 1;
