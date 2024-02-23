@@ -3910,6 +3910,56 @@ for (i in pyIterations) {
 
 # Other plots
 
+## Runtime
+
+```{r runtime}
+# Extract iteration number from rmFiles
+rmIterations <- as.numeric(gsub(".*_([0-9]+)\\.gdx", "\\1", rmFiles))
+ctime = file.info(rmFiles)$ctime
+
+runtimeTotal <- tibble(file = rmFiles, iter = rmIterations, ctime) %>%
+  arrange(iter) %>%
+  mutate(total = ctime - lag(ctime)) %>%
+  select(-file, -ctime)
+
+# Extract iteration number from rm2pyFiles
+rm2pyIterations <- as.numeric(gsub(".*_([0-9]+)\\.gdx", "\\1", rm2pyFiles))
+ctime.rm2py = file.info(rm2pyFiles)$ctime
+
+runtimePyStart <- tibble(file = rm2pyFiles, iter = rm2pyIterations, start = ctime.rm2py) %>%
+  arrange(iter) %>%
+  select(-file)
+
+# Extract iteration number from py2rmFiles
+py2rmIterations <- as.numeric(gsub(".*_([0-9]+)\\.gdx", "\\1", py2rmFiles))
+ctime.py2rm = file.info(py2rmFiles)$ctime
+
+runtimePyEnd <- tibble(file = py2rmFiles, iter = py2rmIterations, end = ctime.py2rm) %>%
+  arrange(iter) %>%
+  select(-file)
+
+# Combine and calculate runtime
+runtimePyPSA <- runtimePyStart %>%
+  left_join(runtimePyEnd, by = "iter") %>%
+  mutate(PyPSA = end - start) %>%
+  select(-start, -end)
+
+runtime <- full_join(runtimeTotal, runtimePyPSA, by = "iter") %>%
+  mutate(REMIND = total - PyPSA) %>%
+  select(-total) %>%
+  pivot_longer(cols = c("REMIND", "PyPSA"), names_to = "model", values_to = "time")
+
+p <- ggplot() +
+  geom_col(data = runtime, aes(x = iter, y = time, fill = model)) +
+  scale_fill_discrete(name = "Model") +
+  labs(x = "Iteration", y = "Runtime (minutes)") +
+  scale_y_continuous(limits = c(0, NA)) +
+  ggtitle("Runtime for each iteration", "Determined by file creation time")
+
+print(p)
+
+```
+
 ## VRE potentials
 
 VRE potentials are constrained in terms of generation (TWa) in REMIND and in terms of capacity (GW) in PyPSA-Eur. REMIND VRE potentials in capacity terms therefore depend on the capacity factor as well, making them non-constant.
