@@ -26,6 +26,7 @@ library(quitte)
 library(ggpp)
 library(ggnewscale)
 library(cowplot)
+library(lubridate)
 
 # Set options for all chunks
 knitr::opts_chunk$set(
@@ -427,7 +428,7 @@ pYear <- ggplot() +
   labs(x = "Year", y = "Electricity load (TWh/a)") +
   scale_y_continuous(limit = c(0, NA)) +
   ggtitle("Electricity load by year") +
-  facet_wrap(~ iteration, scales = "free")
+  facet_wrap(~ iteration)
 
 print(pYear)
 
@@ -456,8 +457,9 @@ dataPreInvCapAvgREMIND <- readREMINDgdx(
     gdxVar = "p32_preInvCapAvg",
     columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_preInvCap"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
-    restoreZeros = FALSE,
+    restoreZeros = TRUE,
     recalcUnit = 1e3) %>%   # TW to GW
+  filter(technology != "hydro") %>%
   revalue.levels(technology = rm2genTech) %>%
   group_by(year, region, technology, iteration) %>%
   summarise(preInvCap = sum(p32_preInvCap)) %>%
@@ -469,8 +471,9 @@ dataPreInvCapREMIND <- readREMINDgdx(
     gdxVar = "p32_preInvCap",
     columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_preInvCap"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
-    restoreZeros = FALSE,
+    restoreZeros = TRUE,
     recalcUnit = 1e3) %>%   # TW to GW
+  filter(technology != "hydro") %>%
   revalue.levels(technology = rm2genTech) %>%
   group_by(year, region, technology, iteration) %>%
   summarise(preInvCap = sum(p32_preInvCap)) %>%
@@ -889,7 +892,7 @@ pDiscountIter <- ggplot() +
   geom_line(data = dataDiscountREMIND, aes(x = iteration, y = value)) +
   geom_point(data = dataDiscountPyPSA, aes(x = iteration, y = value)) +
   labs(x = "Iteration", y = "Discount rate (%)") +
-  scale_x_continuous(breaks = pyIterations) +
+  scale_x_continuous(breaks = integer_breaks()) +
   scale_y_continuous(limits = c(0, NA)) +
   ggtitle("Discount rates over iterations") +
   facet_wrap(~ year, scales = "free")
@@ -1090,7 +1093,10 @@ if (nrow(dataEtaPyPSArmpy) > 0) {
 
 # Efficiencies only from PyPSA-Eur
 dataEtaPyPSApy <- dataEtaPyPSA %>%
-  filter(!str_detect(source, "REMIND-EU"))
+  filter(!str_detect(source, "REMIND-EU")) %>%
+  group_by(technology, parameter, year) %>%
+  # Values should be the same across iterations
+  summarise(value = unique(value))
 
 if (nrow(dataEtaPyPSApy) > 0) {
   pEtaYearPy <- ggplot() +
@@ -1098,7 +1104,7 @@ if (nrow(dataEtaPyPSApy) > 0) {
     scale_color_discrete(name = "Technology\n(only in PyPSA-Eur)") +
     labs(x = "Year", y = "Efficiency") +
     ggtitle("Efficiencies over years", "Only in PyPSA-Eur") +
-    facet_grid(technology ~ iteration)
+    facet_wrap(~ technology)
 
   print(pEtaYearPy)
 }
@@ -1222,7 +1228,7 @@ pFuelCostsIter <- ggplot() +
                      labels = namesTech) +
   scale_y_continuous(limits = c(0, 150)) +
   labs(x = "Iteration", y = "Fuel costs (USD/MWh)") +
-  scale_x_continuous(breaks = pyIterations) +
+  scale_x_continuous(breaks = integer_breaks()) +
   ggtitle("Fuel costs over iterations", "Averaged over iterations")
 
 print(pFuelCostsIter + facet_wrap(~ year))
@@ -1603,6 +1609,7 @@ for (r in regList){
       labels = namesTech,
     ) +
     labs(x = "Year", y = "Capacity factor") +
+    scale_y_continuous(limits = c(0, 1)) +
     ggtitle("Capacity factors over years, averaged over iterations", regSubtitle(r))
 
   print(pCapfacYear + facet_wrap(~ iteration))
@@ -1621,6 +1628,7 @@ for (r in regList){
     ) +
     labs(x = "Iteration", y = "Capacity factor") +
     scale_x_continuous(breaks = integer_breaks()) +
+    scale_y_continuous(limits = c(0, 1)) +
     ggtitle("Capacity factors over iterations, averaged over iterations", regSubtitle(r))
 
   print(pCapfacIter + facet_wrap(~ year))
@@ -3915,16 +3923,21 @@ for (i in pyIterations) {
 ```{r runtime}
 # Extract iteration number from rmFiles
 rmIterations <- as.numeric(gsub(".*_([0-9]+)\\.gdx", "\\1", rmFiles))
-ctime = file.info(rmFiles)$ctime
+ctime <- file.info(rmFiles)$ctime
+
+# From string in variable "scenario" extract the time stamp with format YYYY-MM-DD_HH.MM.SS
+timeStamp <- gsub(".*_([0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}\\.[0-9]{2}\\.[0-9]{2})", "\\1", scenario)
+timeStamp <- ymd_hms(timeStamp, tz = Sys.timezone())
 
 runtimeTotal <- tibble(file = rmFiles, iter = rmIterations, ctime) %>%
+  add_row(file = "NA", iter = 0, ctime = timeStamp) %>%
   arrange(iter) %>%
   mutate(total = ctime - lag(ctime)) %>%
   select(-file, -ctime)
 
 # Extract iteration number from rm2pyFiles
 rm2pyIterations <- as.numeric(gsub(".*_([0-9]+)\\.gdx", "\\1", rm2pyFiles))
-ctime.rm2py = file.info(rm2pyFiles)$ctime
+ctime.rm2py <- file.info(rm2pyFiles)$ctime
 
 runtimePyStart <- tibble(file = rm2pyFiles, iter = rm2pyIterations, start = ctime.rm2py) %>%
   arrange(iter) %>%
@@ -3932,7 +3945,7 @@ runtimePyStart <- tibble(file = rm2pyFiles, iter = rm2pyIterations, start = ctim
 
 # Extract iteration number from py2rmFiles
 py2rmIterations <- as.numeric(gsub(".*_([0-9]+)\\.gdx", "\\1", py2rmFiles))
-ctime.py2rm = file.info(py2rmFiles)$ctime
+ctime.py2rm <- file.info(py2rmFiles)$ctime
 
 runtimePyEnd <- tibble(file = py2rmFiles, iter = py2rmIterations, end = ctime.py2rm) %>%
   arrange(iter) %>%
