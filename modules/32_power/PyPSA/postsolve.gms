@@ -200,7 +200,7 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
   !! (2) Start PyPSA-Eur, including all data processing steps
   !! (3) Copy PyPSAEUR2REMIND.gdx to REMIND directory
   Put_utility logfile, "Exec" /
-  "./RunPyPSA-Eur.sh %c32_pypsa_dir% " iteration.val:0:0;
+  "./RunPyPSA-Eur.sh %c32_pypsa_dir% " iteration.val:0:0 " %c32_mamba_dir% %c32_mamba_env%";
 
   !! Reset round format and number of decimals
   logfile.nr = sm_tmp;

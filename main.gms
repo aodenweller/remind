@@ -1135,14 +1135,9 @@ parameter
 c32_avg_py2rm = 0; !! def = 0  !! regexp = 0|1
 *' Pass iteration-averaged variables from PyPSA to REMIND (0 = off, 1 = on)
 parameter
-  c32_PHSsubtract              "Switch to subtract pumped hydro storage in capacity and production terms from variables passed to and from PyPSA"
-;
-c32_PHSsubtract = 0; !! def = 0  !! regexp = 0|1
-*' Switch to subtract pumped hydro storage in capacity and production terms from variables passed to and from PyPSA
-parameter
   c32_iterPreFacFadeOut        "Iteration in which to activate PyPSA pre-factor fade out"
 ;
-c32_iterPreFacFadeOut = 0; !! def = 0
+c32_iterPreFacFadeOut = 0; !! def = 0  !! regexp = is.numeric
 *' Iteration in which PyPSA pre-factor fade out is activated, zero means it's never activated
 parameter
   c32_adjCost                  "Include adjustment cost into capital costs for PyPSA"
@@ -1672,6 +1667,12 @@ $setglobal c_CO2priceDependent_AdjCosts    on   !! def = on
 *** c32_pypsa_dir
 *** Directory of PyPSA-Eur
 $setglobal c32_pypsa_dir /p/tmp/adrianod/pypsa-eur
+*** c32_mamba_dir
+*** Directory of micromamba for PyPSA
+$setglobal c32_mamba_dir /p/tmp/adrianod/software/micromamba_20240118
+*** c32_mamba_env
+*** Environment name in micromamba directory
+$setglobal c32_mamba_env pypsa-eur-20240118
 *** c32_pypsa_multiregion
 *** Switch to enable PyPSA in multiple regions (changes PyPSA/sets.gms)
 $setglobal c32_pypsa_multiregion off !! def = off !! regexp = off|on
