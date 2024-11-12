@@ -3821,7 +3821,38 @@ for (i in rmIterations) {
 
 This section shows all terms of REMIND's secondary energy electricity (`seel`) equation in `q32_balSe`.
 
+```{r electricity balance equation}
+
+pe2se <- gdx::readGDX(rmFiles[1], "pe2se") %>%
+  filter(all_enty1 == "seel")
+
+se2se <- gdx::readGDX(rmFiles[1], "se2se") %>%
+  filter(all_enty1 == "seel")
+
+pc2te <- gdx::readGDX(rmFiles[1], "pc2te") %>%
+  filter(all_enty2 == "seel")
+
+dataProdSe <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "vm_prodSe",
+    columns = c("tall" = "year", "all_regi" = "region", "all_enty" = "tech_pe", "all_enty1" = "secarrier", "all_te" = "technology", "value" = "value"),
+    colFilter = list("year" = years, "region" = regions, "secarrier" = "seel"),
+    restoreZeros = FALSE,
+    recalcUnit = twa2twh) %>%
+  select(-tech_pe, -secarrier)
+
+# LHS: Term 1
+
+
+# LHS: Term 2
+
+
+```
+
+
 ### Sectoral electricity demand
+
+Electricity load passed to PyPSA vs sectoral electricity demand (including T&D losses).
 
 ## PyPSA-Eur
 
@@ -4077,10 +4108,169 @@ print(pVREpot)
 
 ```{r plots for presentations}
 if (FALSE) {
-iter <- 15
+iter <- 20
 theme_set(theme_cowplot(font_size = 12, line_size = 0.25))
 theme_update(panel.grid.major.y = element_line(color = "grey", linewidth = 0.25),
              plot.title = element_text(hjust = 0.5, face = "plain", size = 12))
+
+# ELECTRICITY LOAD
+dataLoadREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "v32_usableSeDispNet",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_enty" = "technology", "value" = "value"),
+    colFilter = list("year" = years, "region" = regions, "technology" = "seel"),
+    restoreZeros = FALSE,
+    recalcUnit = twa2twh) %>%
+  filter(iteration == iter)
+
+# Load PyPSAEUR electricity loads for cross-checking
+dataLoadPyPSA <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "electricity_loads.csv")) %>%
+  mutate(value = value / 1e6) %>%  # Convert MWh to TWh
+  filter(iteration == iter)
+
+# Plot by year
+pYear <- ggplot() +
+  geom_line(data = dataLoadREMIND, aes(x = year, y = value, color = region)) +
+  geom_point(data = dataLoadPyPSA, aes(x = year, y = value, color = region)) +
+  scale_color_discrete(name = "Region") +
+  labs(x = "Year", y = "Electricity load (TWh/a)") +
+  scale_y_continuous(limit = c(0, NA)) +
+  ggtitle("Electricity load by year")
+
+ggsave("load.png", width = 14, height = 10, units = "cm", dpi = 300, bg = "white")
+
+# CAPEX
+dataCapexREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "p32_capCostwAdjCost",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_capCostwAdjCost"),
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+    restoreZeros = FALSE,
+    recalcUnit = trUSDpTW2USDpMW) %>%
+  filter(iteration == iter)
+
+# Calculated weighted average
+dataCapexWeightedREMIND <- dataCapexREMIND %>%
+  full_join(dataWeightREMIND, by = c("year", "region", "technology", "iteration")) %>%
+  revalue.levels(technology = rm2genTech) %>%
+  group_by(year, technology, iteration) %>%
+  summarise(capex = sum(p32_capCostwAdjCost * weight) / sum(weight)) %>%
+  order.levels(technology = names(colorsTech)) %>%
+  filter(iteration == iter) %>%
+  filter(technology %in% c("wind_onshore", "wind_offshore", "solar_pv")) %>%
+  filter(year <= 2100)
+
+# PyPSA-Eur
+dataCapexPyPSA <- readPyPSAcsv(
+  paths = file.path(pyResourcesDirs, "costs.csv")) %>%
+  filter(parameter == "investment") %>%
+  filter(iteration == iter)
+
+# Costs directly from REMIND
+dataCapexPyPSArm <- dataCapexPyPSA %>%
+  filter(source == "REMIND-EU") %>%
+  revalue.levels(technology = py2genTech) %>%
+  group_by(technology, parameter, source, iteration, year) %>%
+  # Values should be the same across generic technologies
+  summarise(value = unique_tolerance(value)) %>%
+  order.levels(technology = names(colorsTech)) %>%
+  filter(technology %in% c("wind_onshore", "wind_offshore", "solar_pv")) %>%
+  filter(year <= 2100)
+
+# Costs passed from REMIND to PyPSA-Eur
+pCapexYear <- ggplot() +
+  geom_line(data = dataCapexWeightedREMIND, aes(x = year, y = capex, color = technology), show.legend = FALSE) +
+  geom_point(data = dataCapexPyPSArm, aes(x = year, y = value, color = technology), alpha = 0.5, show.legend = FALSE) +
+  scale_color_manual(name = "Technology\n(directly from REMIND)",
+                     values = colorsTech,
+                     labels = namesTech) +
+  labs(x = "Year", y = "Specific capital costs (USD/kW)") +
+  scale_y_continuous(labels = function(x) x / 1000, limits = c(0,NA)) +
+  ggtitle("Specific capital costs (w/ adjustment costs)") +
+  facet_wrap(~ technology, scales = "free", labeller = labeller(technology = namesTech))
+
+ggsave("capex.png", width = 18, height = 8, units = "cm", dpi = 300, bg = "white")
+
+# FUEL COSTS
+# Read pe2se mapping from REMIND
+pe2seTech <- gdx::readGDX(rmFiles[1], "pe2se") %>%
+  rename(pecarrier = all_enty,
+         secarrier = all_enty1,
+         technology = all_te) %>%
+  filter(secarrier == "seel") %>%
+  select(pecarrier, technology)
+
+# Read REMIND data (averaged)
+dataFuelCostsAvgREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "p32_PEPriceAvg",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_enty" = "pecarrier", "value" = "p32_PEPriceAvg"),
+    colFilter = list("year" = years, "region" = regions)) %>%
+  full_join(pe2seTech, by = c("pecarrier"), relationship = "many-to-many") %>%
+  full_join(dataEtaConvREMIND) %>%
+  # Special treatment for nuclear: Costs in T$/Mt_U = $/gU -> don't convert
+  mutate(p32_PEPriceAvg = case_when(pecarrier == "peur" ~ p32_PEPriceAvg,
+                                    pecarrier != "peur" ~ p32_PEPriceAvg * trUSDpTWa2USDpMWh))
+
+# Calculate weighted average fuel costs
+dataFuelCostsAvgWeightedREMIND <- dataFuelCostsAvgREMIND %>%
+  right_join(dataWeightGenREMIND, by = c("year", "region", "technology", "iteration")) %>%
+  revalue.levels(technology = rm2genTech) %>%
+  group_by(year, technology, iteration) %>%
+  summarise(fuelCost = sum(p32_PEPriceAvg * weight) / sum(weight)) %>%
+  order.levels(technology = names(colorsTech)) %>%
+  filter(iteration %in% pyIterations)
+
+# Remove technologies for which fuel costs are always zero in REMIND
+zeroTech <- dataFuelCostsAvgWeightedREMIND %>%
+  group_by(technology) %>%
+  filter(all(fuelCost == 0)) %>%
+  pull(technology) %>%
+  unique()
+
+dataFuelCostsAvgWeightedREMIND <- dataFuelCostsAvgWeightedREMIND %>%
+  filter(!(technology %in% zeroTech)) %>%
+  filter(iteration == iter) %>%
+  filter(year <= 2100)
+
+# Read PyPSA-Eur data
+dataFuelCostsPyPSA <- readPyPSAcsv(
+  paths = file.path(pyResourcesDirs, "costs.csv")) %>%
+  filter(parameter == "fuel")
+
+# For gas create two technologies: CCGT and OCGT
+dataFuelCostsPyPSA <- dataFuelCostsPyPSA %>%
+  filter(technology != "gas") %>%
+  bind_rows(
+    filter(dataFuelCostsPyPSA, technology == "gas") %>%
+      mutate(technology = "CCGT"),
+    filter(dataFuelCostsPyPSA, technology == "gas") %>%
+      mutate(technology = "OCGT")
+  )
+
+# Fuel costs directly from REMIND
+dataFuelCostsPyPSArm <- dataFuelCostsPyPSA %>%
+  filter(source == "REMIND-EU") %>%
+  revalue.levels(technology = py2genTech) %>%
+  group_by(technology, parameter, source, iteration, year) %>%
+  # Values should be the same across generic technologies
+  summarise(value = unique(value)) %>%
+  order.levels(technology = names(colorsTech)) %>%
+  filter(iteration == iter) %>%
+  filter(year <= 2100)
+
+pFuelCostsYear <- ggplot() +
+  geom_line(data = dataFuelCostsAvgWeightedREMIND, aes(x = year, y = fuelCost, color = technology)) +
+  geom_point(data = dataFuelCostsPyPSArm, aes(x = year, y = value, color = technology), alpha = 0.5) +
+  scale_color_manual(name = "Technology",
+                     values = colorsTech,
+                     labels = namesTech) +
+  scale_y_continuous(limits = c(0, NA)) +
+  labs(x = "Year", y = "Fuel costs (USD/MWh)") +
+  ggtitle("Fuel costs")
+
+ggsave("fuel_costs.png", width = 14, height = 8, units = "cm", dpi = 300, bg = "white")
 
 # MARKET VALUES
 dataMarkupREMIND <- readREMINDgdx(
@@ -4120,7 +4310,7 @@ pMarkupYear <- ggplot() +
   labs(x = NULL, y = "Markup ($/MWh)") +
   ggtitle("Markups by technology, Germany")
 
-ggsave("markup_year_new.png", width = 16, height = 10, units = "cm", dpi = 300, bg = "white")
+ggsave("markup_year.png", width = 16, height = 10, units = "cm", dpi = 300, bg = "white")
 
 # CAPACITY FACTORS
 dataCapFacAvgREMIND <- readREMINDgdx(
@@ -4150,6 +4340,45 @@ pCapfacYear <- ggplot() +
   ggtitle("Capacity factors, Germany")
 
 ggsave("capfac_year_new.png", width = 16, height = 10, units = "cm", dpi = 300, bg = "white")
+
+# CAPACITY FACTORS OVER ITERATIONS IN 2025/2030
+dataCapFacAvgREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "p32_PyPSA_CFAvg",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_PyPSA_CFAvg"),
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+    restoreZeros = FALSE) %>%
+  group_by(year, region, technology, iteration) %>%
+  summarise(p32_PyPSA_CFAvg = unique(p32_PyPSA_CFAvg)) %>%
+  revalue.levels(technology = rm2genTech) %>%
+  filter(year %in% c(2025,2030))
+
+dataCapfacPyPSA <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "capacity_factors.csv")) %>%
+  # Increment iteration by 1 to match REMIND
+  mutate(iteration = iteration + 1) %>%
+  quitte::revalue.levels(carrier = rm2genTech) %>%
+  group_by(year, region, carrier, iteration) %>%
+  summarise(value = unique(value)) %>%
+  filter(year %in% c(2025,2030)) %>%
+  rename(technology = carrier)
+
+pCapfacIter <- ggplot() +
+  geom_line(data = dataCapFacAvgREMIND, aes(x = iteration, y = p32_PyPSA_CFAvg, color = technology)) +
+  geom_point(data = dataCapFacAvgREMIND, aes(x = iteration, y = p32_PyPSA_CFAvg, color = technology)) +
+  #geom_point(data = dataCapfacPyPSA, aes(x = iteration, y = value, color = technology), shape = 4) +
+  scale_color_manual(
+    name = "Technology",
+    values = colorsTech,
+    labels = namesTech,
+    breaks = names(namesTech)
+  ) +
+  scale_y_continuous(limits = c(0,1)) +
+  labs(x = "Iteration", y = "Capacity factor") +
+  ggtitle("Capacity factors, Germany") +
+  facet_wrap(~year)
+
+ggsave("capfac_iter.png", width = 22, height = 10, units = "cm", dpi = 300, bg = "white")
 
 # PEAK RESIDUAL LOAD
 dataPeakResLoadPyPSA <- readPyPSAcsv(

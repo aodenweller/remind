@@ -103,9 +103,9 @@ vm_cap.fx(t,regi,"elh2VRE",rlf) = 0;
 ***                  PyPSA-Eur coupling (bounds)
 ***------------------------------------------------------------
 
-*** Assume that total electricity load per region cannot go down below 80% of the 2025 value
-*** This should never be binding, but might prevent the solver from setting the load to 0
-*v32_usableSeDispNet.lo(tPy32,regPy32,"seel") = 0.8 * v32_usableSeDispNet.l("2025",regPy32,"seel");
+*** Assume that total electricity load per region cannot go down below 50% of the 2005 value of vm_usableSe
+*** This should not be binding in the solution, but might prevent the solver from setting the load to 0 in some iterations
+*v32_usableSeDispNet.lo(tPy32,regPy32,"seel") = 0.5 * vm_usableSe.l("2005",regPy32,"seel");
 
 *** All capacity factors come from PyPSA-Eur.
 *** Set vm_capFac free here, so that REMIND can adjust it freely to match the capacity factor from PyPSA-Eur (equation q32_capFac).
