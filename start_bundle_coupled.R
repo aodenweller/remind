@@ -104,9 +104,6 @@ if (!is.null(renv::project())) {
     message("Installing missing MAgPIE dependencies ", paste(missingDeps, collapse = ", "))
     renv::install(missingDeps)
   }
-  if (! any(grepl("renvVersion", readLines(file.path(path_magpie, ".Rprofile"), warn = FALSE)))) {
-    stop("REMIND uses renv, but no renvVersion defined in MAgPIE .Rprofile. Checkout a recent .Rprofile in ", path_magpie)
-  }
 }
 
 ########################################################################################################
@@ -124,16 +121,13 @@ NC    <- "\033[0m"   # No Color
 
 # define arguments that are accepted (test for backward compatibility)
 startgroup <- "1"
-flags <- lucode2::readArgs("startgroup", .flags = c(h = "--help", g = "--gamscompile", i = "--interactive", p = "--parallel", t = "--test"))
+flags <- lucode2::readArgs("startgroup", .flags = c(h = "--help", g = "--gamscompile", i = "--interactive", t = "--test"))
 if (! exists("argv")) argv <- commandArgs(trailingOnly = TRUE)
 if ("--help" %in% flags) {
   message(helpText)
   q()
 }
 if ("test" %in% argv) flags <- unique(c(flags, "--test"))
-if ("--parallel" %in% flags) {
-  message("The flag --parallel is not necessary anymore, as this is default now")
-}
 
 # load arguments from command line
 argv <- grep('(^-|=|^test$)', argv, value = TRUE, invert = TRUE)
@@ -155,7 +149,8 @@ if (length(argv) > 0) {
   message("")
 }
 
-if (! file.exists("output")) dir.create("output")
+dir.create(file.path(path_remind, "output"), showWarnings = FALSE)
+dir.create(file.path(path_magpie, "output"), showWarnings = FALSE)
 
 ensureRequirementsInstalled(rerunPrompt = "start_bundle_coupled.R")
 
@@ -419,7 +414,7 @@ for(scen in common){
 
   # Set description
   if ("description" %in% names(settings_remind) && ! is.na(settings_remind[scen, "description"])) {
-    cfg_rem$description <- gsub('"', '', settings_remind[scen, "description"])
+    cfg_rem$description <- iconv(gsub('"', '', settings_remind[scen, "description"]), from = "UTF-8", to = "ASCII//TRANSLIT")
   } else {
     cfg_rem$description <- paste0("Coupled REMIND and MAgPIE run ", scen, " started by ", path_settings_remind, " and ", path_settings_coupled, ".")
   }
@@ -471,6 +466,7 @@ for(scen in common){
     # Create list of gdx's that this run needs as input from other runs
     gdxlist <- unlist(settings_remind[scen, names(path_gdx_list)])
     names(gdxlist) <- path_gdx_list
+    if (scen %in% gdxlist) stop(scen, " is self-referencial for ", paste(names(path_gdx_list)[which(gdxlist == scen)], collapse = ", "))
     # look for gdx's not only among runs to be started but among all coupled scenarios, as runs that have already finished may also be required
     gdxlist[gdxlist %in% rownames(settings_coupled)] <- paste0(prefix_runname, gdxlist[gdxlist %in% rownames(settings_coupled)], "-rem-", i)
     possibleFulldata <- file.path(path_remind, "output", gdxlist, "fulldata.gdx")
@@ -541,7 +537,7 @@ for(scen in common){
       }
     }
 
-    if (cfg_rem$gms$optimization == "nash" && cfg_rem$gms$cm_nash_mode == "parallel" && isFALSE(magpie_empty)) {
+    if (cfg_rem$gms$optimization == "nash" && cfg_rem$gms$cm_nash_mode == 2 && isFALSE(magpie_empty)) {
       # for nash: set the number of CPUs per node to number of regions + 1
       numberOfTasks <- length(unique(read.csv2(cfg_rem$regionmapping)$RegionCode)) + 1
     } else {
@@ -554,7 +550,7 @@ for(scen in common){
       errorsfound <- errorsfound + cfg_rem$errorsfoundInCheckFixCfg
     }
 
-    if (! "--test" %in% flags) {
+    if (! any(c("--test", "--gamscompile") %in% flags)) {
       Rdatafile <- paste0(fullrunname, ".RData")
       message("Save settings to ", Rdatafile)
       save(path_remind, path_magpie, cfg_rem, cfg_mag, runname, fullrunname, max_iterations, start_iter,
@@ -660,7 +656,7 @@ if (! "--test" %in% flags && ! "--gamscompile" %in% flags) {
   cs_name <- paste0("compScen-all-rem-", max_iterations)
   cs_qos <- if (! isFALSE(run_compareScenarios)) run_compareScenarios else "short"
   cs_command <- paste0("sbatch --qos=", cs_qos, " --job-name=", cs_name, " --output=", cs_name, ".out --error=",
-    cs_name, ".out --mail-type=END --time=60 --wrap='Rscript scripts/cs2/run_compareScenarios2.R outputDirs=",
+    cs_name, ".out --mail-type=END --time=60 --mem=8000 --wrap='Rscript scripts/cs2/run_compareScenarios2.R outputDirs=",
     cs_runs, " profileName=REMIND-MAgPIE outFileName=", cs_name,
     " regionList=World,LAM,OAS,SSA,EUR,NEU,MEA,REF,CAZ,CHA,IND,JPN,USA mainRegName=World'")
   message("\n### To start a compareScenario once everything is finished, run:")
