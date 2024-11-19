@@ -1,4 +1,4 @@
-*** |  (C) 2006-2023 Potsdam Institute for Climate Impact Research (PIK)
+*** |  (C) 2006-2024 Potsdam Institute for Climate Impact Research (PIK)
 *** |  authors, and contributors see CITATION.cff file. This file is part
 *** |  of REMIND and licensed under AGPL-3.0-or-later. Under Section 7 of
 *** |  AGPL-3.0, you are granted additional permissions described in the
@@ -452,8 +452,8 @@ $ifthen.emiMkt not "%cm_emiMktTarget%" == "off"
           display "#### Check out the pm_emiMktTarget_dev parameter of 47_regipol module.";
           display "#### For budget targets, the parameter gives the percentage deviation of current emissions in relation to the target value.";
           display "#### For yearly targets, the parameter gives the current emissions minus the target value in relative terms to the 2005 emissions.";
-          display "#### The deviation must to be less than cm_emiMktTarget_tolerance. By default within 1%, i.e. in between -0.01 and 0.01 of 2005 emissions to reach convergence.";
-          display cm_emiMktTarget_tolerance, pm_emiMktTarget_dev, pm_factorRescaleemiMktCO2Tax, pm_emiMktCurrent, pm_emiMktTarget, pm_emiMktRefYear;
+          display "#### The deviation must to be less than pm_emiMktTarget_tolerance. By default within 1%, i.e. in between -0.01 and 0.01 of 2005 emissions to reach convergence.";
+          display pm_emiMktTarget_tolerance, pm_emiMktTarget_dev, pm_factorRescaleemiMktCO2Tax, pm_emiMktCurrent, pm_emiMktTarget, pm_emiMktRefYear;
           display pm_emiMktTarget_dev_iter;
           display pm_taxemiMkt_iteration;
 	      );
@@ -565,8 +565,8 @@ $ifthen.emiMkt not "%cm_emiMktTarget%" == "off"
           display "#### Check out the pm_emiMktTarget_dev parameter of 47_regipol module.";
           display "#### For budget targets, the parameter gives the percentage deviation of current emissions in relation to the target value.";
           display "#### For yearly targets, the parameter gives the current emissions minus the target value in relative terms to the 2005 emissions.";
-          display "#### The deviation must to be less than cm_emiMktTarget_tolerance. By default within 1%, i.e. in between -0.01 and 0.01 of 2005 emissions to reach convergence.";
-          display cm_emiMktTarget_tolerance, pm_emiMktTarget_dev, pm_factorRescaleemiMktCO2Tax, pm_emiMktCurrent, pm_emiMktTarget, pm_emiMktRefYear;
+          display "#### The deviation must to be less than pm_emiMktTarget_tolerance. By default within 1%, i.e. in between -0.01 and 0.01 of 2005 emissions to reach convergence.";
+          display pm_emiMktTarget_tolerance, pm_emiMktTarget_dev, pm_factorRescaleemiMktCO2Tax, pm_emiMktCurrent, pm_emiMktTarget, pm_emiMktRefYear;
           display pm_emiMktTarget_dev_iter;
           display pm_taxemiMkt_iteration;
 	      );

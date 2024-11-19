@@ -1,4 +1,4 @@
-*** |  (C) 2006-2023 Potsdam Institute for Climate Impact Research (PIK)
+*** |  (C) 2006-2024 Potsdam Institute for Climate Impact Research (PIK)
 *** |  authors, and contributors see CITATION.cff file. This file is part
 *** |  of REMIND and licensed under AGPL-3.0-or-later. Under Section 7 of
 *** |  AGPL-3.0, you are granted additional permissions described in the
@@ -28,7 +28,7 @@ vm_prodFe.l(ttot,regi,entyFe2,entyFe2,te) = 0;
 vm_prodSe.l(ttot,regi,enty,enty2,te) = 0;
 vm_demSe.l(ttot,regi,enty,enty2,te) = 0;
 vm_Xport.l(ttot,regi,tradePe)       = 0;
-vm_capDistr.l(t,regi,te,rlf)          = 0;
+v_capDistr.l(t,regi,te,rlf)          = 0;
 vm_cap.l(t,regi,te,rlf)              = 0;
 vm_fuExtr.l(ttot,regi,"pebiolc","1")$(ttot.val ge 2005)  = 0;
 vm_pebiolc_price.l(ttot,regi)$(ttot.val ge 2005)         = 0;
@@ -82,8 +82,8 @@ if(cm_iterative_target_adj eq 9,
 *** Save the original functional form of the CO2 price trajectory so values for all times can be accessed even if the peakBudgYr is shifted. 
 *** Then change to linear increasing CO2 price after peaking time 
   p_taxCO2eq_until2150(t,regi) = pm_taxCO2eq(t,regi);
-  loop(t2$(t2.val eq c_peakBudgYr),
-    pm_taxCO2eq(t,regi)$(t.val gt c_peakBudgYr) = p_taxCO2eq_until2150(t2,regi) + (t.val - t2.val) * c_taxCO2inc_after_peakBudgYr * sm_DptCO2_2_TDpGtC;  !! increase by c_taxCO2inc_after_peakBudgYr per year
+  loop(t2$(t2.val eq cm_peakBudgYr),
+    pm_taxCO2eq(t,regi)$(t.val gt cm_peakBudgYr) = p_taxCO2eq_until2150(t2,regi) + (t.val - t2.val) * cm_taxCO2inc_after_peakBudgYr * sm_DptCO2_2_TDpGtC;  !! increase by cm_taxCO2inc_after_peakBudgYr per year
   );
 );
 
@@ -189,5 +189,33 @@ execute_load "input_ref.gdx", pm_PEPrice, pm_SEPrice, pm_FEPrice;
 if (cm_startyear gt 2005,
 Execute_Loadpoint 'input_ref' vm_capEarlyReti.l = vm_capEarlyReti.l;
 );
+
+*** initialize the carrier subtype shares in final energy demand such that the starting point for the model is "all sectors have the same bio/fos/syn shares for a given carrier type" when cm_seFeSectorShareDevMethod is enabled
+p_shSeFe(t,regi,entySe)$((entySeBio(entySe) OR entySeSyn(entySe) OR entySeFos(entySe)) AND sum(seAgg$seAgg2se(seAgg,entySe), sum((sector,emiMkt)$sector2emiMkt(sector,emiMkt), sum(entySe2$seAgg2se(seAgg,entySe2), sum(entyFe$(sefe(entySe2,entyFe) AND entyFe2Sector(entyFe,sector)), vm_demFeSector.l(t,regi,entySe2,entyFe,sector,emiMkt))))) ) =
+  sum((sector,emiMkt)$sector2emiMkt(sector,emiMkt), sum(entyFe$(sefe(entySe,entyFe) AND entyFe2Sector(entyFe,sector)), vm_demFeSector.l(t,regi,entySe,entyFe,sector,emiMkt)))
+  /
+  sum(seAgg$seAgg2se(seAgg,entySe), sum((sector,emiMkt)$sector2emiMkt(sector,emiMkt), sum(entySe2$seAgg2se(seAgg,entySe2), sum(entyFe$(sefe(entySe2,entyFe) AND entyFe2Sector(entyFe,sector)), vm_demFeSector.l(t,regi,entySe2,entyFe,sector,emiMkt)))));
+v_shSeFe.l(t,regi,entySe)$p_shSeFe(t,regi,entySe) = p_shSeFe(t,regi,entySe);
+
+$ifthen.penSeFeSectorShareDevCost not "%cm_seFeSectorShareDevMethod%" == "off"
+vm_demFeSector.l(t,regi,entySe,entyFe,sector,emiMkt)$(
+  ( p_shSeFe(t,regi,entySe) ) AND
+  (t.val ge 2025) AND  !!disable share incentives for historical years in buildings, industry and CDR as this should be handled by historical bounds
+  ( entySeBio(entySe) OR entySeSyn(entySe) OR entySeFos(entySe) ) AND !! only redefine vm_demFeSector for entySeBio, entySeSyn and entySeFos items
+  ( sefe(entySe,entyFe) AND entyFe2Sector(entyFe,sector) AND sector2emiMkt(sector,emiMkt) ) AND !!only create the equation for valid cobinations of entySe, entyFe, sector and emiMkt
+  ( (entySeBio(entySe) OR entySeSyn(entySe)) ) AND !!share incentives only need to be applied to n-1 secondary energy carriers
+  ( NOT(sameas(sector,"build") AND (sameas(entyFE,"fesos"))) ) !!disable buildings solids share incentives
+) =
+  sum(entySe2$sefe(entySe2,entyFe), vm_demFeSector.l(t,regi,entySe2,entyFe,sector,emiMkt))
+  * p_shSeFe(t,regi,entySe);  
+vm_demFeSector_afterTax.l(t,regi,entySe,entyFe,sector,emiMkt) = vm_demFeSector.l(t,regi,entySe,entyFe,sector,emiMkt);
+$endif.penSeFeSectorShareDevCost
+
+p_shSeFeSector(t,regi,entySe,entyFe,sector,emiMkt)$((entySeBio(entySe) OR entySeSyn(entySe) OR entySeFos(entySe)) AND (sefe(entySe,entyFe) AND entyFe2Sector(entyFe,sector) AND sector2emiMkt(sector,emiMkt)) AND sum(entySe2$sefe(entySe2,entyFe), vm_demFeSector.l(t,regi,entySe2,entyFe,sector,emiMkt)) ) =
+  vm_demFeSector.l(t,regi,entySe,entyFe,sector,emiMkt)
+  /
+  sum(entySe2$sefe(entySe2,entyFe), vm_demFeSector.l(t,regi,entySe2,entyFe,sector,emiMkt))
+;
+v_shSeFeSector.l(t,regi,entySe,entyFe,sector,emiMkt)$p_shSeFeSector(t,regi,entySe,entyFe,sector,emiMkt) = p_shSeFeSector(t,regi,entySe,entyFe,sector,emiMkt);
 
 *** EOF ./core/preloop.gms

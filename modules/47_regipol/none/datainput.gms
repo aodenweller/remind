@@ -1,4 +1,4 @@
-*** |  (C) 2006-2023 Potsdam Institute for Climate Impact Research (PIK)
+*** |  (C) 2006-2024 Potsdam Institute for Climate Impact Research (PIK)
 *** |  authors, and contributors see CITATION.cff file. This file is part
 *** |  of REMIND and licensed under AGPL-3.0-or-later. Under Section 7 of
 *** |  AGPL-3.0, you are granted additional permissions described in the
@@ -22,5 +22,30 @@ loop(ext_regi$altFeEmiFac_regi(ext_regi),
   pm_emifac(ttot,regi,"pecoal","sesofos","coaltr","co2")$(sameas(regi,"DEU") OR sameas(regi,"UKI")) = 0.922937989;
 $endif.altFeEmiFac
 
+$ontext
+*** VRE capacity factor adjustments for Germany in line with results from detailed models in ARIADNE project
+ loop(te$sameas(te,"windon"),
+  loop(regi$sameas(regi,"DEU"),
+    pm_cf("2025",regi,te) =  1.04 * pm_cf("2025",regi,te);
+    pm_cf("2030",regi,te) =  1.08 * pm_cf("2030",regi,te);
+    pm_cf("2035",regi,te) =  1.12 * pm_cf("2035",regi,te);
+    pm_cf("2040",regi,te) =  1.16 * pm_cf("2040",regi,te);
+    pm_cf("2045",regi,te) =  1.2  * pm_cf("2045",regi,te);
+    pm_cf(t,regi,te)$(t.val gt 2045) =  pm_cf("2045",regi,te);
+  );
+);
+
+
+loop(te$sameas(te,"spv"),
+  loop(regi$sameas(regi,"DEU"),
+    pm_cf("2025",regi,te) =  1.02 * pm_cf("2025",regi,te);
+    pm_cf("2030",regi,te) =  1.04 * pm_cf("2030",regi,te);
+    pm_cf("2035",regi,te) =  1.06 * pm_cf("2035",regi,te);
+    pm_cf("2040",regi,te) =  1.08 * pm_cf("2040",regi,te);
+    pm_cf("2045",regi,te) =  1.10 * pm_cf("2045",regi,te);
+    pm_cf(t,regi,te)$(t.val gt 2045) =  pm_cf("2045",regi,te);
+  );
+);
+$offtext
 
 *** EOF ./modules/47_regipol/none/datainput.gms
