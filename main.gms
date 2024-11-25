@@ -1877,13 +1877,7 @@ $setglobal cm_subsec_model_steel  processes  !! def = processes  !! regexp = pro
 $setglobal cm_tech_bounds_2025  on  !! def = on  !! regexp = on|off
 *** c32_pypsa_dir
 *** Directory of PyPSA-Eur
-$setglobal c32_pypsa_dir /p/tmp/adrianod/pypsa-eur
-*** c32_mamba_dir
-*** Directory of micromamba for PyPSA
-$setglobal c32_mamba_dir /p/tmp/adrianod/software/micromamba_20240118
-*** c32_mamba_env
-*** Environment name in micromamba directory
-$setglobal c32_mamba_env pypsa-eur-20240118
+$setglobal c32_pypsa_dir /p/tmp/adrianod/pypsa-eur_v0.13.0
 *** c32_pypsa_multiregion
 *** Switch to enable PyPSA in multiple regions (changes PyPSA/sets.gms)
 $setglobal c32_pypsa_multiregion off !! def = off !! regexp = off|on

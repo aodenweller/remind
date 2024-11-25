@@ -23,7 +23,7 @@ $elseif "%c32_pypsa_multiregion%" == "off"
 $endif
 
     tePy32(all_te)              "Electricity technologies coupled to PyPSA"
-        /biochp, bioigcc, bioigccc, ngcc, ngccc, gaschp, igcc, igccc, pc, coalchp, tnrs, fnrs, ngt, windoff, dot, wind, hydro, spv/  !! TODO: What about CSP and geohdr?
+        /biochp, bioigcc, bioigccc, ngcc, ngccc, gaschp, igcc, igccc, pc, coalchp, tnrs, fnrs, ngt, windoff, dot, windon, hydro, spv/  !! TODO: What about CSP and geohdr?
 
     tePyDisp32(all_te)          "Dispatchable electricity technologies coupled to PyPSA (without grades)"
         /biochp, bioigcc, bioigccc, ngcc, ngccc, gaschp, igcc, igccc, pc, coalchp, tnrs, fnrs, ngt, dot/
