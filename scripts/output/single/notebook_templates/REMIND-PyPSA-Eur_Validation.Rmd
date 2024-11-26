@@ -193,7 +193,7 @@ techMapping <- tribble(
   "fnrs", "nuclear", "nuclear",
   "tnrs", "nuclear", "nuclear",
   "dot", "oil", "oil",
-  "wind", "wind_onshore", "onwind",
+  "windon", "wind_onshore", "onwind",
   "windoff", "wind_offshore", "offwind",
   "windoff", "wind_offshore", "offwind & offwind-ac & offwind-dc",
   "spv", "solar_pv", "solar & solar-rooftop & solar-utility",
@@ -228,6 +228,7 @@ rm2genTech <- c(rm2genTech, c("elh2" = "electrolysis"))
 py2genTech <- setNames(techMapping$general, techMapping$pypsa.eur)
 py2genTech <- py2genTech[!duplicated(names(py2genTech))]
 
+# TODO: Remove and merge with mapping from above
 py2genTech <- c(py2genTech, c("electrolysis" = "electrolysis",
                               "geothermal" = "geothermal",
                               "csp" = "csp",
@@ -254,7 +255,7 @@ rm2pyTech <- c(
   "ngt" =  "OCGT",
   "windoff" = "offwind",
   "dot" = "oil",
-  "wind" = "onwind",
+  "windon" = "onwind",
   "hydro" = "hydro",
   "spv" = "solar",
   "elh2" = "electrolysis"
