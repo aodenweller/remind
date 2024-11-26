@@ -29,7 +29,7 @@ $endif
         /biochp, bioigcc, bioigccc, ngcc, ngccc, gaschp, igcc, igccc, pc, coalchp, tnrs, fnrs, ngt, dot/
 
     tePyVRE32(all_te)           "Variable renewable electricity technologies coupled to PyPSA (with grades)"
-        /windoff, wind, hydro, spv/
+        /windoff, windon, hydro, spv/
 
     entyPePy32(all_enty)        "Primary energy carriers for which prices are coupled to PyPSA"
         /peoil, pegas, pecoal, peur, pehyd, pewin, pesol, pebiolc/ !! TODO: Remove pehyd, pewin, pesol
