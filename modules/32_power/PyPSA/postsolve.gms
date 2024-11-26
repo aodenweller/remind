@@ -28,12 +28,14 @@ loop(t,
 ***                  PyPSA-Eur reporting
 ***------------------------------------------------------------
 
+$ifthen "%c32_pypsa_peakcap%" == "on"
 if ((sm_PyPSA_eq eq 1),
 *** Calculate shadow price of peak residual load constraint
 p32_PeakResLoadShadowPrice(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePyDisp32(te) AND ((qm_budget.m(t,regi) * p32_PyPSA_CFAvg(t,regi,te) ) ne 0))  =
       q32_PeakResCap.m(t,regi)
   / ( qm_budget.m(t,regi) * p32_PyPSA_CFAvg(t,regi,te) );
 );
+$endif
 
 ***------------------------------------------------------------
 ***                  PyPSA-Eur pre-coupling
@@ -61,7 +63,7 @@ p32_PEPrice_iter(iteration,ttot,regi,entyPe) = pm_PEPrice(ttot,regi,entyPe);
 p32_preInvCap(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND NOT sameas(te, "hydro")) =
   max((vm_cap.l(t,regi,te,"1")
      - vm_deltaCap.l(t,regi,te,"1") * pm_ts(t) * ( 1 - vm_capEarlyReti.l(t,regi,te) )),
-    0);
+    1E-6);  !! Minimal capacity of 1 MW to avoid issues in PyPSA-Eur's RCL implementation
 
 *** Track pre-investment capacities over iterations
 p32_preInvCap_iter(iteration,t,regi,te) = p32_preInvCap(t,regi,te);
