@@ -118,17 +118,24 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
         sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2)) + EPS;
   );
 
-  !! Capital interest rate aggregated for all regions in regPy32, similar to calculation of p_r
-  p32_discountRate(ttot)$(tPy32(ttot) AND ttot.val gt 2005 and ttot.val le 2130) =
-    min(0.1, max(0.03,  !! Limit between 3% and 10%
-    ( (  ( sum(regPy32(regi), vm_cons.l(ttot+1,regi)) / sum(regPy32(regi), pm_pop(ttot+1,regi)) )
-       / ( sum(regPy32(regi), vm_cons.l(ttot-1,regi)) / sum(regPy32(regi), pm_pop(ttot-1,regi)) )
+  !! Capital interest rate aggregated for all regions in regPy32 (PyPSA-Eur has no regional costs yet)
+  !! Also see calculation of p_r in core/postsolve.gms
+  p32_discountRate(ttot)$(tPy32(ttot) and ttot.val le 2100) =
+    1 / ( sum(regPy32(regi), pm_ies(regi)) / card(regPy32) ) * 
+      ( ( ( sum(regPy32(regi), vm_cons.l(ttot+1,regi)) / sum(regPy32(regi), pm_pop(ttot+1,regi)) )
+         /
+          ( sum(regPy32(regi), vm_cons.l(ttot-1,regi)) / sum(regPy32(regi), pm_pop(ttot-1,regi)) )
+        )
+        ** ( 1 / ( pm_ttot_val(ttot+1) - pm_ttot_val(ttot-1) ) )
+        - 1
       )
-      ** ( 1 / ( pm_ttot_val(ttot+1)- pm_ttot_val(ttot-1) ) )
-      - 1
-    )
-    + sum(regPy32(regi), pm_prtp(regi)) / card(regPy32)))
-  ;
+    + sum(regPy32(regi), pm_prtp(regi)) / card(regPy32)
+    ;
+
+  !! Limit p32_discountRate to 3-10%%
+  p32_discountRate(ttot)$(tPy32(ttot) and ttot.val le 2100) = 
+    min(0.1, max(0.03, p32_discountRate(ttot)));  !! Limit between 3% and 10%
+
   !! Set the interest rate to 0.05 after 2100
   p32_discountRate(ttot)$(ttot.val gt 2100) = 0.05;
 
