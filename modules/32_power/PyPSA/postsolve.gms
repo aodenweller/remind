@@ -213,6 +213,7 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_shSeEl=generation_share;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_MV=market_value;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_LoadPrice=load_price;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Markup=markup;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Curtailment=curtailment;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_PeakResLoadRel=peak_residual_load_relative;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Trade=crossborder_flow;
@@ -226,11 +227,13 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
   p32_PyPSA_CF_iter(iteration,t,regi,te) = p32_PyPSA_CF(t,regi,te);
   p32_PyPSA_MV_iter(iteration,t,regi,te) = p32_PyPSA_MV(t,regi,te);
   p32_PyPSA_LoadPrice_iter(iteration,t,regi,carrierPy32) = p32_PyPSA_LoadPrice(t,regi,carrierPy32);
+  p32_PyPSA_Markup_iter(iteration,t,regi,te) = p32_PyPSA_Markup(t,regi,te) + EPS;
 
 *** PyPSA-Eur to REMIND: Calculate averages to reduce oscillations
 *** (1) Capacity factors
-*** (2) Market values
-*** (3) Electricity prices
+*** (2) Market values (--> TODO:REMOVE)
+*** (3) Electricity prices (--> TODO:REMOVE)
+*** (4) Markups
 *** The idea behind averaging is the same as for REMIND to PyPSA-Eur. See above.
 *** Currently set x to 3 and y to 4
   if ((c32_avg_py2rm eq 0) or (iteration.val lt max(c32_startIter_PyPSA, 3) + 4 - 1),  !! c32_startIter_PYPSA + x + y - 1
@@ -240,6 +243,8 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
     p32_PyPSA_MVAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_PyPSA_MV(t,regi,te);
     !! Non-averaged electricity prices
     p32_PyPSA_LoadPriceAvg(t,regi,carrierPy32)$(tPy32(t) and regPy32(regi)) = p32_PyPSA_LoadPrice(t,regi,carrierPy32);
+    !! Non averaged markups
+    p32_PyPSA_MarkupAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_PyPSA_Markup(t,regi,te) + EPS;
   !! Implement step (3)
   elseif (c32_avg_py2rm eq 1),
     !! Averaged capacity factors over iterations
@@ -254,6 +259,10 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
     p32_PyPSA_LoadPriceAvg(t,regi,carrierPy32)$(tPy32(t) and regPy32(regi)) =
       sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2) * p32_PyPSA_LoadPrice_iter(iteration2,t,regi,carrierPy32)) /
       sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2));
+    !! Averaged markups over iterations
+    p32_PyPSA_MarkupAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) =
+      sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2) * p32_PyPSA_Markup_iter(iteration2,t,regi,te)) /
+      sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2)) + EPS;
   );
 
   !! Save v32_usableSeDispNet for next iteration's electricity trade implementation

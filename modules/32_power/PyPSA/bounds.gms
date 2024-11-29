@@ -127,8 +127,12 @@ v32_shSeElDisp.up(tPy32,regPy32,tePy32) = 1;
 $ifthen "%cm_pypsa_markup%" == "on"
 if ((sm_PyPSA_eq eq 1),
   vm_PyPSAMarkup.l(tPy32,regPy32,tePy32) = ( p32_PyPSA_MVAvg(tPy32,regPy32,tePy32) - p32_PyPSA_LoadPriceAvg(tPy32,regPy32,"AC") ) * sm_TWa_2_MWh / 1e12;
-  vm_PyPSAMarkup.lo(tPy32,regPy32,tePy32) = -200 * sm_TWa_2_MWh / 1E12;
-  vm_PyPSAMarkup.up(tPy32,regPy32,tePy32) = +200 * sm_TWa_2_MWh / 1E12;
+  !!vm_PyPSAMarkup.lo(tPy32,regPy32,tePy32) = -10 * sm_TWa_2_MWh / 1E12;
+  !!vm_PyPSAMarkup.up(tPy32,regPy32,tePy32) = +10 * sm_TWa_2_MWh / 1E12;
+  !! Calculate pm_PyPSAMarkup
+  pm_PyPSAMarkup(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te)) = p32_PyPSA_MarkupAvg(t,regi,te) * sm_TWa_2_MWh / 1e12 + EPS;
+  !! Limit pm_PyPSAMarkup to -10 to +10 EUR/MWh
+  pm_PyPSAMarkup(t,regi,te) = min(10 * sm_TWa_2_MWh / 1E12, max(-10 * sm_TWa_2_MWh / 1E12, pm_PyPSAMarkup(t,regi,te))) + EPS;
 );
 $endif
 

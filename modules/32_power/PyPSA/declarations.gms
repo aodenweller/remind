@@ -103,6 +103,9 @@ parameters
     p32_PyPSA_LoadPrice(ttot,all_regi,carrierPy32)                  "PyPSA import: Generic load prices (currently for electricity and hydrogen, later also sectoral loads) [$/MWh]"
     p32_PyPSA_LoadPrice_iter(iteration,ttot,all_regi,carrierPy32)   "PyPSA import calc: Load prices in iterations [$/MWh]"
     p32_PyPSA_LoadPriceAvg(ttot,all_regi,carrierPy32)               "PyPSA import calc: Load prices averaged over iterations [$/MWh]"
+    p32_PyPSA_Markup(ttot,all_regi,all_te)                          "PyPSA import: Markups for electricity technologies according to PyPSA-Eur [$/MWh]"
+    p32_PyPSA_Markup_iter(iteration,ttot,all_regi,all_te)           "PyPSA import calc: Markups in iterations [$/MWh]"
+    p32_PyPSA_MarkupAvg(ttot,all_regi,all_te)                       "PyPSA import calc: Markups averaged over iterations [$/MWh]"
     p32_PyPSA_Curtailment(ttot,all_regi,all_te)                     "PyPSA import: Curtailment by technology [MWh]"
     p32_PyPSA_PeakResLoadRel(ttot,all_regi)                         "PyPSA import: Peak residual load in relative terms [1]"
     p32_PyPSA_shSeEl(ttot,all_regi,all_te)                          "PyPSA import: Electricity generation share by technology within region [1]"
@@ -123,6 +126,7 @@ parameters
     s32_checkPrice_iter(iteration)                                  "PyPSA coupling: s32_checkPrice in iterations"
     s32_preFacFadeOut                                               "PyPSA coupling: Multiplicative factor to fade out pre-factors [1]"
     s32_PyPSA_called(iteration)                                     "PyPSA coupling: Boolean that tracks if PyPSA was called over iterations, necessary for averaging (1 = yes, 0 = no)"
+    pm_PyPSAMarkup(ttot,all_regi,all_te)                            "PyPSA coupling: Markups for electricity technologies according to PyPSA-Eur [T$/TWa]"
     p32_PeakResLoadShadowPrice(ttot,all_regi,all_te)                "PyPSA reporting: Shadow price of peak residual load constraint, used for plotting LCOEs vs. market values [T$/TWa]"
 ;
 
