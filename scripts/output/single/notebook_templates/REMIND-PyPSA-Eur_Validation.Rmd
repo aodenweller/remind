@@ -1749,58 +1749,27 @@ dataMarkupWeightedREMIND <- dataMarkupREMIND %>%
   order.levels(technology = names(namesTech))
 
 # PyPSA-Eur
-dataMarketValuePyPSA <- readPyPSAcsv(
-  paths = file.path(pyValidationDirs, "market_values.csv")) %>%
+dataMarkupPyPSA <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "markups.csv")) %>%
   # Increment iteration by 1 to match REMIND
   mutate(iteration = iteration + 1) %>%
   quitte::revalue.levels(carrier = rm2genTech) %>%
   group_by(year, region, carrier, iteration) %>%
   summarise(value = unique(value)) %>%
-  quitte::order.levels(carrier = names(namesTech))
-
-dataElecPricePyPSA <- readPyPSAcsv(
-  paths = file.path(pyValidationDirs, "load_prices.csv")) %>%
-  filter(carrier == "AC") %>%
-  select(!carrier) %>%
-  # Increment iteration by 1 to match REMIND
-  mutate(iteration = iteration + 1)
-
-dataMarkupPyPSA <- dataMarketValuePyPSA %>%
-  left_join(dataElecPricePyPSA, by = c("year", "region", "iteration")) %>%
-  mutate(value = value.x - value.y) %>%
-  group_by(year, region, carrier, iteration) %>%
-  summarise(value = unique(value)) %>%
   rename(technology = carrier) %>%
-  order.levels(technology = names(namesTech))
+  quitte::order.levels(technology = names(namesTech))
 
 # Average markup REMIND
-dataMarketValueAvgREMIND <- readREMINDgdx(
+dataMarkupAvgREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "p32_PyPSA_MVAvg",
-    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_PyPSA_MVAvg"),
+    gdxVar = "p32_PyPSA_MarkupAvg",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_PyPSA_MarkupAvg"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = FALSE) %>%
-  # Increment iteration by 1 because this value is only available for the next iteration
-  mutate(iteration = iteration + 1) %>%
   revalue.levels(technology = rm2genTech) %>%
   group_by(year, region, technology, iteration) %>%
-  summarise(p32_PyPSA_MVAvg = unique(p32_PyPSA_MVAvg))
-
-# Average electricity price REMIND
-dataElecPriceAvgREMIND <- readREMINDgdx(
-    paths = rmFiles,
-    gdxVar = "p32_PyPSA_LoadPriceAvg",
-    columns = c("ttot" = "year", "all_regi" = "region", "carrierPy32" = "carrier", "value" = "p32_PyPSA_LoadPriceAvg"),
-    colFilter = list("year" = years, "region" = regions, "carrier" = "AC"),
-    restoreZeros = FALSE) %>%
-  # Increment iteration by 1 because this value is only available for the next iteration
-  mutate(iteration = iteration + 1) %>%
-  select(-carrier)
-
-dataMarkupAvgREMIND <- dataMarketValueAvgREMIND %>%
-  right_join(dataElecPriceAvgREMIND, by = c("year", "region", "iteration")) %>%
-  mutate(p32_PyPSA_MarkupAvg = p32_PyPSA_MVAvg - p32_PyPSA_LoadPriceAvg)
-
+  summarise(p32_PyPSA_MarkupAvg = unique(p32_PyPSA_MarkupAvg))
+)
 for (r in regions) {
 
   dataMarkupPlotREMIND <- dataMarkupWeightedREMIND %>%
