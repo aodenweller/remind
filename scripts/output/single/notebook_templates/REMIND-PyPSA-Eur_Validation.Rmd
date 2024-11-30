@@ -1769,7 +1769,7 @@ dataMarkupAvgREMIND <- readREMINDgdx(
   revalue.levels(technology = rm2genTech) %>%
   group_by(year, region, technology, iteration) %>%
   summarise(p32_PyPSA_MarkupAvg = unique(p32_PyPSA_MarkupAvg))
-)
+
 for (r in regions) {
 
   dataMarkupPlotREMIND <- dataMarkupWeightedREMIND %>%
