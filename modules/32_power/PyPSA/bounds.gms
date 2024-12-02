@@ -107,7 +107,7 @@ vm_cap.fx(t,regi,"elh2VRE",rlf) = 0;
 
 *** Assume that total electricity load per region cannot go down below 50% of the 2005 value of vm_usableSe
 *** This should not be binding in the solution, but might prevent the solver from setting the load to 0 in some iterations
-*v32_usableSeDispNet.lo(tPy32,regPy32,"seel") = 0.5 * vm_usableSe.l("2005",regPy32,"seel");
+v32_usableSeDispNet.lo(tPy32,regPy32,"seel") = 0.5 * vm_usableSe.l("2005",regPy32,"seel");
 
 *** All capacity factors come from PyPSA-Eur.
 *** Set vm_capFac free here, so that REMIND can adjust it freely to match the capacity factor from PyPSA-Eur (equation q32_capFac).
@@ -123,14 +123,10 @@ $endif
 v32_shSeElDisp.lo(tPy32,regPy32,tePy32) = 0;
 v32_shSeElDisp.up(tPy32,regPy32,tePy32) = 1;
 
-*** Set starting values for vm_PyPSAMarkup and limit to between -200 and 200 EUR/MWh
+*** Set starting values for vm_PyPSAMarkup
 $ifthen "%cm_pypsa_markup%" == "on"
 if ((sm_PyPSA_eq eq 1),
   vm_PyPSAMarkup.l(tPy32,regPy32,tePy32) = p32_PyPSA_MarkupAvg(tPy32,regPy32,tePy32) * sm_TWa_2_MWh / 1e12;
-  !! Calculate pm_PyPSAMarkup
-  pm_PyPSAMarkup(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te)) = p32_PyPSA_MarkupAvg(t,regi,te) * sm_TWa_2_MWh / 1e12 + EPS;
-  !! Limit pm_PyPSAMarkup to -10 to +10 EUR/MWh
-  pm_PyPSAMarkup(t,regi,te) = min(10 * sm_TWa_2_MWh / 1E12, max(-10 * sm_TWa_2_MWh / 1E12, pm_PyPSAMarkup(t,regi,te))) + EPS;
 );
 $endif
 

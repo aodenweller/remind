@@ -367,7 +367,7 @@ q21_taxrevPyPSAMarkup(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1)
   v21_taxrevPyPSAMarkup(t,regi)
   =e=
     sum (en2en(enty,enty2,te)$(tePy32(te)),
-         - pm_PyPSAMarkup(t,regi,te) * ( vm_prodSe(t,regi,enty,enty2,te) - v32_storloss(t,regi,te) )
+         - vm_PyPSAMarkup(t,regi,te) * ( vm_prodSe(t,regi,enty,enty2,te) - v32_storloss(t,regi,te) )
         )
   - p21_taxrevPyPSAMarkup0(t,regi) 
 ;

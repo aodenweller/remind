@@ -126,7 +126,6 @@ parameters
     s32_checkPrice_iter(iteration)                                  "PyPSA coupling: s32_checkPrice in iterations"
     s32_preFacFadeOut                                               "PyPSA coupling: Multiplicative factor to fade out pre-factors [1]"
     s32_PyPSA_called(iteration)                                     "PyPSA coupling: Boolean that tracks if PyPSA was called over iterations, necessary for averaging (1 = yes, 0 = no)"
-    pm_PyPSAMarkup(ttot,all_regi,all_te)                            "PyPSA coupling: Markups for electricity technologies according to PyPSA-Eur [T$/TWa]"
     p32_PeakResLoadShadowPrice(ttot,all_regi,all_te)                "PyPSA reporting: Shadow price of peak residual load constraint, used for plotting LCOEs vs. market values [T$/TWa]"
 ;
 

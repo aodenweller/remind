@@ -234,7 +234,7 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
   p32_PyPSA_CF_iter(iteration,t,regi,te) = p32_PyPSA_CF(t,regi,te);
   p32_PyPSA_MV_iter(iteration,t,regi,te) = p32_PyPSA_MV(t,regi,te);
   p32_PyPSA_LoadPrice_iter(iteration,t,regi,carrierPy32) = p32_PyPSA_LoadPrice(t,regi,carrierPy32);
-  p32_PyPSA_Markup_iter(iteration,t,regi,te) = p32_PyPSA_Markup(t,regi,te) + EPS;
+  p32_PyPSA_Markup_iter(iteration,t,regi,te) = p32_PyPSA_Markup(t,regi,te);
 
 *** PyPSA-Eur to REMIND: Calculate averages to reduce oscillations
 *** (1) Capacity factors
@@ -251,7 +251,7 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
     !! Non-averaged electricity prices
     p32_PyPSA_LoadPriceAvg(t,regi,carrierPy32)$(tPy32(t) and regPy32(regi)) = p32_PyPSA_LoadPrice(t,regi,carrierPy32);
     !! Non averaged markups
-    p32_PyPSA_MarkupAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_PyPSA_Markup(t,regi,te) + EPS;
+    p32_PyPSA_MarkupAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_PyPSA_Markup(t,regi,te);
   !! Implement step (3)
   elseif (c32_avg_py2rm eq 1),
     !! Averaged capacity factors over iterations
@@ -269,7 +269,7 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
     !! Averaged markups over iterations
     p32_PyPSA_MarkupAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) =
       sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2) * p32_PyPSA_Markup_iter(iteration2,t,regi,te)) /
-      sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2)) + EPS;
+      sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2));
   );
 
   !! Save v32_usableSeDispNet for next iteration's electricity trade implementation
@@ -277,6 +277,8 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
 
 *** Activate PyPSA equations if PyPSA ran once
 sm_PyPSA_eq = 1;
+display "p32_PyPSAMarkupAvg in postsolve";
+display p32_PyPSA_MarkupAvg;
 );
 
 
