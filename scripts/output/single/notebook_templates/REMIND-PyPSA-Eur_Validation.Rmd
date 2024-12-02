@@ -1780,6 +1780,8 @@ dataMarkupAvgREMIND <- readREMINDgdx(
     columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_PyPSA_MarkupAvg"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = FALSE) %>%
+  # Increment iteration by 1 because this value is only available for the next iteration
+  mutate(iteration = iteration + 1) %>%
   revalue.levels(technology = rm2genTech) %>%
   group_by(year, region, technology, iteration) %>%
   summarise(p32_PyPSA_MarkupAvg = unique(p32_PyPSA_MarkupAvg))
