@@ -34,6 +34,7 @@ knitr::opts_chunk$set(
   echo = FALSE,
   message = FALSE,
   cache = FALSE,
+  warning = FALSE,
   dev = c("png", "pdf"),
   dev.args = list(png = list(type = "cairo", family = "sans"), pdf = list(family = "sans", bg = "transparent")),
   fig.align = "center",
@@ -229,7 +230,10 @@ py2genTech <- setNames(techMapping$general, techMapping$pypsa.eur)
 py2genTech <- py2genTech[!duplicated(names(py2genTech))]
 
 # TODO: Remove and merge with mapping from above
-py2genTech <- c(py2genTech, c("electrolysis" = "electrolysis",
+py2genTech <- c(py2genTech, c("H2 electrolysis" = "electrolysis",
+                              "battery discharger" = "battery_discharger",
+                              "battery charger" = "battery_charger",
+                              "H2 fuel cell" = "fuel_cell",
                               "geothermal" = "geothermal",
                               "csp" = "csp",
                               "solar-utility" = "solar_pv",
@@ -263,7 +267,12 @@ rm2pyTech <- c(
 
 # Color mapping
 colorsTech <- c(
+  "load" = "#4B5C67",
+  "line_losses" = "#759EA8",
   "electrolysis" = "#8E5FBE",
+  "battery_discharger" = "#E8E88A",
+  "battery_charger" = "#BFF574",
+  "fuel_cell" = "#74E0F2",
   "solar_pv" = "#ffcc00",
   "csp" = "#ff9900",
   "wind_onshore" = "#337fff",
@@ -283,7 +292,12 @@ colorsTech <- c(
 
 # Pretty names
 namesTech <- c(
+  "load" = "Load",
+  "line_losses" = "Line Losses",
   "electrolysis" = "Electrolysis",
+  "battery_discharger" = "Battery Discharger",
+  "battery_charger" = "Battery Charger",
+  "fuel_cell" = "Fuel Cell",
   "solar_pv" = "Solar",
   "csp" = "CSP",
   "wind_onshore" = "Wind Onshore",
@@ -1866,14 +1880,6 @@ for (r in regList) {
 Relative peak residual load is passed from PyPSA-Eur to REMIND. REMIND can go higher than the PyPSA-Eur value, but not lower.
 
 ```{r peak residual load relative}
-# REMIND data (pre-factor based)
-#dataCapREMIND <- readREMINDgdx(
-#    paths = rmFiles,
-#    gdxVar = "vm_cap",
-#    columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "rlf" = "grade", "value" = "vm_cap"),
-#    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech), "grade" = 1),
-#    restoreZeros = FALSE)
-
 tePyDisp32 <- gdx::readGDX(rmFiles[1], "tePyDisp32", restore_zeros = FALSE)
 
 dataDispCapSumREMIND <- dataCapREMIND %>%
@@ -2694,7 +2700,7 @@ dataGenREMIND <- readREMINDgdx(
   order.levels(technology = names(colorsTech))
 
 dataGenPyPSA <- readPyPSAcsv(
-  paths = file.path(pyValidationDirs, "generations.csv")) %>%
+  paths = file.path(pyValidationDirs, "energy_balances.csv")) %>%
   filter(component == "Generator") %>%
   select(!component) %>%
   mutate(value = value / 1e6) %>%  # MWh to TWh
@@ -2741,9 +2747,9 @@ for (r in regList) {
 }
 ```
 
-### Generation and trade bar charts side-by-side
+### Energy balance charts side-by-side
 
-```{r generation bar charts side-by-side}
+```{r energy balance charts side-by-side}
 # REMIND generation by technology
 dataGenREMIND <- readREMINDgdx(
     paths = rmFiles,
@@ -2755,7 +2761,7 @@ dataGenREMIND <- readREMINDgdx(
   revalue.levels(technology = rm2genTech) %>%
   group_by(year, region, technology, iteration) %>%
   summarise(value = sum(value)) %>%
-  order.levels(technology = names(colorsTech))
+  mutate(technology = factor(technology, levels = names(colorsTech)))
 
 # REMIND load in total
 dataLoadREMIND <- readREMINDgdx(
@@ -2767,17 +2773,24 @@ dataLoadREMIND <- readREMINDgdx(
     recalcUnit = twa2twh)
 
 # PyPSA-Eur generation by technology
-dataGenPyPSA <- readPyPSAcsv(
-  paths = file.path(pyValidationDirs, "generations.csv")) %>%
+dataBalancePyPSA <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "energy_balances.csv")) %>%
+  filter(component != "StorageUnit") %>%
   mutate(value = value / 1e6) %>%  # MWh to TWh
   rename(technology = carrier) %>%
+  mutate(technology = ifelse(component == "Load", "load", technology),
+         technology = ifelse(component == "Line", "line_losses", technology)) %>%
   revalue.levels(technology = py2genTech) %>%
-  order.levels(technology = names(colorsTech))
+  mutate(technology = factor(technology, levels = names(colorsTech)))
 
-# PyPSA-Eur load in total
-dataLoadPyPSA <- readPyPSAcsv(
-  paths = file.path(pyValidationDirs, "electricity_loads.csv")) %>%
-  mutate(value = value / 1e6)  # Convert MWh to TWh
+# Positive values are supply
+dataSupplyPyPSA <- dataBalancePyPSA %>%
+  filter(value > 0)
+
+# Negative values are withdrawal
+dataWithdrawalPyPSA <- dataBalancePyPSA %>%
+  filter(value < 0) %>%
+  order.levels(technology = rev(names(colorsTech)))
 
 if (isTRUE(cfg$gms$c32_pypsa_trade == "off")) {
   for (r in regList) {
@@ -2799,76 +2812,104 @@ if (isTRUE(cfg$gms$c32_pypsa_trade == "off")) {
         group_by(year) %>%
         summarise(value = sum(value))
 
-      dataGenPyPSAploti <- dataGenPyPSA %>%
+      dataSupplyPyPSAploti <- dataSupplyPyPSA %>%
         filter(region %in% r,
               iteration == i) %>%
         group_by(year, technology) %>%
         summarise(value = sum(value))
 
-      dataGenPyPSAplotitot <- dataGenPyPSAploti %>%
+      dataSupplyPyPSAplotitot <- dataSupplyPyPSAploti %>%
         group_by(year) %>%
         summarise(value = sum(value))
 
-      dataLoadPyPSAploti <- dataLoadPyPSA %>%
+      dataWithdrawalPyPSAploti <- dataWithdrawalPyPSA %>%
         filter(region %in% r,
               iteration == i) %>%
+        group_by(year, technology) %>%
+        summarise(value = sum(value))
+
+      dataWithdrawalPyPSAplotitot <- dataWithdrawalPyPSAploti %>%
         group_by(year) %>%
         summarise(value = sum(value))
 
       pGenComp <- ggplot() +
-        geom_bar(data = dataGenREMINDploti,
+        # PyPSA-Eur supply
+        geom_col(data = dataSupplyPyPSAploti,
                 mapping = aes(x = year, y = value, fill = technology),
-                stat = "identity",
+                position = position_stacknudge(x = 1),
+                width = 1.7) +
+        # REMIND supply
+        geom_col(data = dataGenREMINDploti,
+                mapping = aes(x = year, y = value, fill = technology),
                 position = position_stacknudge(x = -1),
                 width = 1.7) +
-        geom_bar(data = dataGenREMINDplotitot,
+        # Supply legend
+        scale_fill_manual(
+          name = "Supply",
+          values = colorsTech,
+          labels = namesTech,
+          guide = guide_legend(order = 1)) +
+        new_scale_fill() +
+        # PyPSA-Eur withdrawal
+        geom_col(data = dataWithdrawalPyPSAploti,
+                mapping = aes(x = year, y = value, fill = technology),
+                position = position_stacknudge(x = 1),
+                width = 1.7) +
+        # REMIND withdrawal
+        geom_col(data = dataLoadREMINDploti,
+                mapping = aes(x = year, y = -value, fill = "load"),
+                position = position_nudge(x = -1),
+                width = 1.7) +
+        # Withdrawal legend
+        scale_fill_manual(
+          name = "Withdrawal",
+          values = colorsTech[c("load", "line_losses", "electrolysis", "battery_charger")],
+          labels = namesTech[c("load", "line_losses", "electrolysis", "battery_charger")],
+          breaks = c("load", "line_losses", "electrolysis", "battery_charger"),
+          guide = guide_legend(order = 2)) +
+        # Model border
+        geom_col(data = dataGenREMINDplotitot,
                 mapping = aes(x = year, y = value, linetype = "REMIND"),
-                stat = "identity",
                 position = position_nudge(x = -1),
                 width = 1.7,
                 linewidth = 0.25,
                 color = "black",
                 fill = NA) +
-        geom_point(data = dataLoadREMINDploti,
-                  mapping = aes(x = year, y = value, color = "Load"),
-                  position = position_nudge(x = -1),
-                  shape = 4) +
-        geom_bar(data = dataGenPyPSAploti,
-                mapping = aes(x = year, y = value, fill = technology),
-                stat = "identity",
-                position = position_stacknudge(x = 1),
-                width = 1.7) +
-        geom_bar(data = dataGenPyPSAplotitot,
+        geom_col(data = dataLoadREMINDploti,
+                mapping = aes(x = year, y = -value, linetype = "REMIND"),
+                position = position_nudge(x = -1),
+                width = 1.7,
+                linewidth = 0.25,
+                color = "black",
+                fill = NA) +
+        geom_col(data = dataSupplyPyPSAplotitot,
                 mapping = aes(x = year, y = value, linetype = "PyPSA-Eur"),
-                stat = "identity",
                 position = position_nudge(x = 1),
                 width = 1.7,
                 linewidth = 0.25,
                 color = "black",
                 fill = NA) +
-        geom_point(data = dataLoadPyPSAploti,
-                  mapping = aes(x = year, y = value, color = "Load"),
-                  position = position_nudge(x = 1),
-                  shape = 4) +
-        scale_fill_manual(
-          name = "Technology",
-          values = colorsTech,
-          labels = namesTech) +
+        geom_col(data = dataWithdrawalPyPSAplotitot,
+                mapping = aes(x = year, y = value, linetype = "PyPSA-Eur"),
+                position = position_nudge(x = 1),
+                width = 1.7,
+                linewidth = 0.25,
+                color = "black",
+                fill = NA) +
         scale_linetype_manual(
           name = "Model",
           values = c("REMIND" = "solid", "PyPSA-Eur" = "dashed"),
-        ) +
-        scale_color_manual(
-          name = NULL,
-          values = c("Load" = "black"),
+          guide = guide_legend(order = 3)
         ) +
         scale_x_continuous(breaks = years) +
-        labs(x = "Year", y = "Generation (TWh)") +
-        ggtitle(paste("Generation over years, iteration", i), regSubtitle(r))
+        labs(x = "Year", y = "Energy (TWh)") +
+        ggtitle(paste("Energy balance over years, iteration", i), regSubtitle(r))
+
 
       # Plot relative differences
-      dataGenDiffplot <- full_join(dataGenREMINDploti, dataGenPyPSAploti,
+      dataGenDiffplot <- full_join(dataGenREMINDploti, dataSupplyPyPSAploti,
                         by = c("year", "technology")) %>%
+        filter(!is.na(value.x)) %>%
         mutate(relDiff = 100 * (value.x - value.y) / sum(value.x))
 
       pGenDiff <- ggplot() + 
