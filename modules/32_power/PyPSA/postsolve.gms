@@ -60,10 +60,15 @@ s32_checkPrice_iter(iteration) = s32_checkPrice;
 p32_PEPrice_iter(iteration,ttot,regi,entyPe) = pm_PEPrice(ttot,regi,entyPe);
 
 *** Calculate pre-investment capacities
-p32_preInvCap(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND NOT sameas(te, "hydro")) =
-  max((vm_cap.l(t,regi,te,"1")
-     - vm_deltaCap.l(t,regi,te,"1") * pm_ts(t) * ( 1 - vm_capEarlyReti.l(t,regi,te) )),
-    1E-6);  !! Minimal capacity of 1 MW to avoid issues in PyPSA-Eur's RCL implementation
+if (c32_pypsa_capacity eq 0,  !! Use pre-investment capacities
+  p32_preInvCap(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND NOT sameas(te, "hydro")) =
+      max((vm_cap.l(t,regi,te,"1")
+    - vm_deltaCap.l(t,regi,te,"1") * pm_ts(t) * ( 1 - vm_capEarlyReti.l(t,regi,te) )),
+        1E-6);  !! Minimal capacity of 1 MW to avoid issues in PyPSA-Eur's RCL implementation
+elseif (c32_pypsa_capacity eq 1),  !! Use full capacities
+  p32_preInvCap(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND NOT sameas(te, "hydro")) =
+    max(vm_cap.l(t,regi,te,"1"), 1E-6);  !! Minimal capacity of 1 MW to avoid issues in PyPSA-Eur's RCL implementation
+);
 
 *** Track pre-investment capacities over iterations
 p32_preInvCap_iter(iteration,t,regi,te) = p32_preInvCap(t,regi,te);
@@ -230,10 +235,13 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Potential=potential;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_AF=availability_factor;
 
-  !! Track capacity factors and market values in iterations
+  !! Track capacity factors in iterations
   p32_PyPSA_CF_iter(iteration,t,regi,te) = p32_PyPSA_CF(t,regi,te);
+  !! Track market values in iterations
   p32_PyPSA_MV_iter(iteration,t,regi,te) = p32_PyPSA_MV(t,regi,te);
+  !! Track load price in iterations
   p32_PyPSA_LoadPrice_iter(iteration,t,regi,carrierPy32) = p32_PyPSA_LoadPrice(t,regi,carrierPy32);
+  !! Track markup in iterations
   p32_PyPSA_Markup_iter(iteration,t,regi,te) = p32_PyPSA_Markup(t,regi,te);
 
 *** PyPSA-Eur to REMIND: Calculate averages to reduce oscillations
