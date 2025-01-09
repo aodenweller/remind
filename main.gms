@@ -1236,6 +1236,13 @@ parameter
     c32_pypsa_trade_max        "Maximum share of electricity imports and exports relative to total electricity production"
 ;
 c32_pypsa_trade_max = 1;  !! def = 1 !! regexp = is.numeric
+*' Maximum share of electricity imports and exports relative to total electricity production
+parameter
+    c32_pypsa_capacity         "Switch that specifies whether the pre-investment capacity or the full capacity is passed to PyPSA"
+;
+c32_pypsa_capacity = 0;  !! def = 0 !! regexp = 0|1
+*' Switch that specifies whether the pre-investment capacity or the full capacity is passed to PyPSA
+*' 0 = pre-investment capacity, 1 = full capacity
 
 ***-----------------------------------------------------------------------------
 *' ####                     FLAGS
@@ -1899,13 +1906,13 @@ $setglobal c32_pypsa_multiregion off !! def = off !! regexp = off|on
 $setglobal c32_pypsa_pathgdx off  !! def = off
 *** c32_pypsa_capfac
 *** Switch to enable capacity factor import from PyPSA-Eur
-$setglobal c32_pypsa_capfac on !! def = on !! regexp = off|on
+$setglobal c32_pypsa_capfac off !! def = on !! regexp = off|on
 *** cm_pypsa_markup
 *** Switch to enable markups/markdowns from PyPSA-Eur via tax module
-$setglobal cm_pypsa_markup off !! def = off !! regexp = off|on
+$setglobal cm_pypsa_markup on !! def = off !! regexp = off|on
 *** c32_pypsa_peakcap
 *** Switch to enable peak capacity constraint
-$setglobal c32_pypsa_peakcap on !! def = on !! regexp = off|on
+$setglobal c32_pypsa_peakcap off !! def = on !! regexp = off|on
 *** c32_pypsa_curtailment
 *** Switch to enable curtailment import from PyPSA-Eur
 $setglobal c32_pypsa_curtailment off !! def = off !! regexp = off|on
@@ -1949,7 +1956,7 @@ $setGlobal c_scaleEmiHistorical  on  !! def = on  !! regexp = off|on
 $SetGlobal cm_quick_mode  off          !! def = off  !! regexp = off|on
 $setGLobal cm_debug_preloop  off    !! def = off  !! regexp = off|on
 $setGlobal cm_APscen  SSP2          !! def = SSP2
-$setglobal cm_CES_configuration  indu_subsectors-buil_simple-tran_edge_esm-POP_pop_SSP2-GDP_gdp_SSP2-En_gdp_SSP2-Kap_debt_limit-Reg_62eff8f7   !! this will be changed by start_run()
+$setglobal cm_CES_configuration  indu_subsectors-buil_simple-tran_edge_esm-POP_pop_SSP2-GDP_gdp_SSP2-En_gdp_SSP2-Kap_debt_limit-Reg_2b1450bc   !! this will be changed by start_run()
 $setglobal c_CES_calibration_iterations  10     !!  def  =  10
 $setglobal c_CES_calibration_industry_FE_target  1
 *' setting which region is to be tested in the one-region test run (80_optimization = testOneRegi)
