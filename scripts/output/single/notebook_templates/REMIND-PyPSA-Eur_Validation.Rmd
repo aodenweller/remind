@@ -27,6 +27,8 @@ library(ggpp)
 library(ggnewscale)
 library(cowplot)
 library(lubridate)
+library(reticulate)
+use_condaenv(condaenv = "pypsa-eur-20241119", conda = "/p/system/packages/tools/anaconda/2024.10/bin/conda")
 
 # Set options for all chunks
 knitr::opts_chunk$set(
@@ -322,10 +324,10 @@ namesTech <- c(
 # (optionally also containing a y<year> folder)
 readPyPSAcsv <- function(paths) {
   purrr::map_df(paths, ~{
-    # Extract iteration from path
+    # Extract iteration from path (one or more digits preceded by an i, followed by /)
     iteration <- as.integer(str_extract(.x, "(?<=i)\\d{1,}(?=/)"))
-    # Try to extract year from path
-    year <- as.integer(str_extract(.x, "(?<=y)\\d{4}"))
+    # Extract year from path (four digits preceded by a y or _, followed by / or .)
+    year <- as.integer(str_extract(.x, "(?<=[y_])\\d{4}(?=[/.])"))
     # Try to read csv file
     tryCatch(
       {
@@ -1657,81 +1659,6 @@ for (r in regList){
 }
 ```
 
-### Curtailments
-
-Work in progress. Not yet coupled from PyPSA-Eur to REMIND.
-
-```{r curtailments}
-# REMIND
-tePyVRE32 <- gdx::readGDX(rmFiles[1], "tePyVRE32", restore_zeros = FALSE)
-
-dataCurtailmentREMIND <- readREMINDgdx(
-    paths = rmFiles,
-    gdxVar = "v32_storloss",
-    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "v32_storloss"),
-    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
-    restoreZeros = FALSE,
-    recalcUnit = twa2twh) %>%
-  filter(technology %in% tePyVRE32) %>%
-  revalue.levels(technology = rm2genTech) %>%
-  quitte::order.levels(technology = names(colorsTech))
-
-# PyPSA-Eur
-dataCurtailmentPyPSA <- readPyPSAcsv(
-    paths = file.path(pyValidationDirs, "curtailments.csv")) %>%
-  filter(value != 0) %>%
-  # Increment iteration by 1 to match REMIND
-  mutate(iteration = iteration + 1) %>%
-  quitte::revalue.levels(carrier = rm2genTech) %>%
-  group_by(year, region, carrier, iteration) %>%
-  summarise(value = unique(value)) %>%
-  quitte::order.levels(carrier = names(namesTech)) %>%
-  mutate(value = value / 1e6) %>%  # Convert MWh to TWh
-  rename(technology = carrier)
-
-for (r in regList) {
-
-  dataCurtailmentplotREMIND <- dataCurtailmentREMIND %>%
-    filter(region %in% r) %>%
-    group_by(year, technology, iteration) %>%
-    summarise(v32_storloss = sum(v32_storloss))
-
-  dataCurtailmentplotPyPSA <- dataCurtailmentPyPSA %>%
-    filter(region %in% r) %>%
-    group_by(year, technology, iteration) %>%
-    summarise(value = sum(value))
-
-  pCurtailmentYear <- ggplot() +
-    geom_line(data = dataCurtailmentplotREMIND, aes(x = year, y = v32_storloss, color = technology)) +
-    geom_point(data = dataCurtailmentplotPyPSA, aes(x = year, y = value, color = technology)) +
-    scale_color_manual(
-      name = "Technology",
-      values = colorsTech,
-      labels = namesTech,
-    ) +
-    labs(x = "Year", y = "Curtailment (TWh/yr)") +
-    ggtitle("Curtailment over years", regSubtitle(r)) +
-    facet_wrap(~ iteration)
-
-  print(pCurtailmentYear)
-
-  pCurtailmentIter <- ggplot() +
-    geom_line(data = dataCurtailmentplotREMIND, aes(x = iteration, y = v32_storloss, color = technology)) +
-    geom_point(data = dataCurtailmentplotPyPSA, aes(x = iteration, y = value, color = technology)) +
-    scale_color_manual(
-      name = "Technology",
-      values = colorsTech,
-      labels = namesTech,
-    ) +
-    labs(x = "Year", y = "Curtailment (TWh/yr)") +
-    scale_x_continuous(breaks = rmIterations) +
-    ggtitle("Curtailment over iterations", regSubtitle(r)) +
-    facet_wrap(~ year)
-
-  print(pCurtailmentIter)
-}
-```
-
 ### Markups (supply side)
 
 Markups and markdowns are read into REMIND from PyPSA-Eur. Markup = Average market value - Average electricity price
@@ -2749,9 +2676,9 @@ for (r in regList) {
 }
 ```
 
-### Energy balance charts side-by-side
+### Electricity balance charts side-by-side
 
-```{r energy balance charts side-by-side}
+```{r electricity balance charts side-by-side}
 # REMIND generation by technology
 dataGenREMIND <- readREMINDgdx(
     paths = rmFiles,
@@ -3916,45 +3843,574 @@ if (length(regions) > 1) {
 print(pMarketValueIter)
 ```
 
+### Curtailments
+
+Work in progress. Not yet coupled from PyPSA-Eur to REMIND.
+
+```{r curtailments}
+
+# PyPSA-Eur
+dataCurtailmentPyPSA <- readPyPSAcsv(
+    paths = file.path(pyValidationDirs, "curtailments.csv")) %>%
+  filter(value != 0) %>%
+  # Increment iteration by 1 to match REMIND
+  quitte::revalue.levels(carrier = rm2genTech) %>%
+  group_by(year, region, carrier, iteration) %>%
+  summarise(value = unique(value)) %>%
+  quitte::order.levels(carrier = names(namesTech)) %>%
+  mutate(value = value / 1e6) %>%  # Convert MWh to TWh
+  rename(technology = carrier) %>%
+  # Only include for VRE technologies
+  filter(technology %in% c("solar_pv", "wind_offshore", "wind_onshore", "hydro"))
+
+for (r in regList) {
+
+  dataCurtailmentplotPyPSA <- dataCurtailmentPyPSA %>%
+    filter(region %in% r) %>%
+    group_by(year, technology, iteration) %>%
+    summarise(value = sum(value))
+
+  pCurtailmentYear <- ggplot() +
+    geom_line(data = dataCurtailmentplotPyPSA, aes(x = year, y = value, color = technology)) +
+    scale_color_manual(
+      name = "Technology",
+      values = colorsTech,
+      labels = namesTech,
+    ) +
+    labs(x = "Year", y = "Curtailment (TWh/yr)") +
+    ggtitle("Curtailment over years", regSubtitle(r)) +
+    facet_wrap(~ iteration)
+
+  print(pCurtailmentYear)
+
+  pCurtailmentIter <- ggplot() +
+    geom_line(data = dataCurtailmentplotPyPSA, aes(x = iteration, y = value, color = technology)) +
+    scale_color_manual(
+      name = "Technology",
+      values = colorsTech,
+      labels = namesTech,
+    ) +
+    labs(x = "Iteration", y = "Curtailment (TWh/yr)") +
+    scale_x_continuous(breaks = rmIterations) +
+    ggtitle("Curtailment over iterations", regSubtitle(r)) +
+    facet_wrap(~ year)
+
+  print(pCurtailmentIter)
+}
+```
+
 ### Price duration curves
 
-```{r price duration curves, warning = FALSE}
-if (FALSE){
+```{r price duration curves}
+
 dataHourlyElecPricesPyPSA <- readPyPSAcsv(
   paths = file.path(pyValidationDirs, "hourly_prices.csv")) %>%
-  filter(carrier == "AC") %>%
-  select(!carrier) %>%
-  pivot_longer(cols = -c("year", "region", "carrier", "iteration"),
+  filter(carrier == "AC",
+         component == "Load") %>%
+  select(-c("carrier", "component")) %>%
+  pivot_longer(cols = -c("year", "region", "iteration"),
                names_to = "time",
                values_to = "value") %>%
-  group_by(year, region, carrier, iteration) %>%
+  group_by(year, region, iteration) %>%
   mutate(hour = 1:n()) %>%
   arrange(-value) %>%
   mutate(hour.sorted = 1:n(),
          year.fraction = hour.sorted / n())
 
-for (i in pyIterations) {
-  dataHourlyElecPricesPyPSAplot <- dataHourlyElecPricesPyPSA %>%
-    filter(iteration == i)
+pPriceDuration <- ggplot() +
+  geom_line(data = dataHourlyElecPricesPyPSA, aes(x = year.fraction, y = value, alpha = as.factor(year))) +
+  scale_alpha_discrete(name = "Year") +
+  labs(x = "Hours of year (fraction)", y = "Electricity price ($/MWh)") +
+  ggtitle("Price duration curve, log scale") +
+  scale_y_continuous(trans = "log10") +
+  facet_wrap(~ iteration)
 
-  pPriceDuration <- ggplot() +
-    geom_line(data = dataHourlyElecPricesPyPSAplot,
-              mapping = aes(x = year.fraction, y = value, color = region)) +
-    labs(x = "Hours of year (fraction)", y = "Electricity price ($/MWh)") +
-    ggtitle(paste("Price duration curve, iteration", i)) +
-    scale_y_continuous(trans = "log10") +
-    facet_wrap(~ year)
+print(pPriceDuration)
 
-  print(pPriceDuration)
-}
-}
 ```
 
 ### Screening curves
 
-### Inverse screening curves
+```{r}
+
+# Create vector with strings from costs_2025.csv, costs_2030.csv, to costs_2150.csv
+costsFiles <- as.vector(outer(pyValidationDirs, paste0("costs_", years, ".csv"), paste, sep = "/"))
+
+# Read PyPSA-Eur costs
+dataCostsPyPSA <- readPyPSAcsv(
+  paths = costsFiles) %>%
+  select(-X) %>%
+  filter(parameter %in% c("capital_cost", "marginal_cost"),
+         technology %in% names(py2genTech)) %>%
+  revalue.levels(technology = py2genTech) %>%
+  # Only include dispatchable technologies
+  filter(technology %in% c("CCGT", "OCGT", "biomass", "all_coal", "nuclear", "oil")) %>%
+  group_by(technology, parameter, iteration, year) %>%
+  summarise(value = unique(value))
+
+# For each technology, iteration and year, create a 
+dataCostsPyPSAplot <- dataCostsPyPSA %>%
+  group_by(technology, iteration, year) %>%
+  mutate(x.val = ifelse(parameter == "capital_cost", 0, 8760),
+         y.val = ifelse(parameter == "capital_cost", value, lag(value) + value * 8760))
+
+# Read PyPSA-Eur capacity factors
+dataCapfacPyPSA <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "capacity_factors.csv")) %>%
+  revalue.levels(carrier = rm2genTech) %>%
+  rename(technology = carrier) %>%
+  group_by(year, region, technology, iteration) %>%
+  summarise(value = unique(value)) %>%
+  mutate(capfac.h = value * 8760) %>%
+  select(-value)
+
+# Merge with dataCostsPyPSAplot
+dataCostsPyPSAplot <- dataCostsPyPSAplot %>%
+  full_join(dataCapfacPyPSA, by = c("technology", "iteration", "year")) %>%
+  mutate(x.val.cf = ifelse(parameter == "capital_cost", capfac.h, 0),
+         y.val.cf = ifelse(parameter == "capital_cost", value + capfac.h * lead(value), lag(y.val)))
+
+for (i in pyIterations) {
+
+  dataCostsPyPSAploti <- dataCostsPyPSAplot %>%
+    filter(iteration == i)
+
+  p <- ggplot() +
+    geom_line(data = dataCostsPyPSAploti,
+              mapping = aes(x = x.val, y = y.val, color = technology),
+              linetype = "dotted") +
+    geom_line(data = dataCostsPyPSAploti,
+              mapping = aes(x = x.val.cf, y = y.val.cf, color = technology),
+              linetype = "solid") +
+    scale_color_manual(
+      name = "Technology",
+      values = colorsTech,
+      labels = namesTech,
+    ) +
+    labs(x = "Hours", y = "Total cost ($/MW)") +
+    ggtitle(paste("Screening curves for dispatchable technologies in PyPSA-Eur, iteration", i)) +
+    facet_wrap(~ year)
+
+  print(p)
+}
+
+```
+
+### Network
+
+```{python network plot, echo=FALSE, warning = FALSE, message = FALSE}
+
+import pypsa
+import matplotlib.pyplot as plt
+import geopandas as gpd
+from pathlib import Path
+from cartopy import crs as ccrs
+import pandas as pd
+import logging
+
+# Suppress INFO and WARNING statements
+logging.getLogger('pypsa').setLevel(logging.WARNING)
+
+# Get PyPSA-Eur results directories from R
+py_results_dirs = r.pyResultsDirs
+
+# Get all network files
+fp = [file for directory in py_results_dirs for file in Path(directory).rglob("y*/networks/*.nc")]
+
+# Extract the year and iteration from the file path and store it in a DataFrame
+df = pd.DataFrame(fp, columns=['file_path'])
+
+# Convert PosixPath objects to strings and extract the year and iteration
+df['file_path_str'] = df['file_path'].astype(str)
+df['year'] = df['file_path_str'].str.extract(r'y(\d{4})')
+df['iteration'] = df['file_path_str'].str.extract(r'i(\d+)')
+
+# Arrange by year and iteration
+df['year'] = pd.to_numeric(df['year'])
+df['iteration'] = pd.to_numeric(df['iteration'])
+df = df.sort_values(by=['year', 'iteration'])
+
+# Set the scale for the bus and line sizes
+bus_scale = 2e5
+line_scale = 3e3
+
+# Iterate over iterations in df
+for iteration in df['iteration'].unique():
+        
+    # Create a figure with 3x5 subplots
+    fig, axs = plt.subplots(3, 5, subplot_kw={"projection": ccrs.EqualEarth()})
+    
+    # Counter to keep track of subplot index
+    counter = 0
+    
+    # Filter for the current iteration and then iterate over the years
+    for _, row in df[df['iteration'] == iteration].iterrows():
+        
+        # Load the PyPSA network
+        n = pypsa.Network(row['file_path'])
+        
+        n.carriers = n.carriers.drop(index='')
+        n.generators = n.generators.drop(index=n.generators.filter(like="load", axis="rows").index)
+        n.carriers = n.carriers.drop(index="load")
+        
+        buses = n.generators.groupby(["bus", "carrier"]).p_nom_opt.sum()
+        
+        # Create a map of the installed capacities of all technologies
+        ax = axs[counter // 5, counter % 5]
+        n.plot(ax=ax,
+            bus_sizes=buses / bus_scale,
+            bus_alpha=0.7,
+            line_widths=n.lines.s_nom_opt / line_scale,
+            link_widths=n.links.p_nom_opt / line_scale,
+            title=f"Year: {row['year']}");
+        
+        # Make the title smaller
+        ax.title.set_fontsize(8)
+        
+        ax.set_extent([6, 15, 47, 55], crs=ccrs.PlateCarree())  # Adjust the values as needed
+        
+        counter += 1
+        
+    # Add one big heading to the entire plot for the iteration
+    plt.tight_layout(rect=[0, 0, 1, 0.95])  # Adjust the rect parameter to make space for the suptitle
+    fig.suptitle(f"Iteration {iteration}", fontsize=10, y=0.99)
+    plt.show();
+
+```
+
+### Electricity balance, summer week
+
+```{python electricity balance summer, echo=FALSE, warning = FALSE, message = FALSE}
+
+import matplotlib as mpl
+import yaml
+
+# Set the font sizes
+mpl.rcParams['font.size'] = 8
+mpl.rcParams['axes.titlesize'] = 8
+mpl.rcParams['axes.labelsize'] = 8
+mpl.rcParams['xtick.labelsize'] = 6
+mpl.rcParams['ytick.labelsize'] = 6
+mpl.rcParams['legend.fontsize'] = 8
+mpl.rcParams['figure.titlesize'] = 10
+
+# Suppress INFO and WARNING statements
+logging.getLogger('pypsa').setLevel(logging.WARNING)
+logging.getLogger('matplotlib').setLevel(logging.WARNING)
+
+# Get file paths to configs (to get colours)
+fp_configs = [file for directory in py_results_dirs for file in Path(directory).rglob("y*/configs/*.yaml")]
+
+# Read first config yaml file
+with open(fp_configs[0], 'r') as file:
+    config = yaml.safe_load(file)
+
+# Convert the tech_colors list to a pandas Series
+color_series = pd.Series(config['plotting']['tech_colors'])
+
+# Variables to store handles and labels for the legend
+handles, labels = None, None
+
+# Iterate over iterations in df
+for iteration in df['iteration'].unique():
+    
+    # Create a figure with 3x5 subplots
+    fig, axs = plt.subplots(3, 5)
+    
+    # Counter to keep track of subplot index
+    counter = 0
+    
+    # Variables to store global y-axis limits
+    global_min, global_max = float('inf'), float('-inf')
+    
+    # Filter for the current iteration and then iterate over the years
+    for _, row in df[df['iteration'] == iteration].iterrows():
+        
+        # Load the PyPSA network
+        n = pypsa.Network(row['file_path'])
+
+        # Use statistics.energy_balance
+        p = (
+            n.statistics.energy_balance(aggregate_time=False, bus_carrier="AC", nice_names=False)
+            .dropna(how="all")
+            .groupby("carrier")
+            .sum()
+            .div(1e3)
+            .T
+        )
+
+        # Rename first column to Load
+        p.rename(columns={"": "Load"}, inplace=True)
+        
+        # Filter for a week in January
+        time_slice = slice('2013-07-15', '2013-07-21')
+        p_week = p.loc[time_slice]
+
+        # Separate positive and negative values
+        p_positive = p_week.where(p_week >= 0).dropna(how="all", axis=1)
+        p_negative = p_week.where(p_week < 0).dropna(how="all", axis=1).drop(columns='Load')
+
+        # Get load data
+        p_load = p_week['Load'].abs()
+
+        # Create a plot for the electricity balance
+        ax = axs[counter // 5, counter % 5]
+
+        # Plot positive values (generation)
+        p_positive.plot.area(ax=ax, stacked=True, linewidth=0, color=[color_series[col] for col in p_positive.columns], legend=False);
+
+        # Plot negative values (storage)
+        p_negative.plot.area(ax=ax, stacked=True, linewidth=0, color=[color_series[col] for col in p_negative.columns], legend=False);
+
+        # Plot the load
+        p_load.plot(ax=ax, color='black', linewidth=2, label='Load', legend=False);
+
+        # Update global y-axis limits
+        global_min = min(global_min, p_negative.sum(axis=1).min())
+        global_max = max(global_max, p_positive.sum(axis=1).max())
+
+        ax.set_title(f"Year: {row['year']}");
+        
+        # Remove the x-axis
+        ax.set_xlabel('');
+        
+        # Remove y-axis labels for all subplots except the first column
+        if counter % 5 != 0:
+            ax.set_yticks([]);
+            ax.set_ylabel('');
+        
+        # Collect handles and labels from the first subplot only
+        if counter == 0:
+            handles, labels = ax.get_legend_handles_labels();
+        
+        counter += 1
+
+    # Set the same y-axis limits for all subplots
+    for ax in axs.flat:
+        ax.set_ylim([global_min, global_max]);
+
+    # Create a single legend for the entire figure
+    fig.legend(handles, labels, loc='center left', bbox_to_anchor=(0.87, 0.5), ncol=1);
+
+    plt.tight_layout(rect=[0, 0, 0.85, 0.95]);  # Adjust the rect parameter to make space for the legend
+    fig.suptitle(f"Generation mix in summer, Iteration {iteration}", fontsize=10, y=0.98);
+    plt.show();
+
+```
+
+### Electricity balance, winter week
+
+```{python electricity balance winter, echo=FALSE, warning = FALSE, message = FALSE}
+
+# Variables to store handles and labels for the legend
+handles, labels = None, None
+
+# Iterate over iterations in df
+for iteration in df['iteration'].unique():
+    
+    # Create a figure with 3x5 subplots
+    fig, axs = plt.subplots(3, 5)
+    
+    # Counter to keep track of subplot index
+    counter = 0
+    
+    # Variables to store global y-axis limits
+    global_min, global_max = float('inf'), float('-inf')
+    
+    # Filter for the current iteration and then iterate over the years
+    for _, row in df[df['iteration'] == iteration].iterrows():
+        
+        # Load the PyPSA network
+        n = pypsa.Network(row['file_path'])
+
+        # Use statistics.energy_balance
+        p = (
+            n.statistics.energy_balance(aggregate_time=False, bus_carrier="AC", nice_names=False)
+            .dropna(how="all")
+            .groupby("carrier")
+            .sum()
+            .div(1e3)
+            .T
+        )
+
+        # Rename first column to Load
+        p.rename(columns={"": "Load"}, inplace=True)
+        
+        # Filter for a week in January
+        time_slice = slice('2013-01-14', '2013-01-20')
+        p_week = p.loc[time_slice]
+
+        # Separate positive and negative values
+        p_positive = p_week.where(p_week >= 0).dropna(how="all", axis=1)
+        p_negative = p_week.where(p_week < 0).dropna(how="all", axis=1).drop(columns='Load')
+
+        # Get load data
+        p_load = p_week['Load'].abs()
+
+        # Create a plot for the electricity balance
+        ax = axs[counter // 5, counter % 5]
+
+        # Plot positive values (generation)
+        p_positive.plot.area(ax=ax, stacked=True, linewidth=0, color=[color_series[col] for col in p_positive.columns], legend=False);
+
+        # Plot negative values (storage)
+        p_negative.plot.area(ax=ax, stacked=True, linewidth=0, color=[color_series[col] for col in p_negative.columns], legend=False);
+
+        # Plot the load
+        p_load.plot(ax=ax, color='black', linewidth=2, label='Load', legend=False);
+
+        # Update global y-axis limits
+        global_min = min(global_min, p_negative.sum(axis=1).min())
+        global_max = max(global_max, p_positive.sum(axis=1).max())
+
+        ax.set_title(f"Year: {row['year']}");
+        
+        # Remove the x-axis
+        ax.set_xlabel('');
+        
+        # Remove y-axis labels for all subplots except the first column
+        if counter % 5 != 0:
+            ax.set_yticks([]);
+            ax.set_ylabel('');
+        
+        # Collect handles and labels from the first subplot only
+        if counter == 0:
+            handles, labels = ax.get_legend_handles_labels();
+        
+        counter += 1
+
+    # Set the same y-axis limits for all subplots
+    for ax in axs.flat:
+        ax.set_ylim([global_min, global_max]);
+
+    # Create a single legend for the entire figure
+    fig.legend(handles, labels, loc='center left', bbox_to_anchor=(0.87, 0.5), ncol=1);
+    plt.tight_layout(rect=[0, 0, 0.85, 0.95]);  # Adjust the rect parameter to make space for the legend
+    fig.suptitle(f"Generation mix in winter, Iteration {iteration}", fontsize=10, y=0.98);
+    plt.show();
+
+```
 
 ### Residual load duration curves (RLDCs)
+
+```{python residual load duration curve, echo=FALSE, warning = FALSE, message = FALSE}
+
+# Variables to store handles and labels for the legend
+handles, labels = None, None
+
+# Iterate over iterations in df
+for iteration in df['iteration'].unique():
+    
+    # Create a figure with 3x5 subplots
+    fig, axs = plt.subplots(3, 5)
+    
+    # Counter to keep track of subplot index
+    counter = 0
+    
+    # Variables to store global y-axis limits
+    global_min, global_max = float('inf'), float('-inf')
+    
+    # Filter for the current iteration and then iterate over the years
+    for _, row in df[df['iteration'] == iteration].iterrows():
+        
+        # Load the PyPSA network
+        n = pypsa.Network(row['file_path'])
+
+        # Calculate the energy balance
+        energy_balance = (n.statistics.energy_balance(
+                aggregate_time=False,
+                bus_carrier="AC",
+                nice_names=False)
+            .dropna(how="all")
+            .groupby("carrier")
+            .sum()
+            .div(1e3)
+            .T
+        )
+
+        # Rename the load column
+        energy_balance.rename(columns={"": "Load"}, inplace=True)
+
+        # Get total load sorted
+        ldc = energy_balance['Load'].abs().sort_values(ascending=False)
+
+        # List of generation technologies to subtract
+        generation_technologies = (
+            ['solar', 'onwind', 'offwind-ac', 'offwind-dc', 'ror',
+            'hydro', 'PHS', 'battery discharger', 'oil', 'CCGT', 'OCGT',
+            'biomass', 'lignite', 'coal', 'nuclear', 'H2 fuel cell',
+            'H2 electrolysis', 'battery charger']
+            )
+
+        # Initialize the residual load with the total load
+        residual_load = energy_balance['Load'].abs()
+
+        # Dictionary to store the sorted residual loads
+        sorted_residual_loads = {}
+
+        # Cumulatively subtract each generation technology and sort the residual load
+        for tech in generation_technologies:
+            try:
+                residual_load -= energy_balance[tech]
+                sorted_residual_loads[tech] = residual_load.sort_values(ascending=False)
+            except KeyError:
+                continue
+    
+        # Create a plot for the electricity balance
+        ax = axs[counter // 5, counter % 5]
+        
+        # To speed up the plotting and make the plot smaller, only show every 10th value
+        ldc = ldc.iloc[::10]
+        for tech in sorted_residual_loads:
+            sorted_residual_loads[tech] = sorted_residual_loads[tech].iloc[::10]        
+
+        # Initialize the previous residual load for filling
+        previous_residual_load = ldc
+
+        # Plot the residual load duration curve
+        for tech, sorted_residual_load in sorted_residual_loads.items():
+            ax.fill_between(range(len(sorted_residual_load)),
+                            sorted_residual_load.values,
+                            previous_residual_load.values,
+                            label=f'{tech}',
+                            color=color_series[tech]);
+            previous_residual_load = sorted_residual_load
+        
+        # Plot load
+        ax.plot(ldc.values, label='Load', color = 'black');
+        ax.set_title(f"Year: {row['year']}")
+
+        # Update global y-axis limits
+        global_min = min(global_min, min([sorted_residual_load.min() for sorted_residual_load in sorted_residual_loads.values()]))
+        global_max = max(global_max, ldc.max())
+
+        # Only show y axis labels for the last row
+        if counter < 10:
+            ax.set_xticks([])
+            ax.set_xlabel('')
+
+        # Only show y axis labels for the first column
+        if counter % 5 != 0:
+            ax.set_yticks([])
+            ax.set_ylabel('')
+
+        # Collect handles and labels from the first subplot only
+        if counter == 0:
+            handles, labels = ax.get_legend_handles_labels()
+        
+        counter += 1
+
+    # Set the same y-axis limits for all subplots
+    for ax in axs.flat:
+        ax.set_ylim([global_min, global_max])
+
+    # Create a single legend for the entire figure
+    fig.legend(handles, labels, loc='center left', bbox_to_anchor=(0.87, 0.5), ncol=1)
+    plt.tight_layout(rect=[0, 0, 0.85, 0.95])  # Adjust the rect parameter to make space for the legend
+    fig.suptitle(f"Residual load duration curve, Iteration {iteration}", fontsize=10, y=0.98)
+    plt.show();
+
+```
 
 ### Storage and transmission not implemented in REMIND
 
