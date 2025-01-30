@@ -355,7 +355,10 @@ vm_costTeCapital.fx(t,regi,teLearn)$(t.val le 2020 AND pm_data(regi,"tech_stat",
 
 *** no technologies with tech_stat 5 before 2030
 vm_deltaCap.fx(t,regi,te,rlf)$(t.val le 2025 AND pm_data(regi,"tech_stat",te) eq 5)=0;
-
+*** for pypsa coupled regions enable h2turb already in 2025
+$ifthen "%power%" == "PyPSA"
+vm_deltaCap.up(t,regi,te,rlf)$(t.val eq 2025 AND sameas(te,"h2turb") AND (regPy32(regi) AND sm_PyPSA_eq eq 1)) = Inf;
+$endif
 
 *CB 2012024 -----------------------------------------------------
 *CB allow for early retirement at the start of free model time

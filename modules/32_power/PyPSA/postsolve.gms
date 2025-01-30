@@ -59,14 +59,14 @@ s32_checkPrice_iter(iteration) = s32_checkPrice;
 *** Track PE price over iterations
 p32_PEPrice_iter(iteration,ttot,regi,entyPe) = pm_PEPrice(ttot,regi,entyPe);
 
-*** Calculate pre-investment capacities
+*** Calculate pre-investment capacities (for generation and storage/transmission technologies)
 if (c32_pypsa_capacity eq 0,  !! Use pre-investment capacities
-  p32_preInvCap(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND NOT sameas(te, "hydro")) =
+  p32_preInvCap(t,regi,te)$(tPy32(t) AND regPy32(regi) AND (tePy32(te) OR teStoreTransPy32(te)) AND NOT sameas(te, "hydro")) =
       max((vm_cap.l(t,regi,te,"1")
     - vm_deltaCap.l(t,regi,te,"1") * pm_ts(t) * ( 1 - vm_capEarlyReti.l(t,regi,te) )),
         1E-6);  !! Minimal capacity of 1 MW to avoid issues in PyPSA-Eur's RCL implementation
 elseif (c32_pypsa_capacity eq 1),  !! Use full capacities
-  p32_preInvCap(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND NOT sameas(te, "hydro")) =
+  p32_preInvCap(t,regi,te)$(tPy32(t) AND regPy32(regi) AND (tePy32(te) OR teStoreTransPy32(te)) AND NOT sameas(te, "hydro")) =
     max(vm_cap.l(t,regi,te,"1"), 1E-6);  !! Minimal capacity of 1 MW to avoid issues in PyPSA-Eur's RCL implementation
 );
 
@@ -139,20 +139,20 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
 
   !! Limit p32_discountRate to 3-10%%
   p32_discountRate(ttot)$(tPy32(ttot) and ttot.val le 2100) = 
-    min(0.1, max(0.03, p32_discountRate(ttot)));  !! Limit between 3% and 10%
+    min(0.1, max(0.02, p32_discountRate(ttot)));  !! Limit between 2% and 10%
 
-  !! Set the interest rate to 0.05 after 2100
-  p32_discountRate(ttot)$(ttot.val gt 2100) = 0.05;
+  !! Set the interest rate to 0.03 after 2100
+  p32_discountRate(ttot)$(ttot.val gt 2100) = 0.03;
 
   !! Specific capital costs plus adjustment costs
   if ((c32_adjCost eq 0),  !! No adjustment costs
-    p32_capCostwAdjCost(t,regi,te)$(tPy32(t) and regPy32(regi) and (tePy32(te) or sameas(te,"elh2"))) = 
+    p32_capCostwAdjCost(t,regi,te)$(tPy32(t) and regPy32(regi) and (tePy32(te) or teStoreTransPy32(te))) = 
       vm_costTeCapital.l(t,regi,te) + EPS;
   elseif (c32_adjCost eq 1),  !! Average adjustment costs
-    p32_capCostwAdjCost(t,regi,te)$(tPy32(t) and regPy32(regi) and (tePy32(te) or sameas(te,"elh2"))) = 
+    p32_capCostwAdjCost(t,regi,te)$(tPy32(t) and regPy32(regi) and (tePy32(te) or teStoreTransPy32(te))) = 
       max(0, vm_costTeCapital.l(t,regi,te) + o_avgAdjCostInv(t,regi,te)$( sum(te2rlf(te,rlf), vm_deltaCap.l(t,regi,te,rlf)) ge 1e-5 )) + EPS;
   elseif (c32_adjCost eq 2),  !! Marginal adjustment costs
-    p32_capCostwAdjCost(t,regi,te)$(tPy32(t) and regPy32(regi) and (tePy32(te) or sameas(te,"elh2"))) = 
+    p32_capCostwAdjCost(t,regi,te)$(tPy32(t) and regPy32(regi) and (tePy32(te) or teStoreTransPy32(te))) = 
       max(0, vm_costTeCapital.l(t,regi,te) + o_margAdjCostInv(t,regi,te)$( sum(te2rlf(te,rlf), vm_deltaCap.l(t,regi,te,rlf)) ge 1e-5 )) + EPS;
   );
 
@@ -164,6 +164,7 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
   !! Parameters to calculate weighted averages across technologies and regions in PyPSA
   p32_weightGen(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te)) = v32_usableSeTeDisp.l(t,regi,"seel",te) + EPS;
   p32_weightStor(t,regi,te)$(tPy32(t) AND regPy32(regi) AND sameas(te,"elh2")) = vm_prodSe.l(t,regi,"seel","seh2","elh2") + EPS;
+  p32_weightStor(t,regi,te)$(tPy32(t) AND regPy32(regi) AND sameas(te,"h2turb")) = vm_prodSe.l(t,regi,"seh2","seel","h2turb") + EPS;
   p32_weightPEprice(t,regi,entyPe)$(tPy32(t) AND regPy32(regi) AND entyPePy32(entyPe)) = vm_prodPe.l(t,regi,entyPe) + EPS;
   
   !! Also export zeros for CO2 price
@@ -228,6 +229,8 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Markup=markup;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Curtailment=curtailment;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_PeakResLoadRel=peak_residual_load_relative;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_StoreTrans_Cap=storage_and_transmission_capacities;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_StoreTrans_CF=storage_and_transmission_capacity_factors;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Trade=crossborder_flow;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_TradePriceImport=crossborder_price_import;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_TradePriceExport=crossborder_price_export;
@@ -285,8 +288,6 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
 
 *** Activate PyPSA equations if PyPSA ran once
 sm_PyPSA_eq = 1;
-display "p32_PyPSAMarkupAvg in postsolve";
-display p32_PyPSA_MarkupAvg;
 );
 
 

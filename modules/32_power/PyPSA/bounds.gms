@@ -30,6 +30,8 @@ $endif
 * Calculate value factor to parametrise the pre-factor equation for markups
 $ifthen "%cm_pypsa_markup%" == "on"
   p32_PyPSA_ValueFactor(tPy32,regPy32,tePy32) = p32_PyPSA_MVAvg(tPy32,regPy32,tePy32) / p32_PyPSA_LoadPriceAvg(tPy32,regPy32,"AC");
+  !! Replace UNDF with 1
+  p32_PyPSA_ValueFactor(tPy32,regPy32,tePy32)$(mapVal(p32_PyPSA_ValueFactor(tPy32,regPy32,tePy32)) eq 4) = 1;
 $endif
 
   p32_hydroCorrectionFactor(tPy32,regPy32)$(p32_PyPSA_CF(tPy32,regPy32,"hydro") gt sm_eps) = p32_PyPSA_AF(tPy32,regPy32,"hydro") / p32_PyPSA_CF(tPy32,regPy32,"hydro");
@@ -119,9 +121,21 @@ if ((sm_PyPSA_eq eq 1),
 );
 $endif
 
+*** Fix capacity factor for electrolysis and hydrogen turbines
+*** Set capacity for electrolysis as lower bound and for hydrogen turbines fixed
+$ifthen "%c32_pypsa_h2stor%" == "on"
+if ((sm_PyPSA_eq eq 1),
+  vm_capFac.fx(tPy32,regPy32,"elh2") = p32_PyPSA_StoreTrans_CF(tPy32,regPy32,"H2 electrolysis");
+  vm_capFac.fx(tPy32,regPy32,"h2turb") = p32_PyPSA_StoreTrans_CF(tPy32,regPy32,"H2 fuel cell");
+  vm_cap.lo(tPy32,regPy32,"elh2","1") = p32_PyPSA_StoreTrans_Cap(tPy32,regPy32,"H2 electrolysis") / 1E6;  !! MW to TW
+  vm_cap.lo(tPy32,regPy32,"h2turb","1") = p32_PyPSA_StoreTrans_Cap(tPy32,regPy32,"H2 fuel cell") / 1E6;  !! MW to TW
+);
+$endif
+
 *** Restrict v32_shSeElDisp between 0 and 1
 v32_shSeElDisp.lo(tPy32,regPy32,tePy32) = 0;
 v32_shSeElDisp.up(tPy32,regPy32,tePy32) = 1;
+v32_shSeElDisp.l(tPy32,regPy32,tePy32) = 0;
 
 *** Set starting values for vm_PyPSAMarkup
 $ifthen "%cm_pypsa_markup%" == "on"

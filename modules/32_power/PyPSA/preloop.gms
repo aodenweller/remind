@@ -42,6 +42,8 @@ vm_Xport.l(tPy32,regPy32,"seel") = 0;
 p32_hydroCorrectionFactor(tPy32,regPy32) = 1;
 p32_PyPSA_AF(tPy32,regPy32,tePy32) = 0;
 p32_PyPSA_CF(tPy32,regPy32,tePy32) = 0;
+p32_PyPSA_StoreTrans_Cap(tPy32,regPy32,storeTransPy32) = 0;
+p32_PyPSA_StoreTrans_CF(tPy32,regPy32,storeTransPy32) = 0;
 
 *** If c32_pypsa_pathgdx is set to a directory, import PyPSA variables
 $ifthen not "%c32_pypsa_pathgdx%" == "off"
