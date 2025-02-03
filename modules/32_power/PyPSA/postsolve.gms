@@ -238,6 +238,11 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Potential=potential;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_AF=availability_factor;
 
+  !! Temporary workaround to avoid overinvestment in REMIND:
+  !! Limit markup to between -50 and +150 EUR/MWh
+  p32_PyPSA_Markup(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te)) = 
+    min(150, max(-50, p32_PyPSA_Markup(t,regi,te)));
+
   !! Track capacity factors in iterations
   p32_PyPSA_CF_iter(iteration,t,regi,te) = p32_PyPSA_CF(t,regi,te);
   !! Track market values in iterations

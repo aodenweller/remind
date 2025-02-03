@@ -2278,14 +2278,14 @@ This section includes variables that are not exchanged directly between REMIND a
 ### Optimal capacities line charts
 
 ```{r optimal capacities line charts}
-#dataCapREMIND <- readREMINDgdx(
-#    paths = rmFiles,
-#    gdxVar = "vm_cap",
-#    columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "rlf" = "grade", "value" = "vm_cap"),
-#    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech), "grade" = 1),
-#    restoreZeros = FALSE,
-#    recalcUnit = 1e3) %>%   # TW to GW
-#  select(-grade)  # Remove grade column
+dataCapREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "vm_cap",
+    columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "rlf" = "grade", "value" = "vm_cap"),
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech), "grade" = 1),
+    restoreZeros = FALSE,
+    recalcUnit = 1e3) %>%   # TW to GW
+  select(-grade)  # Remove grade column
 
 dataCapPyPSA <- readPyPSAcsv(
     paths = file.path(pyValidationDirs, "optimal_capacities.csv")) %>%
@@ -2300,7 +2300,7 @@ dataCapPyPSA <- readPyPSAcsv(
 for (r in regList) {
 
   dataCapREMINDplot <- dataCapREMIND %>% 
-    mutate(cap = 1E3*vm_cap) %>%
+    mutate(cap = vm_cap) %>%
     filter(region %in% r) %>%
     revalue.levels(technology = rm2genTech) %>%
     group_by(year, technology, iteration) %>%
@@ -2399,8 +2399,7 @@ dataPreInvCapPyPSA <- readPyPSAcsv(
 
 dataCapPyPSA <- readPyPSAcsv(
   paths = file.path(pyValidationDirs, "optimal_capacities.csv")) %>%
-  filter(type == "Generator",
-         carrier != "Load shedding") %>%
+  filter(carrier %in% names(py2genTech)) %>%
   mutate(value = value / 1e3) %>%   # Convert capacities to GW
   select(-type) %>%
   rename(cap = value)
