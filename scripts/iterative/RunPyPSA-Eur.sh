@@ -21,8 +21,9 @@ TARGET_FILE="results/${scenario}/i${2}/PyPSAEUR2REMIND.gdx"
 # Loop until file exists or maximum attempts are reached
 while [[ ! -f "${1}/${TARGET_FILE}" && $ATTEMPT -lt $MAX_RETRIES ]]; do
     echo "Attempt $((ATTEMPT + 1)) to run PyPSA-Eur..."
-    
-    conda run --name pypsa-eur-20241119 snakemake --profile "${1}/pik_hpc_profile/" \
+
+    # Call PyPSA-Eur with a timeout of 30 minutes
+    timeout 30m conda run --name pypsa-eur-20241119 snakemake --profile "${1}/pik_hpc_profile/" \
         -s "${1}/Snakefile_remind" --directory "${1}" "${TARGET_FILE}"
     
     # Wait one second before next attempt
