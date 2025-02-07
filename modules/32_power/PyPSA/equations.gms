@@ -441,9 +441,12 @@ $endif.cm_pypsa_markup
 *** Currently deactivate pre-factors.
 $ifthen "%c32_pypsa_peakcap%" == "on"
 q32_PeakResCap(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
-  sum(tePyDisp32, vm_cap(t,regi,tePyDisp32, "1"))  !! TODO: Hydro included or not?
+  sum(tePyDisp32, vm_cap(t,regi,tePyDisp32, "1"))  !! TODO: Hydro included or not, h2turb included or not?
   =g=
-    p32_PyPSA_PeakResLoadRel(t,regi) !!* ( 1 - 0.1 * ( sum(tePyVRE32, v32_shSeElDisp(t,regi,tePyVRE32) - p32_PyPSA_shSeEl(t,regi,tePyVRE32)) ) )
+    p32_PyPSA_PeakResLoadRel(t,regi)
+$ifthen.c32_pypsa_preFac "%c32_pypsa_preFac%" == "on"
+    * ( 1 - 0.1 * ( sum(tePyVRE32, v32_shSeElDisp(t,regi,tePyVRE32) - p32_PyPSA_shSeEl(t,regi,tePyVRE32)) ) )
+$endif.c32_pypsa_preFac
   * v32_usableSeDispNet(t,regi,"seel")
 ;
 $endif

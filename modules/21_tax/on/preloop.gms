@@ -185,10 +185,12 @@ v21_taxrevChProdStartYear.l(t,regi) = 0;
 v21_tau_SE_tax.l(t,regi,te)=0;
 
 *** initialise PyPSA electricity price markup/markdown
-$ifthen "%cm_pypsa_markup%" == "on"
+$ifthen.pypsa "%power%" == "PyPSA"
+$ifthen.markup "%cm_pypsa_markup%" == "on"
 vm_PyPSAMarkup.l(t,regi,te) = 0;
 sm_PyPSA_eq = 0;  !! Could remove this or move to core/preloop.gms?
-*** v21_taxrevPyPSAMarkup.l(ttot,all_regi) = 0
-$endif
+v21_taxrevPyPSAMarkup.l(tPy32,regPy32) = 0;
+$endif.markup
+$endif.pypsa
 
 *** EOF ./modules/21_tax/on/preloop.gms

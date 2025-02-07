@@ -56,7 +56,8 @@ p21_taxrevSE0(t,regi) =     sum(se2se(enty,enty2,te)$(teSeTax(te)),
                                     v21_tau_SE_tax.l(t,regi,te) 
                                   * vm_demSe.l(t,regi,enty,enty2,te));
 
-$ifthen "%cm_pypsa_markup%" == "on"
+$ifthen.pypsa "%power%" == "PyPSA"
+$ifthen.markup "%cm_pypsa_markup%" == "on"
 p21_taxrevPyPSAMarkup0(ttot,regi) = sum(en2en(enty,enty2,te)$(tePy32(te)),
                                    - vm_PyPSAMarkup.l(ttot,regi,te) * ( vm_prodSe.l(ttot,regi,enty,enty2,te) - v32_storloss.l(ttot,regi,te) )
                                   );
@@ -65,6 +66,7 @@ display "Iteration number: ";
 o_iterationNumber = iteration.val;
 display o_iterationNumber;
 display p21_taxrevPyPSAMarkup0;
-$endif
+$endif.markup
+$endif.pypsa
 
 *** EOF ./modules/21_tax/on/presolve.gms

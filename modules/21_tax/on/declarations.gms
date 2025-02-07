@@ -123,9 +123,11 @@ v21_taxemiMkt(ttot,all_regi,all_emiMkt)         "tax on greenhouse gas emissions
 v21_taxrevImport(ttot,all_regi,all_enty)        "net change vs. last iteration of tax revenues from energy import tax"
 v21_taxrevChProdStartYear(ttot,all_regi)        "tax to limit changes compared to reference run in cm_startyear"
 v21_taxrevSE(ttot,all_regi)                     "tax on SE electricity demand, used for taxes on electrolysis"
-$ifthen "%cm_pypsa_markup%" == "on"
+$ifthen.pypsa "%power%" == "PyPSA"
+$ifthen.markup "%cm_pypsa_markup%" == "on"
 v21_taxrevPyPSAMarkup(ttot,all_regi)            "Tax revenue of electricity technology markups from PyPSA-Eur"
-$endif
+$endif.markup
+$endif.pypsa
 ;
 
 Positive Variable
@@ -157,9 +159,11 @@ q21_taxrevImport(ttot,all_regi,all_enty)        "calculation of import tax"
 q21_taxrevChProdStartYear(ttot,all_regi)        "calculation of tax to limit changes compared to reference run in cm_startyear"
 q21_taxrevSE(ttot,all_regi)                     "calculation of tax on SE electricity demand, used for taxes on electrolysis"
 q21_SeTaxRate(ttot,all_regi,all_te)             "calculation of SE tax rate, used for taxes on electrolysis"
-$ifthen "%cm_pypsa_markup%" == "on"
+$ifthen.pypsa "%power%" == "PyPSA"
+$ifthen.markup "%cm_pypsa_markup%" == "on"
 q21_taxrevPyPSAMarkup(ttot,all_regi)            "calculation of electricity technology markups from PyPSA-Eur"
-$endif
+$endif.markup
+$endif.pypsa
 ;
 
 $ifthen.importtaxrc "%cm_taxrc_RE%" == "REdirect"

@@ -60,9 +60,11 @@ $endIf.cm_implicitPriceTarget
 $ifthen.cm_implicitPePriceTarget not "%cm_implicitPePriceTarget%" == "off"
   + sum(entyPe,vm_taxrevimplicitPePriceTax(t,regi,entyPe))
 $endIf.cm_implicitPePriceTarget
-$ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
+$ifthen.pypsa "%power%" == "PyPSA"
+$ifthen.markup "%cm_pypsa_markup%" == "on"
   + v21_taxrevPyPSAMarkup(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))
-$endif.cm_pypsa_markup
+$endif.markup
+$endif.pypsa
 ;
 
 ***---------------------------------------------------------------------------
@@ -362,7 +364,8 @@ q21_taxrevChProdStartYear(t,regi)$(t.val ge max(2010,cm_startyear))..
 *'  Electricity technology markup from PyPSA-Eur
 ***---------------------------------------------------------------------------
 *** vm_PyPSAMarkup is the markup/markdown for each generation technology
-$ifthen "%cm_pypsa_markup%" == "on"
+$ifthen.pypsa "%power%" == "PyPSA"
+$ifthen.markup "%cm_pypsa_markup%" == "on"
 q21_taxrevPyPSAMarkup(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
   v21_taxrevPyPSAMarkup(t,regi)
   =e=
@@ -371,7 +374,8 @@ q21_taxrevPyPSAMarkup(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1)
         )
   - p21_taxrevPyPSAMarkup0(t,regi) 
 ;
-$endif
+$endif.markup
+$endif.pypsa
 *' This calculates the SE tax rate for electricity going into electrolysis.
 *' It contains the final energy tax rate for electricity use in industry and
 *' grid fees that are assumed be equal to the investment cost of tdfels.
