@@ -12,14 +12,13 @@
 
 *** REMIND sets used for the PyPSA coupling
 sets
-    tPy32(ttot)                 "Years coupled to PyPSA"
+    tPy32(ttot)                 "Years coupled to PyPSA, later adjusted to exclude 2025 if cm_startyear is 2030"
         /2025, 2030, 2035, 2040, 2045, 2050, 2055, 2060, 2070, 2080, 2090, 2100, 2110, 2130, 2150/
 
 $ifthen "%c32_pypsa_multiregion%" == "on"
     regPy32(all_regi)           "Regions coupled to PyPSA"
         /DEU, FRA, EWN/
-
-$elseif "%c32_pypsa_multiregion%" == "off"
+$else
     regPy32(all_regi)           "Regions coupled to PyPSA"
         /DEU/
 $endif
@@ -39,6 +38,9 @@ $endif
     entyPePy32(all_enty)        "Primary energy carriers for which prices are coupled to PyPSA"
         /peoil, pegas, pecoal, peur, pehyd, pewin, pesol, pebiolc/ !! TODO: Remove pehyd, pewin, pesol
 ;
+
+* Remove year 2025 if cm_startyear is 2030
+If (cm_startyear = 2030, tPy32("2025") = no);
 
 *** Sets to import PyPSA data
 sets

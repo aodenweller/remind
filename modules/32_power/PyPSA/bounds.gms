@@ -29,7 +29,8 @@ $endif
 
 * Calculate value factor to parametrise the pre-factor equation for markups
 $ifthen "%cm_pypsa_markup%" == "on"
-  p32_PyPSA_ValueFactor(tPy32,regPy32,tePy32) = p32_PyPSA_MVAvg(tPy32,regPy32,tePy32) / p32_PyPSA_LoadPriceAvg(tPy32,regPy32,"AC");
+  p32_PyPSA_ValueFactor(tPy32,regPy32,tePy32)$(p32_PyPSA_LoadPriceAvg(tPy32,regPy32,"AC") ne 0) = 
+    p32_PyPSA_MVAvg(tPy32,regPy32,tePy32) / p32_PyPSA_LoadPriceAvg(tPy32,regPy32,"AC");
   !! Replace UNDF with 1
   p32_PyPSA_ValueFactor(tPy32,regPy32,tePy32)$(mapVal(p32_PyPSA_ValueFactor(tPy32,regPy32,tePy32)) eq 4) = 1;
 $endif
