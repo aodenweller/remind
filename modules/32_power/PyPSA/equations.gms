@@ -419,9 +419,9 @@ q32_MarkUp(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (sm_PyPSA_e
 	=e=
 $ifthen.c32_pypsa_preFac "%c32_pypsa_preFac%" == "on"
 $ifthen.c32_pypsa_preFacManual "%c32_pypsa_preFacManual%" == "on"
-    p32_PyPSA_MarkupAvg(t,regi,te) * ( 1 + s32_preFacFadeOut * p32_preFactor_MV(regi,te) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
+    ( p32_PyPSA_MarkupAvg(t,regi,te) + abs(p32_PyPSA_MarkupAvg(t,regi,te)) * s32_preFacFadeOut * p32_preFactor_MV(regi,te) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
 $elseif.c32_pypsa_preFacManual "%c32_pypsa_preFacManual%" == "off"
-    p32_PyPSA_MarkupAvg(t,regi,te) * ( 1 - s32_preFacFadeOut * p32_PyPSA_ValueFactor(t,regi,te) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
+    ( p32_PyPSA_MarkupAvg(t,regi,te) + abs(p32_PyPSA_MarkupAvg(t,regi,te)) * s32_preFacFadeOut * (-p32_PyPSA_ValueFactor(t,regi,te)) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
 $endif.c32_pypsa_preFacManual
 $elseif.c32_pypsa_preFac "%c32_pypsa_preFac%" == "off"
     p32_PyPSA_MarkupAvg(t,regi,te)
@@ -445,7 +445,7 @@ q32_PeakResCap(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
   =g=
     p32_PyPSA_PeakResLoadRel(t,regi)
 $ifthen.c32_pypsa_preFac "%c32_pypsa_preFac%" == "on"
-    * ( 1 - 0.1 * ( sum(tePyVRE32, v32_shSeElDisp(t,regi,tePyVRE32) - p32_PyPSA_shSeEl(t,regi,tePyVRE32)) ) )
+    * ( 1 - 0.3 * ( sum(tePyVRE32, v32_shSeElDisp(t,regi,tePyVRE32) - p32_PyPSA_shSeEl(t,regi,tePyVRE32)) ) )
 $endif.c32_pypsa_preFac
   * v32_usableSeDispNet(t,regi,"seel")
 ;

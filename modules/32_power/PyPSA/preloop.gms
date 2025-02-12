@@ -37,6 +37,7 @@ s32_PyPSA_called(iteration) = 0;
 p32_usableSeDispNet0(tPy32,regPy32,"seel") = 0;
 v32_usableSeDisp.l(tPy32,regPy32,"seel") = 0;
 v32_usableSeDispNet.l(tPy32,regPy32,"seel") = 0;
+v32_shSeElDisp.l(tPy32,regPy32,tePy32) = 0;
 vm_Mport.l(tPy32,regPy32,"seel") = 0;
 vm_Xport.l(tPy32,regPy32,"seel") = 0;
 p32_hydroCorrectionFactor(tPy32,regPy32) = 1;

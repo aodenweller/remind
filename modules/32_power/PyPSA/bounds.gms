@@ -136,7 +136,6 @@ $endif
 *** Restrict v32_shSeElDisp between 0 and 1
 v32_shSeElDisp.lo(tPy32,regPy32,tePy32) = 0;
 v32_shSeElDisp.up(tPy32,regPy32,tePy32) = 1;
-v32_shSeElDisp.l(tPy32,regPy32,tePy32) = 0;
 
 *** Set starting values for vm_PyPSAMarkup
 $ifthen "%cm_pypsa_markup%" == "on"
