@@ -1,5 +1,8 @@
 #!/bin/bash
 scenario="$(basename "$(pwd)")"
+# Define PIK HPC profile and conda environment
+hpc_profile="${1}/pik_hpc_profile"
+conda_env="pypsa-eur-20241119"
 # Logging info
 echo "PyPSA log: Starting PyPSA-Eur"
 echo "PyPSA log: Directory: ${1}"
@@ -70,7 +73,7 @@ while [[ ! -f "${1}/${TARGET_FILE}" && $ATTEMPT -lt $MAX_RETRIES ]]; do
     # Log attempt number
     echo "PyPSA log: Attempt $((ATTEMPT + 1)) to run PyPSA-Eur..."
     # Call PyPSA-Eur
-    timeout $TIMEOUT conda run --name pypsa-eur-20241119 snakemake --profile ${1}/pik_hpc_profile_bash \
+    timeout $TIMEOUT conda run --name $conda_env snakemake --profile $hpc_profile \
         -s "${1}/Snakefile_remind" --directory "${1}" "${TARGET_FILE}"
     # Check if the timeout command was successful and move jobs if any
     if [[ $? -eq 124 ]]; then
