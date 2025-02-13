@@ -12,44 +12,78 @@ mkdir -p ${1}/resources/${scenario}/i${2}
 cp REMIND2PyPSAEUR.gdx ${1}/resources/${scenario}/i${2}/REMIND2PyPSAEUR.gdx
 # Source conda environment
 module load anaconda/2024.10
-# Define initial PIK HPC profile and timeout
-profile_folder="${1}/pik_hpc_profile_short"
-TIMEOUT=20m
-# Function to cancel all remaining jobs with the string "scenario=${scenario}" in the name
-cancel_remaining_jobs() {
-    jobs_to_cancel=$(squeue -u $USER -o "%.18i %.9P %.10Q %.200j" | grep "scenario=${scenario}")
-    if [[ -n "$jobs_to_cancel" ]]; then
-        echo "PyPSA log: Cancelling the following remaining jobs"
-        echo "$jobs_to_cancel"
-        echo "$jobs_to_cancel" | awk '{print $1}' | xargs -r scancel
-    fi
+# Function to check the %QOS on a given partition/QoS combination
+check_qos_usage() {
+    local qos=$1
+    qos_usage=$(sclass | grep "$qos" | head -n 1 | awk '{print $5}')
+    echo $qos_usage
+}
+# Define the preferred order of partition/QoS combinations
+declare -a PARTITION_QOS_COMBINATIONS=(
+    "standard short"
+    "standard medium"
+    "priority standby"
+    "priority priority"
+)
+# Find a suitable partition/QoS combination
+qos_threshold=90
+used_combinations=()
+# Function to find a partition/QoS combination that is not in the used_combinations list
+find_partition_qos() {
+    for combo in "${PARTITION_QOS_COMBINATIONS[@]}"; do
+        if [[ " ${used_combinations[@]} " =~ " ${combo} " ]]; then
+            continue
+        fi
+        partition=$(echo $combo | awk '{print $1}')
+        qos=$(echo $combo | awk '{print $2}')
+        qos_usage=$(check_qos_usage $qos)
+        qos_usage_check=$(echo "$qos_usage < $qos_threshold" | bc -l)
+        if [[ $qos_usage_check -eq 1 || $qos == "priority" ]]; then
+            # Set partition and QoS environment variables (read in snakemake profile)
+            echo "PyPSA log: Using partition $partition and QOS $qos with usage $qos_usage %"
+            export PARTITION=$partition
+            export QOS=$qos
+            # If not priority, add to used_combinations and set timeout to 20 minutes
+            if [[ $qos != "priority" ]]; then
+                used_combinations+=("$combo")
+                TIMEOUT=20m
+            # If priority, set timeout to 60 minutes
+            else
+                TIMEOUT=60m
+            fi
+            return 0
+        else
+            echo "PyPSA log: Skipping partition $partition and QOS $qos with usage $qos_usage %"
+        fi
+    done
 }
 # Start PyPSA-Eur
-# Attempt to create PyPSAEUR2REMIND.gdx X times (due to spurious errors in snakemake and potential timeouts)
+# Attempt to create PyPSAEUR2REMIND.gdx X times (due to spurious errors in snakemake)
 # See: https://github.com/snakemake/snakemake/issues/3165
 MAX_RETRIES=3
 ATTEMPT=0
 TARGET_FILE="results/${scenario}/i${2}/PyPSAEUR2REMIND.gdx"
+# Find a suitable partition/QoS combination
+find_partition_qos
 # Loop until file exists or maximum attempts are reached
 while [[ ! -f "${1}/${TARGET_FILE}" && $ATTEMPT -lt $MAX_RETRIES ]]; do
     # Log attempt number
     echo "PyPSA log: Attempt $((ATTEMPT + 1)) to run PyPSA-Eur..."
-    # Call PyPSA-Eur with a timeout
-    timeout ${TIMEOUT} conda run --name pypsa-eur-20241119 snakemake --profile ${profile_folder} \
+    # Call PyPSA-Eur
+    timeout $TIMEOUT conda run --name pypsa-eur-20241119 snakemake --profile ${1}/pik_hpc_profile_bash \
         -s "${1}/Snakefile_remind" --directory "${1}" "${TARGET_FILE}"
-    # Check if the timeout command was successful and cancel remaining jobs if any
+    # Check if the timeout command was successful and move jobs if any
     if [[ $? -eq 124 ]]; then
-        echo "PyPSA log: Timeout of ${TIMEOUT} reached. Retrying..."
-        cancel_remaining_jobs
+        echo "PyPSA log: Timeout of ${TIMEOUT} reached. Moving jobs to a different QoS and partition..."
+        jobs_to_move=$(squeue -u $USER -o "%.18i %.9P %.10Q %.200j" | grep "scenario=${scenario}" | awk '{print $1}')
+        # Finda a new partition/QoS combination (next available in list)
+        find_partition_qos
+        for jobid in $jobs_to_move; do
+            scontrol update jobid=$jobid qos=$QOS partition=$PARTITION
+        done
     fi
     # Increment attempt counter
     ((ATTEMPT++))
-    # Change PIK HPC profile to priority after the second attempt
-    if [[ $ATTEMPT -eq 2 ]]; then
-        echo "PyPSA log: Changing QOS to priority for the next attempt, increasing timeout to 60 minutes..."
-        profile_folder="${1}/pik_hpc_profile_priority"
-        TIMEOUT=60m
-    fi
     # Sleep for 1 second
     sleep 1
 done
