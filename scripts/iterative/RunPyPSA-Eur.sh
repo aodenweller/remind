@@ -16,9 +16,10 @@ cp REMIND2PyPSAEUR.gdx ${1}/resources/${scenario}/i${2}/REMIND2PyPSAEUR.gdx
 # Source conda environment
 module load anaconda/2024.10
 # Function to check the %QOS on a given partition/QoS combination
+# This function rounds down in order to compare integers
 check_qos_usage() {
     local qos=$1
-    qos_usage=$(sclass | grep "$qos" | head -n 1 | awk '{print $5}')
+    qos_usage=$(sclass | grep "$qos" | head -n 1 | awk '{print $5}' | sed 's/\..*//')
     echo $qos_usage
 }
 # Define the preferred order of partition/QoS combinations
@@ -40,12 +41,11 @@ find_partition_qos() {
         partition=$(echo $combo | awk '{print $1}')
         qos=$(echo $combo | awk '{print $2}')
         qos_usage=$(check_qos_usage $qos)
-        qos_usage_check=$(echo "$qos_usage < $qos_threshold" | bc -l)
-        if [[ $qos_usage_check -eq 1 || $qos == "priority" ]]; then
+        if [[ $qos_usage -lt $qos_threshold || $qos == "priority" ]]; then
             # Set partition and QoS environment variables (read in snakemake profile)
             echo "PyPSA log: Using partition $partition and QOS $qos with usage $qos_usage %"
-            export PARTITION=$partition
-            export QOS=$qos
+            export HPC_PARTITION=$partition
+            export HPC_QOS=$qos
             # If not priority, add to used_combinations and set timeout to 20 minutes
             if [[ $qos != "priority" ]]; then
                 used_combinations+=("$combo")
@@ -82,7 +82,7 @@ while [[ ! -f "${1}/${TARGET_FILE}" && $ATTEMPT -lt $MAX_RETRIES ]]; do
         # Finda a new partition/QoS combination (next available in list)
         find_partition_qos
         for jobid in $jobs_to_move; do
-            scontrol update jobid=$jobid qos=$QOS partition=$PARTITION
+            scontrol update jobid=$jobid qos=$HPC_QOS partition=$HPC_PARTITION
         done
     fi
     # Increment attempt counter
