@@ -81,6 +81,7 @@ v32_flexPriceShareMin(ttot,all_regi,all_te)         "possible minimum of share o
 *** (3) PyPSA coupling parameters: Parameters that are used within the coupling, mostly in equations.gms
 *** (4) PyPSA reporting parameters: Parameters that are calculated for reporting and plotting
 parameters
+    p32_load(ttot,all_regi)                                         "PyPSA export: Electricity load [TWa]"
     p32_preInvCap(ttot,all_regi,all_te)                             "PyPSA export: Pre-investment capacities [TW]"
     p32_preInvCap_iter(iteration,ttot,all_regi,all_te)              "PyPSA export: Pre-investment capacities in iterations [TW]"
     p32_preInvCapAvg(ttot,all_regi,all_te)                          "PyPSA export: Pre-investment capacities averaged over iterations [TW]"
@@ -110,7 +111,7 @@ parameters
     p32_PyPSA_PeakResLoadRel(ttot,all_regi)                         "PyPSA import: Peak residual load in relative terms [1]"
     p32_PyPSA_shSeEl(ttot,all_regi,all_te)                          "PyPSA import: Electricity generation share by technology within region [1]"
     p32_PyPSA_ValueFactor(ttot,all_regi,all_te)                     "PyPSA import calc: Value factor = Market value / electricity price [1]"
-    p32_PyPSA_StoreTrans_Cap(ttot,all_regi,storeTransPy32)          "PyPSA import: Storage and transmission capacities [MW] (links, lines) or [MWh] (stores)"
+    p32_PyPSA_StoreTrans_Cap(ttot,all_regi,storeTransPy32)          "PyPSA import: Storage and transmission capacities [MW] (links, lines) or [MWh] (stores). Attention: w.r.t. input!"
     p32_PyPSA_StoreTrans_CF(ttot,all_regi,storeTransPy32)           "PyPSA import: Storage and transmission capacity factors [1]"
     p32_PyPSA_Trade(ttot,all_regi,all_regi)                         "PyPSA import: Electricity exports from region 1 to region 2 [MWh]" 
     p32_PyPSA_TradePriceImport(ttot,all_regi,all_regi)              "PyPSA import: Price for electricity imports paid by region 2 due to trade with region 1 [$/MWh]"
@@ -129,6 +130,7 @@ parameters
     s32_preFacFadeOut                                               "PyPSA coupling: Multiplicative factor to fade out pre-factors [1]"
     s32_PyPSA_called(iteration)                                     "PyPSA coupling: Boolean that tracks if PyPSA was called over iterations, necessary for averaging (1 = yes, 0 = no)"
     p32_PeakResLoadShadowPrice(ttot,all_regi,all_te)                "PyPSA reporting: Shadow price of peak residual load constraint, used for plotting LCOEs vs. market values [T$/TWa]"
+    p32_ElecBalance(ttot,all_regi,rep32)                            "PyPSA reporting: Electricity balance [TWa]"
 ;
 
 *** Positive variables for the PyPSA coupling

@@ -37,6 +37,9 @@ $endif
 
     entyPePy32(all_enty)        "Primary energy carriers for which prices are coupled to PyPSA"
         /peoil, pegas, pecoal, peur, pehyd, pewin, pesol, pebiolc/ !! TODO: Remove pehyd, pewin, pesol
+
+    rep32                       "Generic set for PyPSA reporting"
+        /1*20/
 ;
 
 * Remove year 2025 if cm_startyear is 2030

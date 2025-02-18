@@ -128,8 +128,18 @@ $ifthen "%c32_pypsa_h2stor%" == "on"
 if ((sm_PyPSA_eq eq 1),
   vm_capFac.fx(tPy32,regPy32,"elh2") = p32_PyPSA_StoreTrans_CF(tPy32,regPy32,"H2 electrolysis");
   vm_capFac.fx(tPy32,regPy32,"h2turb") = p32_PyPSA_StoreTrans_CF(tPy32,regPy32,"H2 fuel cell");
-  vm_cap.lo(tPy32,regPy32,"elh2","1") = p32_PyPSA_StoreTrans_Cap(tPy32,regPy32,"H2 electrolysis") / 1E6;  !! MW to TW
-  vm_cap.lo(tPy32,regPy32,"h2turb","1") = p32_PyPSA_StoreTrans_Cap(tPy32,regPy32,"H2 fuel cell") / 1E6;  !! MW to TW
+  !! Capacity in PyPSA is defined w.r.t. to input, so for electrolysis it is the electrical input capacity
+  !! In REMIND capacities are defined w.r.t. to output (hydrogen output capacity). Include efficiency!
+  vm_cap.lo(tPy32,regPy32,"elh2","1") =
+      p32_PyPSA_StoreTrans_Cap(tPy32,regPy32,"H2 electrolysis")
+    * pm_eta_conv(tPy32,regPy32,"elh2")
+    / 1E6;  !! MW to TW
+  !! Capacity in PyPSA is defined w.r.t. to input, so for hydrogen turbines it is the hydrogen input capacity
+  !! In REMIND capacities are defined w.r.t. to output (electrical output capacity). Include efficiency!
+  vm_cap.lo(tPy32,regPy32,"h2turb","1") = 
+      p32_PyPSA_StoreTrans_Cap(tPy32,regPy32,"H2 fuel cell")
+    * pm_eta_conv(tPy32,regPy32,"h2turb")
+    / 1E6;  !! MW to TW
 );
 $endif
 
