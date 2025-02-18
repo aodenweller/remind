@@ -96,12 +96,11 @@ if [[ -f "${1}/${TARGET_FILE}" ]]; then
     cp ${1}/results/${scenario}/i${2}/PyPSAEUR2REMIND.gdx PyPSAEUR2REMIND.gdx
     cp ${1}/results/${scenario}/i${2}/PyPSAEUR2REMIND.gdx PyPSAEUR2REMIND_${2}.gdx
 else
-    # If iteration == 1, exit with error
-    if [[ $2 -eq 1 ]]; then
-        echo "PyPSA log: ERROR, PyPSAEUR2REMIND.gdx was not created after $MAX_RETRIES attempts in first iteration."
-        exit 1
-    # Else, echo that previous iteration's results will be used
+    # If a PyPSAEUR2REMIND.gdx file exists in current folder, raise warning
+    if [[ -f "PyPSAEUR2REMIND.gdx" ]]; then
+        echo "PyPSA log: WARNING, using previous iteration's PyPSAEUR2REMIND.gdx file."
     else
-        echo "PyPSA log: WARNING, using previous iteration's PyPSAEUR2REMIND.gdx."
+        echo "PyPSA log: ERROR, failed to create ${TARGET_FILE} after $ATTEMPT attempts."
+        exit 1
     fi
 fi
