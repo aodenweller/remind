@@ -32,6 +32,8 @@ q32_balSe(t,regi,enty2)$(sameas(enty2,"seel"))..
   + sum(teVRE, v32_storloss(t,regi,teVRE) )
   + sum(pe2rlf(enty3,rlf2), (pm_fuExtrOwnCons(regi, enty2, enty3) * vm_fuExtr(t,regi,enty3,rlf2))$(pm_fuExtrOwnCons(regi, enty2, enty3) gt 0))$(t.val > 2005) !! do not use in 2005 because this demand is not contained in 05_initialCap
   + vm_Xport(t,regi,enty2)
+  !! PyPSA grid losses
+  + v32_gridLosses(t,regi)$(tPy32(t) AND regPy32(regi) AND sm_PyPSA_eq eq 1)
 ;
 
 
@@ -332,8 +334,38 @@ q32_flexAdj(t,regi,te)$(teFlexTax(te))..
 ;
 
 *' @stop
+
 ***------------------------------------------------------------
-***                  PyPSA coupling equations
+***            REMIND to PyPSA-Eur: Electricity load
+***------------------------------------------------------------
+
+*** Calculate electricity load passed to PyPSA
+*** This is based on the harmonisation of the electricity balance equation of REMIND and PyPSA-Eur.
+*** Additional electricity demand for hydrogen production is included separately elsewhere.
+q32_load(t,regi,enty2)$(tPy32(t) and regPy32(regi) and sameas(enty2,"seel"))..
+  v32_load(t,regi)
+  =e=
+  !! Demand for electricity from final energy sectors
+    sum(se2fe(enty2,enty3,te), vm_demSe(t,regi,enty2,enty3,te) )
+  !! Add electricity demand for fuel extraction
+  + sum(pe2rlf(enty3,rlf2), (pm_fuExtrOwnCons(regi, enty2, enty3) * vm_fuExtr(t,regi,enty3,rlf2))$(pm_fuExtrOwnCons(regi, enty2, enty3) gt 0))$(t.val > 2005) !! do not use in 2005 because this demand is not contained in 05_initialCap
+  !! Subtract electricity supply due to co-production of secondary energy
+  !! This can also be negative, in which case it is added to the load
+  - sum(pc2te(enty,entySe(enty3),te,enty2), 
+        pm_prodCouple(regi,enty,enty3,te,enty2) * vm_prodSe(t,regi,enty,enty3,te) )
+  !! Subtract electricity supply due to co-production of final energy
+  !! This can also be negative, in which case it is added to the load
+  - sum(pc2te(enty4,entyFe(enty5),te,enty2), 
+        pm_prodCouple(regi,enty4,enty5,te,enty2) * vm_prodFe(t,regi,enty4,enty5,te) )
+  !! Subtract electricity supply due to co-production of CCS (?)
+  !! This can also be negative, in which case it is added to the load
+  - sum(pc2te(enty,enty3,te,enty2),
+        sum(teCCS2rlf(te,rlf),
+            pm_prodCouple(regi,enty,enty3,te,enty2) * vm_co2CCS(t,regi,enty,enty3,te,rlf) ) )
+;
+
+***------------------------------------------------------------
+***            REMIND to PyPSA-Eur: Helper equations
 ***------------------------------------------------------------
 
 *** Calculate usable electricity generation in total, without imports or exports, i.e. only domestic generation
@@ -398,7 +430,7 @@ $endif.c32_pypsa_preFac
 $endif.c32_pypsa_capfac
 
 ***------------------------------------------------------------
-***            PyPSA-Eur to REMIND: Markups / Markdowns
+***            PyPSA-Eur to REMIND: Markups (supply)
 ***------------------------------------------------------------
 *** Pre-factor equation to calculate markups and markdowns of technologies
 *** This equation calculates vm_PyPSAMarkup, which is used in 21_tax/on to subsidise or penalise technologies.
@@ -430,7 +462,7 @@ $endif.cm_pypsa_markup
 ***            PyPSA-Eur to REMIND: Peak residual load
 ***------------------------------------------------------------
 *** Pre-factor equation to set the minimum dispatchable capacity to always cover peak residual load.
-*** This constraint is formulated relative to the average load, v32_usableSeDispNet [TWa/a].
+*** This constraint is formulated relative to the average load, v32_load [TWa/a].
 *** The pre-factor can be based on the following intuition:
 *** If the sum of VRE shares increases, peak residual load decreases.
 *** However, since VREs have a small capacity credit, this effect is also small.
@@ -440,12 +472,34 @@ q32_PeakResCap(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
   sum(tePyDisp32, vm_cap(t,regi,tePyDisp32, "1"))  !! TODO: Hydro included or not, h2turb included or not?
   =g=
     p32_PyPSA_PeakResLoadRel(t,regi)
-$ifthen.c32_pypsa_preFac "%c32_pypsa_preFac%" == "on"
-    * ( 1 - 0.3 * ( sum(tePyVRE32, v32_shSeElDisp(t,regi,tePyVRE32) - p32_PyPSA_shSeEl(t,regi,tePyVRE32)) ) )
-$endif.c32_pypsa_preFac
-  * v32_usableSeDispNet(t,regi,"seel")
+*$ifthen.c32_pypsa_preFac "%c32_pypsa_preFac%" == "on"
+*    * ( 1 - 0.3 * ( sum(tePyVRE32, v32_shSeElDisp(t,regi,tePyVRE32) - p32_PyPSA_shSeEl(t,regi,tePyVRE32)) ) )
+*$endif.c32_pypsa_preFac
+  * v32_load(t,regi)
 ;
 $endif
+;
+$endif
+
+***------------------------------------------------------------
+***            PyPSA-Eur to REMIND: Electricity prices paid by electrolysis
+***------------------------------------------------------------
+*** This is the equivalent to supply-side markups and can be regarded as demand-side markups.
+*** Currently this only includes electricity prices paid by electrolysis.
+q32_MarkUpDemand(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (sm_PyPSA_eq eq 1))..
+  vm_PyPSAMarkupDemand(t,regi,"elh2")
+  =e=
+  (p32_PyPSA_ElecPriceElectrolysisAvg(t,regi) - p32_PyPSA_LoadPriceAvg(t,regi,"AC")) * sm_TWa_2_MWh / 1e12
+;
+
+***------------------------------------------------------------
+***            PyPSA-Eur to REMIND: Transmission losses 
+***------------------------------------------------------------
+q32_gridLosses(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
+  v32_gridLosses(t,regi)
+  =e=
+  p32_gridLossesRel(t,regi) * v32_load(t,regi)
+;
 
 ***------------------------------------------------------------
 ***            PyPSA-Eur to REMIND: Electricity trade

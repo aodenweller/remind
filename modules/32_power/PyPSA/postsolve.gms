@@ -25,35 +25,6 @@ loop(t,
 );
 
 ***------------------------------------------------------------
-***                  PyPSA-Eur reporting
-***------------------------------------------------------------
-
-$ifthen "%c32_pypsa_peakcap%" == "on"
-if ((sm_PyPSA_eq eq 1),
-*** Calculate shadow price of peak residual load constraint
-p32_PeakResLoadShadowPrice(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePyDisp32(te) AND ((qm_budget.m(t,regi) * p32_PyPSA_CFAvg(t,regi,te) ) ne 0))  =
-      q32_PeakResCap.m(t,regi)
-  / ( qm_budget.m(t,regi) * p32_PyPSA_CFAvg(t,regi,te) );
-*** Report electricity balance equation components
-p32_ElecBalance(t,regi,"1") = sum(pe2se(enty,enty2,te)$(sameas(enty2,"seel")), vm_prodSe.l(t,regi,enty,enty2,te) );
-p32_ElecBalance(t,regi,"2") = sum(se2se(enty,enty2,te)$(sameas(enty2,"seel")), vm_prodSe.l(t,regi,enty,enty2,te) );
-p32_ElecBalance(t,regi,"3") = sum(pc2te(enty,entySe(enty3),te,enty2)$(sameas(enty2,"seel")), 
-                              pm_prodCouple(regi,enty,enty3,te,enty2) * vm_prodSe.l(t,regi,enty,enty3,te) );
-p32_ElecBalance(t,regi,"4") = sum(pc2te(enty4,entyFe(enty5),te,enty2)$(sameas(enty2,"seel")), 
-                              pm_prodCouple(regi,enty4,enty5,te,enty2) * vm_prodFe.l(t,regi,enty4,enty5,te) );
-p32_ElecBalance(t,regi,"5") = sum(pc2te(enty,enty3,te,enty2)$(sameas(enty2,"seel")),
-                                sum(teCCS2rlf(te,rlf),
-                                  pm_prodCouple(regi,enty,enty3,te,enty2) * vm_co2CCS.l(t,regi,enty,enty3,te,rlf) ) );
-p32_ElecBalance(t,regi,"6") = vm_Mport.l(t,regi,"seel");
-p32_ElecBalance(t,regi,"7") = sum(se2fe(enty2,enty3,te)$(sameas(enty2,"seel")), vm_demSe.l(t,regi,enty2,enty3,te) );
-p32_ElecBalance(t,regi,"8") = sum(se2se(enty2,enty3,te)$(sameas(enty2,"seel")), vm_demSe.l(t,regi,enty2,enty3,te) );
-p32_ElecBalance(t,regi,"9") = sum(teVRE, v32_storloss.l(t,regi,teVRE) );
-p32_ElecBalance(t,regi,"10") = sum(pe2rlf(enty3,rlf2), (pm_fuExtrOwnCons(regi, "seel", enty3) * vm_fuExtr.l(t,regi,enty3,rlf2))$(pm_fuExtrOwnCons(regi, "seel", enty3) gt 0))$(t.val > 2005);
-p32_ElecBalance(t,regi,"11") = vm_Xport.l(t,regi,"seel");
-);
-$endif
-
-***------------------------------------------------------------
 ***                  PyPSA-Eur pre-coupling
 ***------------------------------------------------------------
 
@@ -121,7 +92,7 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
   s32_PyPSA_called(iteration) = 1;
 
   !! Electricity load
-  p32_load(t,regi)$(tPy32(t) and regPy32(regi)) = sum(se2fe(entySe,enty,te)$(sameas(entySe, "seel")), vm_demSe.l(t,regi,entySe,enty,te) );
+  p32_load(t,regi)$(tPy32(t) and regPy32(regi)) = v32_load.l(t,regi);
 
   !! Additional electrolytic hydrogen demand that is not used for storage
   !! vm_prodSe.l(t,regi,"seel","seh2","elh2") is the production of hydrogen from electrolysis (TWa w.r.t. hydrogen)
@@ -214,6 +185,8 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
     tPy32, regPy32, tePy32,
     !! Total electricity load
     p32_load,
+    !! Additional electrolytic hydrogen demand (from other sectors)
+    p32_ElecH2Demand,
     !! Capital cost components
     p32_capCostwAdjCost, pm_data, p32_discountRate,
     !! Marginal cost components
@@ -222,8 +195,6 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
     p32_weightGen, p32_weightStor, p32_weightPEprice, 
     !! Pre-investment capacities
     p32_preInvCapAvg,
-    !! Additional electrolytic hydrogen demand
-    p32_ElecH2Demand,
     !! Hydro capacities and generation
     p32_hydroCap, p32_hydroGen,
     !! -- PyPSA-Eur to REMIND -- 
@@ -267,6 +238,8 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_shSeElRegi=generation_region_share;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Potential=potential;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_AF=availability_factor;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_ElecPriceElectrolysis=electricity_price_electrolysis;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_gridLossesRel=grid_loss_relative;
 
   !! Temporary workaround to avoid overinvestment in REMIND:
   !! Limit markup to between -50 and +150 EUR/MWh
@@ -281,6 +254,8 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
   p32_PyPSA_LoadPrice_iter(iteration,t,regi,carrierPy32) = p32_PyPSA_LoadPrice(t,regi,carrierPy32);
   !! Track markup in iterations
   p32_PyPSA_Markup_iter(iteration,t,regi,te) = p32_PyPSA_Markup(t,regi,te);
+  !! Track electricity price paid by electrolysis in iterations
+  p32_PyPSA_ElecPriceElectrolysis_iter(iteration,t,regi) = p32_PyPSA_ElecPriceElectrolysis(t,regi);
 
 *** PyPSA-Eur to REMIND: Calculate averages to reduce oscillations
 *** (1) Capacity factors
@@ -298,6 +273,8 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
     p32_PyPSA_LoadPriceAvg(t,regi,carrierPy32)$(tPy32(t) and regPy32(regi)) = p32_PyPSA_LoadPrice(t,regi,carrierPy32);
     !! Non averaged markups
     p32_PyPSA_MarkupAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_PyPSA_Markup(t,regi,te);
+    !! Non averaged electricity price paid by electrolysis
+    p32_PyPSA_ElecPriceElectrolysisAvg(t,regi)$(tPy32(t) and regPy32(regi)) = p32_PyPSA_ElecPriceElectrolysis(t,regi);
   !! Implement step (3)
   elseif (c32_avg_py2rm eq 1),
     !! Averaged capacity factors over iterations
@@ -316,6 +293,10 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
     p32_PyPSA_MarkupAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) =
       sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2) * p32_PyPSA_Markup_iter(iteration2,t,regi,te)) /
       sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2));
+    !! Averaged electricity price paid by electrolysis over iterations
+    p32_PyPSA_ElecPriceElectrolysisAvg(t,regi)$(tPy32(t) and regPy32(regi)) =
+      sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2) * p32_PyPSA_ElecPriceElectrolysis_iter(iteration2,t,regi)) /
+      sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2));
   );
 
   !! Save v32_usableSeDispNet for next iteration's electricity trade implementation
@@ -324,6 +305,38 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
 *** Activate PyPSA equations if PyPSA ran once
 sm_PyPSA_eq = 1;
 );
+
+***------------------------------------------------------------
+***                  PyPSA-Eur reporting
+***------------------------------------------------------------
+
+$ifthen "%c32_pypsa_peakcap%" == "on"
+if ((sm_PyPSA_eq eq 1),
+*** Calculate shadow price of peak residual load constraint
+p32_PeakResLoadShadowPrice(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePyDisp32(te) AND ((qm_budget.m(t,regi) * p32_PyPSA_CFAvg(t,regi,te) ) ne 0))  =
+      q32_PeakResCap.m(t,regi)
+  / ( qm_budget.m(t,regi) * p32_PyPSA_CFAvg(t,regi,te) );
+*** Report electricity balance equation components
+*** Supply
+p32_ElecBalance(t,regi,"1")$(tPy32(t) and regPy32(regi)) = sum(pe2se(enty,enty2,te)$(sameas(enty2,"seel")), vm_prodSe.l(t,regi,enty,enty2,te) );
+p32_ElecBalance(t,regi,"2")$(tPy32(t) and regPy32(regi)) = sum(se2se(enty,enty2,te)$(sameas(enty2,"seel")), vm_prodSe.l(t,regi,enty,enty2,te) );
+p32_ElecBalance(t,regi,"3")$(tPy32(t) and regPy32(regi)) = sum(pc2te(enty,entySe(enty3),te,enty2)$(sameas(enty2,"seel")), 
+                              pm_prodCouple(regi,enty,enty3,te,enty2) * vm_prodSe.l(t,regi,enty,enty3,te) );
+p32_ElecBalance(t,regi,"4")$(tPy32(t) and regPy32(regi)) = sum(pc2te(enty4,entyFe(enty5),te,enty2)$(sameas(enty2,"seel")), 
+                              pm_prodCouple(regi,enty4,enty5,te,enty2) * vm_prodFe.l(t,regi,enty4,enty5,te) );
+p32_ElecBalance(t,regi,"5")$(tPy32(t) and regPy32(regi)) = sum(pc2te(enty,enty3,te,enty2)$(sameas(enty2,"seel")),
+                                sum(teCCS2rlf(te,rlf),
+                                  pm_prodCouple(regi,enty,enty3,te,enty2) * vm_co2CCS.l(t,regi,enty,enty3,te,rlf) ) );
+p32_ElecBalance(t,regi,"6")$(tPy32(t) and regPy32(regi)) = vm_Mport.l(t,regi,"seel");
+*** Withdrawal
+p32_ElecBalance(t,regi,"7")$(tPy32(t) and regPy32(regi)) = sum(se2fe(enty2,enty3,te)$(sameas(enty2,"seel")), vm_demSe.l(t,regi,enty2,enty3,te) );
+p32_ElecBalance(t,regi,"8")$(tPy32(t) and regPy32(regi)) = sum(se2se(enty2,enty3,te)$(sameas(enty2,"seel")), vm_demSe.l(t,regi,enty2,enty3,te) );
+p32_ElecBalance(t,regi,"9")$(tPy32(t) and regPy32(regi)) = sum(teVRE, v32_storloss.l(t,regi,teVRE) );
+p32_ElecBalance(t,regi,"10")$(tPy32(t) and regPy32(regi)) = sum(pe2rlf(enty3,rlf2), (pm_fuExtrOwnCons(regi, "seel", enty3) * vm_fuExtr.l(t,regi,enty3,rlf2))$(pm_fuExtrOwnCons(regi, "seel", enty3) gt 0))$(t.val > 2005);
+p32_ElecBalance(t,regi,"11")$(tPy32(t) and regPy32(regi)) = vm_Xport.l(t,regi,"seel");
+p32_ElecBalance(t,regi,"12")$(tPy32(t) and regPy32(regi)) = v32_gridLosses.l(t,regi);
+);
+$endif
 
 
 *** EOF ./modules/32_power/PyPSA/postsolve.gms

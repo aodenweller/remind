@@ -65,12 +65,7 @@ $ifthen.markup "%cm_pypsa_markup%" == "on"
 p21_taxrevPyPSAMarkup0(ttot,regi) = sum(en2en(enty,enty2,te)$(tePy32(te)),
                                    - vm_PyPSAMarkup.l(ttot,regi,te) * ( vm_prodSe.l(ttot,regi,enty,enty2,te) - v32_storloss.l(ttot,regi,te) )
                                   );
-p21_taxrevPyPSAMarkup_iter(iteration+1,ttot,regi) = v21_taxrevPyPSAMarkup.l(ttot,regi);
-display "PyPSA markup in presolve.gms";
-display "Iteration number: ";
-o_iterationNumber = iteration.val;
-display o_iterationNumber;
-display p21_taxrevPyPSAMarkup0;
+p21_taxrevPyPSAMarkupDemand0(ttot,regi) = vm_PyPSAMarkupDemand.l(ttot,regi,"elh2") * vm_demSe.l(ttot,regi,"seel","seh2","elh2");
 $endif.markup
 $endif.pypsa
 
@@ -91,6 +86,8 @@ p21_taxrevFlex_iter(iteration+1,ttot,regi) = v21_taxrevFlex.l(ttot,regi);
 p21_taxrevImport_iter(iteration+1,ttot,regi,tradePe) = v21_taxrevImport.l(ttot,regi,tradePe);
 p21_taxrevChProdStartYear_iter(iteration+1,t,regi) = v21_taxrevChProdStartYear.l(t,regi);
 p21_taxrevSE_iter(iteration+1,t,regi) = v21_taxrevSE.l(t,regi);
+p21_taxrevPyPSAMarkup_iter(iteration,ttot,all_regi) = v21_taxrevPyPSAMarkup.l(ttot,all_regi);
+p21_taxrevPyPSAMarkupDemand_iter(iteration,ttot,all_regi) = v21_taxrevPyPSAMarkupDemand.l(ttot,all_regi);
 
 display p21_taxrevFE_iter;
 

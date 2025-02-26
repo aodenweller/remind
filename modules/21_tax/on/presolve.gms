@@ -61,11 +61,7 @@ $ifthen.markup "%cm_pypsa_markup%" == "on"
 p21_taxrevPyPSAMarkup0(ttot,regi) = sum(en2en(enty,enty2,te)$(tePy32(te)),
                                    - vm_PyPSAMarkup.l(ttot,regi,te) * ( vm_prodSe.l(ttot,regi,enty,enty2,te) - v32_storloss.l(ttot,regi,te) )
                                   );
-display "PyPSA markup in presolve.gms";
-display "Iteration number: ";
-o_iterationNumber = iteration.val;
-display o_iterationNumber;
-display p21_taxrevPyPSAMarkup0;
+p21_taxrevPyPSAMarkupDemand0(ttot,regi) = vm_PyPSAMarkupDemand.l(ttot,regi,"elh2") * vm_demSe.l(ttot,regi,"seel","seh2","elh2");
 $endif.markup
 $endif.pypsa
 

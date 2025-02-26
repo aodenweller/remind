@@ -63,6 +63,7 @@ $endIf.cm_implicitPePriceTarget
 $ifthen.pypsa "%power%" == "PyPSA"
 $ifthen.markup "%cm_pypsa_markup%" == "on"
   + v21_taxrevPyPSAMarkup(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))
+  + v21_taxrevPyPSAMarkupDemand(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))
 $endif.markup
 $endif.pypsa
 ;
@@ -374,8 +375,16 @@ q21_taxrevPyPSAMarkup(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1)
         )
   - p21_taxrevPyPSAMarkup0(t,regi) 
 ;
+
+q21_taxrevPyPSAMarkupDemand(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
+  v21_taxrevPyPSAMarkupDemand(t,regi)
+  =e=
+  ( vm_PyPSAMarkupDemand(t,regi,"elh2") * vm_demSe(t,regi,"seel","seh2","elh2") )
+  - p21_taxrevPyPSAMarkupDemand0(t,regi)
+;
 $endif.markup
 $endif.pypsa
+
 *' This calculates the SE tax rate for electricity going into electrolysis.
 *' It contains the final energy tax rate for electricity use in industry and
 *' grid fees that are assumed be equal to the investment cost of tdfels.

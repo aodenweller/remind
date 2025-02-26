@@ -39,6 +39,7 @@ p21_taxrevFlex0(ttot,all_regi)                               "reference level va
 p21_taxrevImport0(ttot,all_regi,all_enty,tax_import_type_21) "tax revenues from import tax in the previous iteration"
 p21_taxrevChProdStartYear0(ttot,all_regi)                    "reference level value of tax to limit changes compared to reference run in cm_startyear"
 p21_taxrevPyPSAMarkup0(ttot,all_regi)                        "reference level value of electricity technology markups from PyPSA"
+p21_taxrevPyPSAMarkupDemand0(ttot,all_regi)                  "reference level value of electricity demand markups from PyPSA"
 p21_taxrevSE0(ttot,all_regi)                                 "reference level value of tax on SE electricity demand"
 p21_taxrevGHG_iter(iteration,ttot,all_regi)                "reference level value of GHG emission tax revenue"
 p21_taxrevCCS_iter(iteration,ttot,all_regi)                "reference level value of CCS tax revenue"
@@ -56,6 +57,7 @@ p21_taxrevImport_iter(iteration,ttot,all_regi,all_enty)    "reference level valu
 p21_taxrevChProdStartYear_iter(iteration,ttot,all_regi)    "Difference to tax revenues in last iteration for: tax to limit changes compared to reference run in cm_startyear"
 p21_taxrevSE_iter(iteration,ttot,all_regi)                 "Difference to tax revenues in last iteration for: tax on SE electricity demand"
 p21_taxrevPyPSAMarkup_iter(iteration,ttot,all_regi)             "reference level value of markup from PyPSA"
+p21_taxrevPyPSAMarkupDemand_iter(iteration,ttot,all_regi)       "reference level value of markup from PyPSA"
 
 p21_CO2TaxSectorMarkup(ttot,all_regi,emi_sectors)          "CO2 tax markup in building, industry or transport sector"
 
@@ -125,7 +127,8 @@ v21_taxrevChProdStartYear(ttot,all_regi)        "tax to limit changes compared t
 v21_taxrevSE(ttot,all_regi)                     "tax on SE electricity demand, used for taxes on electrolysis"
 $ifthen.pypsa "%power%" == "PyPSA"
 $ifthen.markup "%cm_pypsa_markup%" == "on"
-v21_taxrevPyPSAMarkup(ttot,all_regi)            "Tax revenue of electricity technology markups from PyPSA-Eur"
+v21_taxrevPyPSAMarkup(ttot,all_regi)            "Tax revenue of electricity generation markups from PyPSA-Eur"
+v21_taxrevPyPSAMarkupDemand(ttot,all_regi)      "Tax revenue of electricity demand markups from PyPSA-Eur"
 $endif.markup
 $endif.pypsa
 ;
@@ -162,6 +165,7 @@ q21_SeTaxRate(ttot,all_regi,all_te)             "calculation of SE tax rate, use
 $ifthen.pypsa "%power%" == "PyPSA"
 $ifthen.markup "%cm_pypsa_markup%" == "on"
 q21_taxrevPyPSAMarkup(ttot,all_regi)            "calculation of electricity technology markups from PyPSA-Eur"
+q21_taxrevPyPSAMarkupDemand(ttot,all_regi)      "calculation of electricity demand markups from PyPSA-Eur"
 $endif.markup
 $endif.pypsa
 ;

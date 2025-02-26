@@ -190,6 +190,7 @@ $ifthen.markup "%cm_pypsa_markup%" == "on"
 vm_PyPSAMarkup.l(t,regi,te) = 0;
 sm_PyPSA_eq = 0;  !! Could remove this or move to core/preloop.gms?
 v21_taxrevPyPSAMarkup.l(tPy32,regPy32) = 0;
+vm_PyPSAMarkupDemand.l(tPy32,regPy32,"elh2") = 0;
 $endif.markup
 $endif.pypsa
 

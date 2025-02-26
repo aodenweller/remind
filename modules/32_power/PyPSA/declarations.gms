@@ -119,6 +119,10 @@ parameters
     p32_PyPSA_Potential(ttot,all_regi,all_te)                       "PyPSA import: VRE potentials by technology within region [MW]"
     p32_PyPSA_shSeElRegi(ttot,all_regi)                             "PyPSA import: Electricity generation share across coupled regions [1]"
     p32_PyPSA_AF(ttot,all_regi,all_te)                              "PyPSA import: Availability factors [1]"
+    p32_PyPSA_ElecPriceElectrolysis(ttot,all_regi)                  "PyPSA import: Electricity price paid by electrolysis [$/MWh]"
+    p32_PyPSA_ElecPriceElectrolysis_iter(iteration,ttot,all_regi)   "PyPSA import calc: Electricity price paid by electrolysis in iterations [$/MWh]"
+    p32_PyPSA_ElecPriceElectrolysisAvg(ttot,all_regi)               "PyPSA import calc: Electricity price paid by electrolysis averaged over iterations [$/MWh]"
+    p32_gridLossesRel(ttot,all_regi)                                "PyPSA import: Transmission losses relative to total load [1]"
     p32_preFactor_CF(all_regi,all_te)                               "PyPSA coupling: Pre-factor for the capacity factor [1]"
     p32_preFactor_MV(all_regi,all_te)                               "PyPSA coupling: Pre-factor for the market value [1]"
     p32_usableSeDispForeign(ttot,all_regi)                          "PyPSA coupling: Foreign usable SE electricity generation, without own consumption, without imports/exports [TWa]"
@@ -135,10 +139,12 @@ parameters
 
 *** Positive variables for the PyPSA coupling
 positive variables
+    v32_load(ttot,all_regi)                                         "PyPSA coupling: Electricity load [TWa]"
     v32_usableSeDisp(ttot,all_regi,all_enty)                        "PyPSA coupling: Domestic usable SE electricity generation, without own consumption, without imports/exports [TWa]"
     v32_usableSeDispNet(ttot,all_regi,all_enty)                     "PyPSA export: Usable SE electricity, without own consumption, with imports/exports [TWa]"
     v32_usableSeTeDisp(ttot,all_regi,all_enty,all_te)               "PyPSA export: Domestic usable SE electricity generation, without own consumption, without imports/exports, by technology [TWa]"
     v32_shSeElDisp(ttot,all_regi,all_te)                            "PyPSA export/coupling: Share of domestic usable SE electricity generation, without own consumption, used for pre-factor equations [1]"
+    v32_gridLosses(ttot,all_regi)                                   "PyPSA coupling: Grid losses [TWa]"
 $ifthen "%c32_pypsa_trade%" == "on"
     v32_shSeElRegi(ttot,all_regi)                                   "PyPSA coupling: Share of usable SE electricity for dispatch without own consumption by region [1]"
     v32_shSeELTradeImport(ttot,all_regi)                            "PyPSA coupling: Share of electricity imports relative to domestic production [1]"
@@ -149,12 +155,14 @@ $endif
 *** Variables for the PyPSA coupling
 $ifthen "%cm_pypsa_markup%" == "on"
 variables
-    vm_PyPSAMarkup(ttot,all_regi,all_te)                            "PyPSA coupling: Markups for electricity technologies according to PyPSA-Eur [T$/TWa]"
+    vm_PyPSAMarkup(ttot,all_regi,all_te)                            "PyPSA coupling: Markups for electricity generation technologies  [T$/TWa]"
+    vm_PyPSAMarkupDemand(ttot,all_regi,all_te)                      "PyPSA coupling: Markups for electricity consumption technologies [T$/TWa]"
 ;
 $endif
 
 *** Equations for the PyPSA coupling
 equations
+    q32_load(ttot,all_regi,all_enty)                                "PyPSA coupling: Calculate electricity load"
     q32_usableSeDisp(ttot,all_regi,all_enty)                        "PyPSA coupling: Calculate v32_usableSeDisp"
     q32_usableSeDispNet(ttot,all_regi,all_enty)                     "PyPSA coupling: Calculate v32_usableSeDispNet"
     q32_usableSeTeDisp(ttot,all_regi,all_enty,all_te)               "PyPSA coupling: Calculate v32_usableSeTeDisp"
@@ -164,6 +172,7 @@ $ifthen "%c32_pypsa_capfac%" == "on"
 $endif
 $ifthen "%cm_pypsa_markup%" == "on"
     q32_MarkUp(ttot,all_regi,all_te)                                "PyPSA coupling: Pre-factor equation to calculate technology-specific markups"
+    q32_MarkUpDemand(ttot,all_regi,all_te)                          "PyPSA coupling: Equation for markup demand"
 $endif
 $ifthen "%c32_pypsa_peakcap%" == "on"
     q32_PeakResCap(ttot,all_regi)                                   "PyPSA coupling: Pre-factor equation for peak residual load"
@@ -175,6 +184,7 @@ $ifthen "%c32_pypsa_trade%" == "on"
     q32_shSeELTradeImport(ttot,all_regi)                            "PyPSA coupling: Calculate v32_shSeELTradeImport"
     q32_shSeELTradeExport(ttot,all_regi)                            "PyPSA coupling: Calculate v32_shSeELTradeExport"
 $endif
+    q32_gridLosses(ttot,all_regi)                                   "PyPSA coupling: Equation to calculate grid losses"
 ;
 
 *** EOF ./modules/32_power/PyPSA/declarations.gms
