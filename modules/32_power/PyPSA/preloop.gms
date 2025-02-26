@@ -36,9 +36,7 @@ p32_PyPSA_Potential(tPy32,regPy32,tePy32) = 0;
 p32_PyPSA_ElecPriceElectrolysisAvg(tPy32,regPy32) = 0;
 p32_gridLossesRel(tPy32,regPy32) = 0;
 s32_PyPSA_called(iteration) = 0;
-p32_usableSeDispNet0(tPy32,regPy32,"seel") = 0;
 v32_usableSeDisp.l(tPy32,regPy32,"seel") = 0;
-v32_usableSeDispNet.l(tPy32,regPy32,"seel") = 0;
 v32_shSeElDisp.l(tPy32,regPy32,tePy32) = 0;
 vm_Mport.l(tPy32,regPy32,"seel") = 0;
 vm_Xport.l(tPy32,regPy32,"seel") = 0;
@@ -47,6 +45,7 @@ p32_PyPSA_AF(tPy32,regPy32,tePy32) = 0;
 p32_PyPSA_CF(tPy32,regPy32,tePy32) = 0;
 p32_PyPSA_StoreTrans_Cap(tPy32,regPy32,storeTransPy32) = 0;
 p32_PyPSA_StoreTrans_CF(tPy32,regPy32,storeTransPy32) = 0;
+p32_PyPSA_H2TurbRel(tPy32,regPy32) = 0;
 v32_usableSeTeDisp.l(tPy32,regPy32,"seel",tePy32) = 0;
 $ifthen "%c32_pypsa_peakcap%" == "on"
 q32_PeakResCap.m(tPy32,regPy32) = 0;

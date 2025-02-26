@@ -368,31 +368,21 @@ q32_load(t,regi,enty2)$(tPy32(t) and regPy32(regi) and sameas(enty2,"seel"))..
 ***            REMIND to PyPSA-Eur: Helper equations
 ***------------------------------------------------------------
 
-*** Calculate usable electricity generation in total, without imports or exports, i.e. only domestic generation
+*** Calculate domestic generation of electricity from PE
 q32_usableSeDisp(t,regi,entySe)$(tPy32(t) and regPy32(regi) and sameas(entySe,"seel"))..
 	v32_usableSeDisp(t,regi,entySe)
 	=e=
 	sum(pe2se(enty,entySe,te)$(tePy32(te)), vm_prodSe(t,regi,enty,entySe,te))
 ;
 
-*** Calculate usable electricity generation including imports and exports
-*** This is used as total electricity load in PyPSA-Eur
-q32_usableSeDispNet(t,regi,entySe)$(tPy32(t) and regPy32(regi) and sameas(entySe,"seel"))..
-    v32_usableSeDispNet(t,regi,entySe)
-    =e=
-    v32_usableSeDisp(t,regi,entySe)
-    + vm_Mport(t,regi,entySe)  !! Add imports to load
-    - vm_Xport(t,regi,entySe)  !! Subtract exports from load
-;
-
-*** Calculate usable electricity generation by technology
+*** Calculate domestic generation of electricity from PE by technology
 q32_usableSeTeDisp(t,regi,entySe,te)$(tPy32(t) and regPy32(regi) and sameas(entySe,"seel") AND tePy32(te))..
  	v32_usableSeTeDisp(t,regi,entySe,te)
  	=e=
  	sum(pe2se(enty,entySe,te), vm_prodSe(t,regi,enty,entySe,te) )
 ;
 
-*** Calculate electricity generation shares by technology, without imports/exports
+*** Calculate electricity generation shares by technology
 q32_shSeElDisp(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te))..
   v32_shSeElDisp(t,regi,te) * v32_usableSeDisp(t,regi,"seel")
   =e=
@@ -478,6 +468,35 @@ q32_PeakResCap(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
   * v32_load(t,regi)
 ;
 $endif
+
+***------------------------------------------------------------
+***            PyPSA-Eur to REMIND: Hydrogen for power storage
+***------------------------------------------------------------
+*** In PyPSA hydrogen storage works like a big battery, with all hydrogen consumed by turbines
+*** previously produced by electrolysers within that year (no storage losses).
+*** The implementation of hydrogen storage is based on two equations:
+*** 1. Equation that sets the required production of hydrogen turbines relative to the load (from PyPSA).
+*** 2. Equation that requires all hydrogen consumed by turbines to be produced by electrolysers.
+***    This then also implies that the additional hydrogen demand (p32_ElecH2Demand) is positive.
+*** Jointly, these two equations ensure that hydrogen storage is harmonised, while giving REMIND
+*** freedom to decide on the production of hydrogen for other end-uses.
+*** Note that capacity factors of elh2 and h2turb are fixed to PyPSA values in bounds.gms
+
+*** Equation 1: Set the required production of hydrogen turbines relative to the load.
+$ifthen "%c32_pypsa_h2stor%" == "on"
+q32_h2turb(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
+  vm_prodSe(t,regi,"seh2","seel","h2turb")
+  =g=
+  p32_PyPSA_H2TurbRel(t,regi) * v32_load(t,regi)
+;
+$endif
+
+*** Equation 2: Ensure that enough hydrogen is produced by electrolysers to cover the demand of hydrogen turbines.
+$ifthen "%c32_pypsa_h2stor%" == "on"
+q32_elh2forh2turb(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
+  vm_prodSe(t,regi,"seel","seh2","elh2")
+  =g=
+  vm_demSe(t,regi,"seh2","seel","h2turb")
 ;
 $endif
 
@@ -539,6 +558,7 @@ $endif
 
 $elseif.c32_pypsa_trade_quantities "%c32_pypsa_trade_quantities%" == "rel"
 *** Electricity imports: Relative quantities
+*** TODO: UPDATE EQUATION
 q32_TradeImport(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
     vm_Mport(t,regi,"seel")
   * p32_usableSeDispNet0(t,regi,"seel")
@@ -551,6 +571,7 @@ $endif
 ;
 
 *** Electricity exports: Relative quantities
+*** TODO: UPDATE EQUATION
 q32_TradeExport(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
     vm_Xport(t,regi,"seel")
   * p32_usableSeDispNet0(t,regi,"seel")

@@ -62,6 +62,7 @@ knitr::knit_hooks$set(
 # Get REMIND and PyPSA-Eur files
 
 ```{r data}
+# Load REMIND config file
 load("config.Rdata")
 
 # REMIND directories
@@ -225,7 +226,10 @@ techGroup2genTech <- c(
 rm2genTech <- setNames(techMapping$general, techMapping$remind.eu)
 rm2genTech <- rm2genTech[!duplicated(names(rm2genTech))]
 
-rm2genTech <- c(rm2genTech, c("elh2" = "electrolysis", "h2turb" = "fuel_cell"))
+rm2genTech <- c(rm2genTech,
+                c("elh2" = "electrolysis",
+                  "h2turb" = "fuel_cell",
+                  "h2stor" = "hydrogen_storage"))
 
 # Create mapping from PyPSA-Eur to General
 py2genTech <- setNames(techMapping$general, techMapping$pypsa.eur)
@@ -236,6 +240,8 @@ py2genTech <- c(py2genTech, c("H2 electrolysis" = "electrolysis",
                               "battery discharger" = "battery_discharger",
                               "battery charger" = "battery_charger",
                               "H2 fuel cell" = "fuel_cell",
+                              "H2" = "hydrogen_storage",
+                              "hydrogen storage underground" = "hydrogen_storage",
                               "fuel cell" = "fuel_cell",
                               "geothermal" = "geothermal",
                               #"csp" = "csp",
@@ -273,6 +279,7 @@ colorsTech <- c(
   "load" = "#4B5C67",
   "line_losses" = "#759EA8",
   "electrolysis" = "#8E5FBE",
+  "hydrogen_storage" = "#352447",
   "battery_discharger" = "#E8E88A",
   "battery_charger" = "#BFF574",
   "fuel_cell" = "#74E0F2",
@@ -301,6 +308,7 @@ namesTech <- c(
   "battery_discharger" = "Battery Discharger",
   "battery_charger" = "Battery Charger",
   "fuel_cell" = "Hydrogen Turbine",  # Fuel cell is actually a hydrogen turbine
+  "hydrogen_storage" = "Hydrogen Storage",
   "solar_pv" = "Solar",
   "csp" = "CSP",
   "wind_onshore" = "Wind Onshore",
@@ -505,7 +513,7 @@ print(pH2DemandIter)
 
 ```
 
-### Pre-investment capacities
+### Pre-investment capacities (generation and links)
 
 Pre-investment capacities are used to initialize the PyPSA-Eur model. They are modelled as "free capacity" that PyPSA-Eur can build without incurring any CAPEX.
 
@@ -519,7 +527,8 @@ dataPreInvCapAvgREMIND <- readREMINDgdx(
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = TRUE,
     recalcUnit = 1e3) %>%   # TW to GW
-  filter(technology != "hydro") %>%
+  filter(technology != "hydro",
+         technology != "h2stor") %>%
   revalue.levels(technology = rm2genTech) %>%
   group_by(year, region, technology, iteration) %>%
   summarise(preInvCap = sum(p32_preInvCap)) %>%
@@ -534,7 +543,8 @@ dataPreInvCapREMIND <- readREMINDgdx(
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = TRUE,
     recalcUnit = 1e3) %>%   # TW to GW
-  filter(technology != "hydro") %>%
+  filter(technology != "hydro",
+         technology != "h2stor") %>%
   revalue.levels(technology = rm2genTech) %>%
   group_by(year, region, technology, iteration) %>%
   summarise(preInvCap = sum(p32_preInvCap)) %>%
@@ -544,6 +554,7 @@ dataPreInvCapREMIND <- readREMINDgdx(
 # Read PyPSA-Eur data
 dataPreInvCapPyPSA <- readPyPSAcsv(
   paths = file.path(pyValidationDirs, "preinstalled_capacities.csv")) %>%
+  filter(component %in% c("Generator", "Link")) %>%
   mutate(value = value / 1e3) %>%   # Convert capacities to GW
   rename(preInvCap = value) %>%
   rename(technology = carrier) %>%
@@ -624,13 +635,67 @@ for (r in regList){
 }
 ```
 
+### Pre-investment capacities (stores)
+
+```{r preinvestment capacities stores}
+
+# Average pre-investment capacities
+dataPreInvCapAvgREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "p32_preInvCapAvg",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "value"),
+    colFilter = list("year" = years, "region" = regions, "technology" = c("h2stor")),
+    restoreZeros = TRUE) %>%
+  filter(iteration %in% pyIterations)
+
+# Non-averaged pre-investment capacities
+dataPreInvCapREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "p32_preInvCap",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "value"),
+    colFilter = list("year" = years, "region" = regions, "technology" = c("h2stor")),
+    restoreZeros = TRUE) %>%
+  filter(iteration %in% pyIterations)
+
+# Read PyPSA-Eur data
+dataPreInvCapPyPSA <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "preinstalled_capacities.csv")) %>%
+  filter(carrier == "H2") %>%
+  mutate(value = value / 1e6)  # Convert capacities to TWh
+
+# Plot by year
+pYear <- ggplot() +
+  geom_line(data = dataPreInvCapAvgREMIND, aes(x = year, y = value, color = region)) +
+  geom_point(data = dataPreInvCapREMIND, aes(x = year, y = value, color = region, shape = "Non-avg. value")) +
+  geom_point(data = dataPreInvCapPyPSA, aes(x = year, y = value, color = region), alpha = 0.5) +
+  scale_color_discrete(name = "Region") +
+  scale_shape_manual(name = NULL, values = c("Non-avg. value" = 4)) +
+  labs(x = "Year", y = "Capacity (TWh)") +
+  ggtitle("Pre-investment hydrogen storage capacities over years") +
+  facet_wrap(~ iteration)
+
+print(pYear)
+
+# Plot by iteration
+pIter <- ggplot() +
+  geom_line(data = dataPreInvCapAvgREMIND, aes(x = iteration, y = value, color = region)) +
+  geom_point(data = dataPreInvCapREMIND, aes(x = iteration, y = value, color = region, shape = "Non-avg. value")) +
+  geom_point(data = dataPreInvCapPyPSA, aes(x = iteration, y = value, color = region), alpha = 0.5) +
+  scale_color_discrete(name = "Region") +
+  scale_shape_manual(name = NULL, values = c("Non-avg. value" = 4)) +
+  labs(x = "Iteration", y = "Capacity (TWh)") +
+  ggtitle("Pre-investment hydrogen storage capacities over iterations") +
+  facet_wrap(~ year)
+
+print(pIter)
+
+```
+
 ### Specific capital costs w/ adjustment costs
 
 Costs are the same across all regions as PyPSA-Eur doesn't have regionalised costs (yet). Costs from REMIND are hence aggregated.
 
 ```{r remind weights}
-# Get weights used to aggregate costs
-
 # Weights for generation technologies
 dataWeightGenREMIND <- readREMINDgdx(
   paths = rmFiles,
@@ -675,7 +740,8 @@ dataCapexWeightedREMIND <- dataCapexREMIND %>%
 # PyPSA-Eur
 dataCapexPyPSA <- readPyPSAcsv(
   paths = file.path(pyResourcesDirs, "costs.csv")) %>%
-  filter(parameter == "investment")
+  filter(parameter == "investment",
+         technology != "hydrogen storage underground")
 
 # Special treatment for electrolysers: Costs in costs.csv are per MWel, not per MW
 dataEtaPyPSA <- readPyPSAcsv(
@@ -767,6 +833,41 @@ if (nrow(dataCapexPyPSApy) > 0) {
 
   print(pCapexYearPy)
 }
+```
+
+### Specific capital costs w/ adjustment costs (store)
+
+```{r cap cost store}
+
+# REMIND
+dataCapexREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "p32_capCostwAdjCost",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "value"),
+    colFilter = list("year" = years, "region" = regions, "technology" = c("h2stor")),
+    restoreZeros = FALSE,
+    recalcUnit = trUSDpTW2USDpMW) %>%
+  filter(iteration %in% pyIterations) %>%
+  revalue.levels(technology = c("h2stor" = "hydrogen storage underground"))
+
+# PyPSA-Eur
+dataCapexPyPSA <- readPyPSAcsv(
+  paths = file.path(pyResourcesDirs, "costs.csv")) %>%
+  filter(parameter == "investment",
+         technology %in% c("hydrogen storage underground"))
+
+# Plot
+pCapexYear <- ggplot() +
+  geom_line(data = dataCapexREMIND, aes(x = year, y = value, color = technology)) +
+  geom_point(data = dataCapexPyPSA, aes(x = year, y = value, color = technology), alpha = 0.5) +
+  scale_color_discrete(name = "Technology") +
+  labs(x = "Year", y = "Specific capital costs (USD/MWh)") +
+  scale_y_continuous(limits = c(0, NA)) +
+  ggtitle("Specific capital costs (w/ adjustment costs) over years") +
+  facet_wrap(~ iteration)
+
+print(pCapexYear)
+
 ```
 
 #### CAPEX and adjustment costs in REMIND
@@ -1625,7 +1726,7 @@ dataCapREMIND <- readREMINDgdx(
     columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "rlf" = "grade", "value" = "vm_cap"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech), "grade" = 1),
     restoreZeros = FALSE) %>%
-  filter(!(technology %in% c("elh2", "h2turb"))) %>%
+  filter(!(technology %in% c("elh2", "h2turb", "h2stor"))) %>%
   select(-grade)
 
 dataUsableSeTeDispREMIND <- readREMINDgdx(
@@ -1740,7 +1841,7 @@ for (r in regList){
 }
 ```
 
-### Markups (supply side)
+### Markups (generation technologies)
 
 Markups and markdowns are read into REMIND from PyPSA-Eur. Markup = Average market value - Average electricity price
 
@@ -1848,13 +1949,14 @@ for (r in regions) {
 }
 ```
 
-### Markup tax revenue (supply side)
+### Markup tax revenue (generation technologies)
 
 Markups are implemented as a tax/subsidy in REMIND in order to manipulate a variable that is usually an outcome (Lagrangian multiplier of the optimisation) and not an input.
 
 Here we look at the tax revenue from markups, which should approach zero over iterations.
 
 ```{r markup tax revenue}
+
 # REMIND
 dataMarkUpRevenue <- readREMINDgdx(
     paths = rmFiles,
@@ -1881,37 +1983,54 @@ for (r in regList) {
 }
 ```
 
-### Markups (demand side)
+### Markup: Electricity prices for electrolysis
 
-Not yet coupled into REMIND.
+```{r markup electrolysis}
 
-```{r}
+# REMIND
+dataMarkupElectrolysisREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "vm_PyPSAMarkupDemand",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "value"),
+    colFilter = list("year" = years, "region" = regions, "technology" = "elh2"),
+    restoreZeros = FALSE,
+    recalcUnit = trUSDpTWa2USDpMWh) %>%
+  revalue.levels(technology = c("elh2" = "electrolysis"))
 
-# PyPSA data
+# PyPSA electricity price for electrolysis
 dataElecPriceElectrolysisPyPSA <- readPyPSAcsv(
   paths = file.path(pyValidationDirs, "electricity_prices_electrolysis.csv")) %>%
   # Increment iteration by 1 to match REMIND
   mutate(iteration = iteration + 1)
 
+# PyPSA load price
+dataLoadPricePyPSA <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "load_prices.csv")) %>%
+  filter(carrier == "AC") %>%
+  # Increment iteration by 1 to match REMIND
+  mutate(iteration = iteration + 1)
+
+# Calculate markup
+dataMarkupElectrolysisPyPSA <- dataElecPriceElectrolysisPyPSA %>%
+  left_join(dataLoadPricePyPSA, by = c("year", "region", "iteration")) %>%
+  mutate(value = value.x - value.y)
+
+# Plot
 pYear <- ggplot() +
-  geom_point(data = dataElecPriceElectrolysisPyPSA,
-             aes(x = year, y = value, color = region)) +
-  ggtitle("Electricity prices for electrolysis over years") +
-  xlab("Year") +
-  scale_y_continuous(name = "USD/MWh",
-                     limits = c(0, NA)) +
+  geom_line(data = dataMarkupElectrolysisREMIND, aes(x = year, y = value, color = region)) +
+  geom_point(data = dataMarkupElectrolysisPyPSA, aes(x = year, y = value, color = region)) +
+  labs(x = "Year", y = "Markup ($/MWh)") +
+  ggtitle("Markup for electricity prices for electrolysis over years") +
   facet_wrap(~ iteration, scales = "free")
 
 print(pYear)
 
 pIter <- ggplot() +
-  geom_point(data = dataElecPriceElectrolysisPyPSA,
-             aes(x = iteration, y = value, color = region)) +
-  ggtitle("Electricity prices for electrolysis over iterations") +
-  xlab("Iteration") +
-  scale_y_continuous(name = "USD/MWh",
-                     limits = c(0, NA)) +
+  geom_line(data = dataMarkupElectrolysisREMIND, aes(x = iteration, y = value, color = region)) +
+  geom_point(data = dataMarkupElectrolysisPyPSA, aes(x = iteration, y = value, color = region)) +
+  labs(x = "Iteration", y = "Markup ($/MWh)") +
   scale_x_continuous(breaks = integer_breaks()) +
+  ggtitle("Markup for electricity prices for electrolysis over iterations") +
   facet_wrap(~ year, scales = "free")
 
 print(pIter)
@@ -1920,11 +2039,31 @@ print(pIter)
 
 ### Markup tax revenue (demand side)
 
+```{r markup tax revenue demand}
+
+# REMIND
+dataMarkUpRevenue <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "v21_taxrevPyPSAMarkupDemand",
+    columns = c("ttot" = "year", "all_regi" = "region", "value" = "value"),
+    colFilter = list("year" = years, "region" = regions),
+    restoreZeros = FALSE,
+    recalcUnit = -1E6)  # T$/yr to Million $/yr
+    
+pMarkUpRevenue <- ggplot() +
+    geom_line(data = dataMarkUpRevenue, aes(x = year, y = value)) +
+    labs(x = "Year", y = "Markup revenue (Million $/yr)") +
+    ggtitle("Markup revenue over years (demand side)") +
+    facet_wrap(~ iteration)
+
+print(pMarkUpRevenue)
+
+```
+
 ### Peak residual load
 
-Relative peak residual load is passed from PyPSA-Eur to REMIND. REMIND can go higher than the PyPSA-Eur value, but not lower.
-
 ```{r peak residual load relative}
+
 tePyDisp32 <- gdx::readGDX(rmFiles[1], "tePyDisp32", restore_zeros = FALSE)
 
 dataDispCapSumREMIND <- dataCapREMIND %>%
@@ -1932,16 +2071,16 @@ dataDispCapSumREMIND <- dataCapREMIND %>%
   group_by(year, region, iteration) %>%
   summarise(dispCapSum = sum(vm_cap))
 
-dataGenREMIND <- readREMINDgdx(
+dataLoadREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "v32_usableSeDispNet",
-    columns = c("ttot" = "year", "all_regi" = "region", "value" = "v32_usableSeDispNet"),
+    gdxVar = "v32_load",
+    columns = c("ttot" = "year", "all_regi" = "region", "value" = "v32_load"),
     colFilter = list("year" = years, "region" = regions),
     restoreZeros = FALSE)
 
 dataPeakResLoadREMIND <- dataDispCapSumREMIND %>%
-  left_join(dataGenREMIND, by = c("year", "region", "iteration")) %>%
-  mutate(peakResLoad = dispCapSum / v32_usableSeDispNet)
+  left_join(dataLoadREMIND, by = c("year", "region", "iteration")) %>%
+  mutate(peakResLoad = dispCapSum / v32_load)
 
 # PyPSA csv contains both absolute and relative
 dataPeakResLoadPyPSA <- readPyPSAcsv(
@@ -1985,7 +2124,8 @@ print(pPeakResLoadAbsYear)
 
 ### Hydrogen storage: Capacity factors
 
-```{r capacity factors storage}
+```{r hydrogen storage capacity factors}
+
 # REMIND capacity factors (hydrogen storage)
 dataCapFacStorREMIND <- readREMINDgdx(
     paths = rmFiles,
@@ -2030,74 +2170,163 @@ print(pCapFacStorIter)
 
 ```
 
-### Hydrogen storage: Optimal capacities
+### Hydrogen storage: Hydrogen turbine share of load
 
-For electrolysers, we import minimum capacities from PyPSA (for seasonal storage).
-For fuel cells/hydrogen turbines, we import fixed capacities from PyPSA (re-electriciation).
+```{r hydrogen storage turbine relative}
 
-```{r hydrogen storage capacities}
-# REMIND capacities
-dataCapStorREMIND <- readREMINDgdx(
+# REMIND h2turb production
+dataH2turbREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "vm_prodSe",
+    columns = c("tall" = "year", "all_regi" = "region", "all_enty" = "enty1", "all_enty1" = "enty2", "all_te" = "technology", "value" = "value"),
+    colFilter = list("year" = years, "region" = regions, "enty1" = "seh2", "enty2" ="seel", "technology" = "h2turb"),
+    restoreZeros = FALSE,
+    recalcUnit = twa2twh) %>%  # TWa to TWh
+  revalue.levels(technology = rm2genTech) %>%
+  select(year, region, technology, value, iteration)
+
+# REMIND load
+dataLoadREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "v32_load",
+    columns = c("ttot" = "year", "all_regi" = "region", "value" = "v32_load"),
+    colFilter = list("year" = years, "region" = regions),
+    restoreZeros = FALSE,
+    recalcUnit = twa2twh)
+
+# Calculate share of hydrogen turbine w.r.t. load
+dataH2turbShareREMIND <- dataH2turbREMIND %>%
+  left_join(dataLoadREMIND, by = c("year", "region", "iteration")) %>%
+  mutate(value = value / v32_load)
+
+# PyPSA data
+dataH2turbPyPSA <- readPyPSAcsv(
+    paths = file.path(pyValidationDirs, "h2turb_storages.csv")) %>%
+  # Increment iteration by 1 to match REMIND
+  mutate(iteration = iteration + 1)
+
+# Plot
+pH2turbRel <- ggplot() +
+  geom_line(data = dataH2turbShareREMIND, aes(x = year, y = value, color = region)) +
+  geom_point(data = dataH2turbPyPSA, aes(x = year, y = relative, color = region)) +
+  labs(x = "Year", y = "Relative hydrogen turbine production") +
+  ggtitle("Relative hydrogen turbine production over years") +
+  facet_wrap(~ iteration)
+
+print(pH2turbRel)
+
+pH2turbRelIter <- ggplot() +
+  geom_line(data = dataH2turbShareREMIND, aes(x = iteration, y = value, color = region)) +
+  geom_point(data = dataH2turbPyPSA, aes(x = iteration, y = relative, color = region)) +
+  labs(x = "Iteration", y = "Relative hydrogen turbine production") +
+  ggtitle("Relative hydrogen turbine production over iterations") +
+  facet_wrap(~ year)
+
+print(pH2turbRelIter)
+
+```
+
+```{r hydrogen storage turbine absolute}
+
+pH2turbAbs <- ggplot() +
+  geom_line(data = dataH2turbREMIND, aes(x = year, y = value, color = region)) +
+  geom_point(data = dataH2turbPyPSA, aes(x = year, y = absolute/1E6, color = region)) +
+  labs(x = "Year", y = "Hydrogen turbine production (TWh)") +
+  ggtitle("Hydrogen turbine production over years", "Not directly coupled to REMIND") +
+  facet_wrap(~ iteration)
+
+print(pH2turbAbs)
+
+```
+
+### Hydrogen storage: Hydrogen underground storage
+
+```{r hydrogen underground storage}
+
+dataCapH2REMIND <- readREMINDgdx(
     paths = rmFiles,
     gdxVar = "vm_cap",
     columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "rlf" = "grade", "value" = "value"),
-    colFilter = list("year" = years, "region" = regions, "technology" = c("elh2", "h2turb"), "grade" = 1),
-    restoreZeros = FALSE,
-    recalcUnit = 1E3) %>%
-  revalue.levels(technology = c("elh2" = "electrolysis", "h2turb" = "fuel_cell")) %>%
-  select(-grade)
+    colFilter = list("year" = years, "region" = regions, "grade" = 1, "technology" = "h2stor"),
+    restoreZeros = FALSE)
 
-# PyPSA capacities
-dataCapStorPyPSA <- readPyPSAcsv(
+dataCapH2PyPSA <- readPyPSAcsv(
     paths = file.path(pyValidationDirs, "optimal_capacities.csv")) %>%
-  filter(carrier %in% c("H2 electrolysis", "H2 fuel cell")) %>%
-  revalue.levels(carrier = c("H2 electrolysis" = "electrolysis", "H2 fuel cell" = "fuel_cell")) %>%
+  filter(carrier == "H2") %>%
+  # Increment iteration by 1 to match REMIND
   mutate(iteration = iteration + 1) %>%
-  rename(technology = carrier) %>%
-  mutate(value = value / 1E3)  # MW to GW
+  mutate(value = value / 1E6)  # MWh to TWh
 
-# PyPSA capacity is defined w.r.t. input, not output
-# E.g., for electrolysis the capacity is defined w.r.t. electrical input
-# Multiply with efficiency to get output capacity like in REMIND
-dataEtaPyPSA <- readPyPSAcsv(
-  paths = file.path(pyResourcesDirs, "costs.csv")) %>%
-  filter(parameter == "efficiency") %>%
-  revalue.levels(technology = py2genTech) %>%
-  group_by(year, technology, iteration) %>%
-  summarise(value = unique_tolerance(value)) %>%
-  rename(eta = value) %>%
-  select(year, technology, iteration, eta)
-
-# Multiply with efficiency
-dataCapStorPyPSA <- dataCapStorPyPSA %>%
-  left_join(dataEtaPyPSA, by = c("year", "technology", "iteration")) %>%
-  mutate(value = value * eta)
-
-# Plot by year
-pCapStorYear <- ggplot() +
-  geom_line(data = dataCapStorREMIND, aes(x = year, y = value, color = technology)) +
-  geom_point(data = dataCapStorPyPSA, aes(x = year, y = value, color = technology)) +
-  scale_color_manual(name = "Technology",
-                     values = colorsTech,
-                     labels = namesTech) +
-  labs(x = "Year", y = "Output capacity (GW)") +
-  ggtitle("Hydrogen storage capacities over years") +
+pCapH2Year <- ggplot() +
+  geom_line(data = dataCapH2REMIND, aes(x = year, y = value, color = region)) +
+  geom_point(data = dataCapH2PyPSA, aes(x = year, y = value, color = region)) +
+  labs(x = "Year", y = "Hydrogen storage capacity (TWh)") +
+  ggtitle("Hydrogen storage capacity over years") +
   facet_wrap(~ iteration)
 
-print(pCapStorYear)
+print(pCapH2Year)
 
-# Plot by iteration
-pCapStorIter <- ggplot() +
-  geom_line(data = dataCapStorREMIND, aes(x = iteration, y = value, color = technology)) +
-  geom_point(data = dataCapStorPyPSA, aes(x = iteration, y = value, color = technology)) +
-  scale_color_manual(name = "Technology",
-                     values = colorsTech,
-                     labels = namesTech) +
-  labs(x = "Iteration", y = "Output capacity (GW)") +
-  ggtitle("Hydrogen storage capacities over iterations") +
+pCapH2Iter <- ggplot() +
+  geom_line(data = dataCapH2REMIND, aes(x = iteration, y = value, color = region)) +
+  geom_point(data = dataCapH2PyPSA, aes(x = iteration, y = value, color = region)) +
+  labs(x = "Iteration", y = "Hydrogen storage capacity (TWh)") +
+  ggtitle("Hydrogen storage capacity over iterations") +
   facet_wrap(~ year)
 
-print(pCapStorIter)
+print(pCapH2Iter)
+
+```
+
+### Transmission: Grid losses
+
+```{r}
+
+# REMIND grid losses
+dataGridLossREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "v32_gridLosses",
+    columns = c("ttot" = "year", "all_regi" = "region", "value" = "value"),
+    colFilter = list("year" = years, "region" = regions),
+    restoreZeros = FALSE) %>%
+  filter(iteration %in% pyIterations)
+
+# REMIND load
+dataLoadREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "v32_load",
+    columns = c("ttot" = "year", "all_regi" = "region", "value" = "v32_load"),
+    colFilter = list("year" = years, "region" = regions),
+    restoreZeros = FALSE)
+
+# Calculate share of hydrogen turbine w.r.t. load
+dataGridLossRelREMIND <- dataGridLossREMIND %>%
+  left_join(dataLoadREMIND, by = c("year", "region", "iteration")) %>%
+  mutate(value = value / v32_load)
+
+# PyPSA data
+dataGridLossPyPSA <- readPyPSAcsv(
+    paths = file.path(pyValidationDirs, "grid_losses.csv")) %>%
+  # Increment iteration by 1 to match REMIND
+  mutate(iteration = iteration + 1)
+
+# Plot
+pGridLossRel <- ggplot() +
+  geom_line(data = dataGridLossRelREMIND, aes(x = year, y = value, color = region)) +
+  geom_point(data = dataGridLossPyPSA, aes(x = year, y = relative, color = region)) +
+  labs(x = "Year", y = "Relative grid losses") +
+  ggtitle("Relative grid losses over years") +
+  facet_wrap(~ iteration)
+
+print(pGridLossRel)
+
+pGridLossRelIter <- ggplot() +
+  geom_line(data = dataGridLossRelREMIND, aes(x = iteration, y = value, color = region)) +
+  geom_point(data = dataGridLossPyPSA, aes(x = iteration, y = relative, color = region)) +
+  labs(x = "Iteration", y = "Relative grid losses") +
+  ggtitle("Relative grid losses over iterations") +
+  facet_wrap(~ year)
+
+print(pGridLossRelIter)
 
 ```
 
@@ -2493,7 +2722,8 @@ dataPreInvCapREMIND <- readREMINDgdx(
     columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_preInvCap"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = TRUE,
-    recalcUnit = 1e3)
+    recalcUnit = 1e3) %>%
+  mutate(p32_preInvCap = ifelse(technology == "h2stor", p32_preInvCap / 1e3, p32_preInvCap))
 
 dataPreInvCapAvgREMIND <- readREMINDgdx(
     paths = rmFiles,
@@ -2502,6 +2732,7 @@ dataPreInvCapAvgREMIND <- readREMINDgdx(
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = TRUE,
     recalcUnit = 1e3) %>%
+  mutate(p32_preInvCapAvg = ifelse(technology == "h2stor", p32_preInvCapAvg / 1e3, p32_preInvCapAvg)) %>%
   revalue.levels(technology = rm2genTech) %>%
   group_by(year, region, technology, iteration) %>%
   summarise(p32_preInvCapAvg = sum(p32_preInvCapAvg))
@@ -2513,6 +2744,7 @@ dataCapREMIND <- readREMINDgdx(
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech), "grade" = 1),
     restoreZeros = FALSE,
     recalcUnit = 1e3) %>%   # TW to GW
+  mutate(vm_cap = ifelse(technology == "h2stor", vm_cap / 1e3, vm_cap)) %>%
   select(-grade)  # Remove grade column
 
 dataCapInvestREMIND <- full_join(dataPreInvCapREMIND, dataCapREMIND) %>%
@@ -2530,13 +2762,15 @@ dataCapInvestREMIND <- full_join(dataPreInvCapREMIND, dataCapREMIND) %>%
 # Read PyPSA-Eur data
 dataPreInvCapPyPSA <- readPyPSAcsv(
   paths = file.path(pyValidationDirs, "preinstalled_capacities.csv")) %>%
-  mutate(value = value / 1e3) %>%   # Convert capacities to GW
+  # Convert MW to GW and MWh to TWh
+  mutate(value = ifelse(component == "Store", value / 1e6, value / 1e3)) %>%
   rename(preInvCap = value)
 
 dataCapPyPSA <- readPyPSAcsv(
   paths = file.path(pyValidationDirs, "optimal_capacities.csv")) %>%
   filter(carrier %in% names(py2genTech)) %>%
-  mutate(value = value / 1e3) %>%   # Convert capacities to GW
+  # Convert MW to GW and MWh to TWh
+  mutate(value = ifelse(carrier == "H2", value / 1e6, value / 1e3)) %>%
   select(-type) %>%
   rename(cap = value)
 
@@ -2655,7 +2889,7 @@ for (r in regList) {
 
 dataCapREMINDplot <- dataCapREMIND %>%
   revalue.levels(technology = rm2genTech) %>%
-  filter(!(technology %in% c("electrolysis", "fuel_cell"))) %>%
+  filter(!(technology %in% c("electrolysis", "fuel_cell", "hydrogen_storage"))) %>%
   group_by(year, region, technology, iteration) %>%
   summarise(value = sum(vm_cap)) %>%
   order.levels(technology = names(colorsTech))
@@ -2663,8 +2897,8 @@ dataCapREMINDplot <- dataCapREMIND %>%
 # Calculate minimum required capacities in REMIND from peak residual load in PyPSA-Eur
 dataGenREMIND <- readREMINDgdx(
   paths = rmFiles,
-  gdxVar = "v32_usableSeDispNet",
-  columns = c("ttot" = "year", "all_regi" = "region", "value" = "v32_usableSeDispNet"),
+  gdxVar = "v32_load",
+  columns = c("ttot" = "year", "all_regi" = "region", "value" = "v32_load"),
   colFilter = list("year" = years, "region" = regions),
   restoreZeros = FALSE,
   recalcUnit = 1E3)  # TWa to GWa
@@ -2675,7 +2909,7 @@ dataPeakResLoadPyPSA <- readPyPSAcsv(
 
 dataPeakResLoadMinREMIND <- full_join(dataPeakResLoadPyPSA %>% mutate(iteration = iteration + everyIter),
                                       dataGenREMIND) %>%
-  mutate(minCap = relative * v32_usableSeDispNet)
+  mutate(minCap = relative * v32_load)
 
 # Read optimal capacities from the CSV files
 dataCapPyPSA <- readPyPSAcsv(
@@ -2914,6 +3148,17 @@ dataLoadREMIND <- readREMINDgdx(
   mutate(technology = "load") %>%
   select(year, region, technology, iteration, value)
 
+# REMIND grid losses
+dataGridLossesREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "v32_gridLosses",
+    columns = c("ttot" = "year", "all_regi" = "region", "value" = "value"),
+    colFilter = list("year" = years, "region" = regions),
+    restoreZeros = FALSE,
+    recalcUnit = twa2twh) %>%
+  mutate(technology = "line_losses") %>%
+  select(year, region, technology, iteration, value)
+
 # REMIND electricity demand for electrolysis (additional demand and electricity storage)
 dataElectrolysisREMIND <- readREMINDgdx(
     paths = rmFiles,
@@ -2965,6 +3210,7 @@ dataElectrolysisAddREMIND <- dataElectrolysisREMIND %>%
 # Combine load with electrolysers to withdrawal
 dataWithdrawalREMIND <- bind_rows(dataLoadREMIND, dataElectrolysisStorREMIND) %>%
   bind_rows(dataElectrolysisAddREMIND) %>%
+  bind_rows(dataGridLossesREMIND) %>%
   mutate(value = -value)
 
 # PyPSA-Eur generation by technology
@@ -3605,6 +3851,55 @@ if (isTRUE(cfg$gms$c32_pypsa_trade == "on")) {
 
 ```
 
+## Hydrogen prices
+
+```{r hydrogen prices}
+
+# REMIND hydrogen price
+dataH2PriceREMIND <- readREMINDgdx(
+  paths = rmFiles,
+  gdxVar = "pm_SEPrice",
+  columns = c("ttot" = "year", "all_regi" = "region", "all_enty" = "secarrier", "value" = "value"),
+  colFilter = list("year" = years, "region" = regions, "secarrier" = "seh2"),
+  restoreZeros = FALSE,
+  recalcUnit = trUSDpTWa2USDpMWh) %>%  # T$/TWa to $/MWh
+  select(-secarrier)
+
+# PyPSA hydrogen price
+dataH2PricePyPSA <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "load_prices.csv")) %>%
+  filter(carrier == "H2 demand REMIND") %>% 
+  select(!carrier)
+
+pH2PriceYear <- ggplot() +
+  geom_line(data = dataH2PriceREMIND,
+            mapping = aes(x = year, y = value, color = "REMIND")) +
+  geom_line(data = dataH2PricePyPSA,
+            mapping = aes(x = year, y = value, color = "PyPSA-Eur")) +
+  scale_color_discrete(name = "Model") +
+  labs(x = "Year", y = "Hydrogen price ($/MWh)") +
+  scale_y_continuous(limits = c(0, NA)) +
+  ggtitle("Hydrogen price over years") +
+  facet_wrap(~ iteration, scales = "free")
+
+print(pH2PriceYear)
+
+pH2PriceIter <- ggplot() +
+  geom_line(data = dataH2PriceREMIND,
+            mapping = aes(x = iteration, y = value, color = "REMIND")) +
+  geom_line(data = dataH2PricePyPSA,
+            mapping = aes(x = iteration, y = value, color = "PyPSA-Eur")) +
+  scale_color_discrete(name = "Model") +
+  labs(x = "Iteration", y = "Hydrogen price ($/MWh)") +
+  scale_x_continuous(breaks = rmIterations) +
+  scale_y_continuous(limits = c(0, NA)) +
+  ggtitle("Hydrogen price over iterations") +
+  facet_wrap(~ year, scales = "free")
+
+print(pH2PriceIter)
+
+```
+
 ## LCOEs
 
 In the long-term equilibrium the levelised cost of electricity (LCOE) should be the same as the market value for each technology.
@@ -4225,9 +4520,48 @@ if (length(regions) > 1) {
 print(pMarketValueIter)
 ```
 
-### Curtailments
+### End-use electricity prices
 
-Work in progress. Not yet coupled from PyPSA-Eur to REMIND.
+```{r end-use electricity prices}
+
+dataElectrolysisPrice <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "electricity_prices_electrolysis.csv")) %>%
+  mutate(carrier = "electrolysis")
+
+dataLoadPrice <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "load_prices.csv")) %>%
+  filter(carrier == "AC") %>%
+  mutate(carrier = "load")
+
+p <- ggplot() +
+  geom_line(data = dataElectrolysisPrice, aes(x = year, y = value, color = carrier)) +
+  geom_line(data = dataLoadPrice, aes(x = year, y = value, color = carrier)) +
+  scale_color_manual(
+    labels = namesTech[c("electrolysis", "load")],
+    values = colorsTech[c("electrolysis", "load")]
+  ) +
+  labs(x = "Year", y = "Electricity price ($/MWh)") +
+  ggtitle("End-use electricity prices") +
+  facet_wrap(~ iteration)
+
+print(p)
+
+pIter <- ggplot() +
+  geom_line(data = dataElectrolysisPrice, aes(x = iteration, y = value, color = carrier)) +
+  geom_line(data = dataLoadPrice, aes(x = iteration, y = value, color = carrier)) +
+  scale_color_manual(
+    labels = namesTech[c("electrolysis", "load")],
+    values = colorsTech[c("electrolysis", "load")]
+  ) +
+  labs(x = "Iteration", y = "Electricity price ($/MWh)") +
+  ggtitle("End-use electricity prices") +
+  facet_wrap(~ year)
+
+print(pIter)
+
+```
+
+### Curtailment
 
 ```{r curtailments}
 
@@ -4299,7 +4633,7 @@ dataHourlyElecPricesPyPSA <- readPyPSAcsv(
   mutate(hour.sorted = 1:n(),
          year.fraction = hour.sorted / n())
 
-pPriceDuration <- ggplot() +
+pPriceDurationLog <- ggplot() +
   geom_line(data = dataHourlyElecPricesPyPSA, aes(x = year.fraction, y = value, alpha = as.factor(year))) +
   scale_alpha_discrete(name = "Year") +
   labs(x = "Hours of year (fraction)", y = "Electricity price ($/MWh)") +
@@ -4307,7 +4641,65 @@ pPriceDuration <- ggplot() +
   scale_y_continuous(trans = "log10") +
   facet_wrap(~ iteration)
 
+print(pPriceDurationLog)
+
+pPriceDuration <- ggplot() +
+  geom_line(data = dataHourlyElecPricesPyPSA, aes(x = year.fraction, y = value, alpha = as.factor(year))) +
+  scale_alpha_discrete(name = "Year") +
+  labs(x = "Hours of year (fraction)", y = "Electricity price ($/MWh)") +
+  ggtitle("Price duration curve") +
+  facet_wrap(~ iteration)
+
 print(pPriceDuration)
+
+pPriceDurationCut <- ggplot() +
+  geom_line(data = dataHourlyElecPricesPyPSA, aes(x = year.fraction, y = value, alpha = as.factor(year))) +
+  scale_alpha_discrete(name = "Year") +
+  labs(x = "Hours of year (fraction)", y = "Electricity price ($/MWh)") +
+  coord_cartesian(ylim = c(0, 200)) +
+  ggtitle("Price duration curve, cut off at 200 $/MWh") +
+  facet_wrap(~ iteration)
+
+print(pPriceDurationCut)
+
+# Price duration curves for last iteration only
+maxiter <- dataHourlyElecPricesPyPSA %>%
+  ungroup() %>%
+  pull(iteration) %>%
+  max()
+
+dataHourlyElecPricesPyPSA <- dataHourlyElecPricesPyPSA %>%
+  ungroup() %>%
+  filter(iteration == maxiter)
+
+pPriceDurationLog <- ggplot() +
+  geom_line(data = dataHourlyElecPricesPyPSA, aes(x = year.fraction, y = value)) +
+  scale_alpha_discrete(name = "Year") +
+  labs(x = "Hours of year (fraction)", y = "Electricity price ($/MWh)") +
+  ggtitle(paste("Price duration curve, log scale, iteration", maxiter)) +
+  scale_y_continuous(trans = "log10") +
+  facet_wrap(~ year)
+
+print(pPriceDurationLog)
+
+pPriceDuration <- ggplot() +
+  geom_line(data = dataHourlyElecPricesPyPSA, aes(x = year.fraction, y = value)) +
+  scale_alpha_discrete(name = "Year") +
+  labs(x = "Hours of year (fraction)", y = "Electricity price ($/MWh)") +
+  ggtitle(paste("Price duration curve, cut off at 200 $/MWh, iteration", maxiter)) +
+  facet_wrap(~ year)
+
+print(pPriceDuration)
+
+pPriceDurationCut <- ggplot() +
+  geom_line(data = dataHourlyElecPricesPyPSA, aes(x = year.fraction, y = value)) +
+  scale_alpha_discrete(name = "Year") +
+  labs(x = "Hours of year (fraction)", y = "Electricity price ($/MWh)") +
+  ggtitle(paste("Price duration curve, cut off at 200 $/MWh, iteration", maxiter)) +
+  coord_cartesian(ylim = c(0, 200)) +
+  facet_wrap(~ year)
+
+print(pPriceDurationCut)
 
 ```
 
@@ -4417,6 +4809,9 @@ df = df.sort_values(by=['year', 'iteration'])
 bus_scale = 2e5
 line_scale = 3e3
 
+# Only show the last iteration
+df = df[df['iteration'] == df['iteration'].max()]
+
 # Iterate over iterations in df
 for iteration in df['iteration'].unique():
         
@@ -4433,9 +4828,11 @@ for iteration in df['iteration'].unique():
         n = pypsa.Network(row['file_path'])
         
         n.carriers = n.carriers.drop(index='')
+        # Remove load shedding from generators
         n.generators = n.generators.drop(index=n.generators.filter(like="load", axis="rows").index)
-        n.carriers = n.carriers.drop(index="load")
-        
+        # Remove H2 transfer to H2 demand REMIND links
+        n.links = n.links.drop(index=n.links.filter(like="H2 demand", axis="rows").index)
+
         buses = n.generators.groupby(["bus", "carrier"]).p_nom_opt.sum()
         
         # Create a map of the installed capacities of all technologies
@@ -4458,6 +4855,7 @@ for iteration in df['iteration'].unique():
     plt.tight_layout(rect=[0, 0, 1, 0.95])  # Adjust the rect parameter to make space for the suptitle
     fig.suptitle(f"Iteration {iteration}", fontsize=10, y=0.99)
     plt.show();
+    plt.close(fig);
 
 ```
 
@@ -4688,9 +5086,7 @@ for iteration in df['iteration'].unique():
 
 ### Residual load duration curves (RLDCs)
 
-Don't evaluate due to unresolved issues for now.
-
-```{python residual load duration curve, echo=FALSE, warning = FALSE, message = FALSE, eval = FALSE}
+```{python residual load duration curve, echo=FALSE, warning = FALSE, message = FALSE}
 
 # Variables to store handles and labels for the legend
 handles, labels = None, None
@@ -4764,7 +5160,7 @@ for iteration in df['iteration'].unique():
         # To speed up the plotting and make the plot smaller, only show every 10th value
         ldc = ldc.iloc[::10]
         for tech in sorted_residual_loads:
-            sorted_residual_loads[tech] = sorted_residual_loads[tech].iloc[::10]        
+            sorted_residual_loads[tech] = sorted_residual_loads[tech].iloc[::10]
 
         # Initialize the previous residual load for filling
         previous_residual_load = ldc
@@ -4810,6 +5206,170 @@ for iteration in df['iteration'].unique():
     fig.legend(handles, labels, loc='center left', bbox_to_anchor=(0.87, 0.5), ncol=1)
     plt.tight_layout(rect=[0, 0, 0.85, 0.95])  # Adjust the rect parameter to make space for the legend
     fig.suptitle(f"Residual load duration curve, Iteration {iteration}", fontsize=10, y=0.98)
+    plt.show();
+    plt.close(fig);
+
+```
+
+### System costs
+
+```{python system costs, echo=FALSE, warning = FALSE, message = FALSE}
+
+# Variables to store handles and labels for the legend
+handles, labels = None, None
+
+# Iterate over iterations in df
+for iteration in df['iteration'].unique():
+        
+    # Create a figure with 3x5 subplots
+    fig, axs = plt.subplots(3, 5)
+    
+    # Counter to keep track of subplot index
+    counter = 0
+    
+    # Initialize variables to track global max for y-axis
+    global_max = float('-inf')
+
+    # Filter for the current iteration and then iterate over the years
+    for _, row in df[df['iteration'] == iteration].iterrows():
+        
+        # Load the PyPSA network
+        n = pypsa.Network(row['file_path'])
+        
+        capex_cost = n.statistics.capex(nice_names=False).to_frame()
+        installed_capex_cost = n.statistics.installed_capex(nice_names=False).to_frame()
+        opex_cost = n.statistics.opex(nice_names=False).to_frame()
+
+        # Calculate system costs
+        system_cost = capex_cost.subtract(installed_capex_cost, fill_value=0).add(opex_cost, fill_value=0)
+        system_cost = system_cost.reset_index()[["carrier", 0]].rename(columns={0: "cost"}).set_index("carrier")
+
+        system_cost = system_cost.T
+        
+        # Objective value (total system costs) for cross checking
+        objective = n.objective
+
+        # Show system costs
+        ax = axs[counter // 5, counter % 5]
+        system_cost.plot(ax=ax,
+            kind="bar",
+            stacked=True,
+            color = [color_series[col] for col in system_cost.columns],
+            legend=False,
+            title=f"Year: {row['year']}");
+       
+        # Add a cross for the value of n.objective
+        ax.scatter(x=0, y=objective, color='black', marker='x', s=10, label='Objective');
+
+        # Remove x-axis label
+        ax.set_xticks([])
+
+        # Make the title smaller
+        ax.title.set_fontsize(8)
+
+        # Update global max for y-axis
+        global_max = max(global_max, system_cost.values.sum())
+
+        # Collect handles and labels from the first subplot only
+        if counter == 0:
+            handles, labels = ax.get_legend_handles_labels()
+        
+        counter += 1
+
+    # Set the same y-axis limits for all subplots
+    for ax in axs.flat:
+        ax.set_ylim([0, 1.1*global_max])
+        
+    # Add one big heading to the entire plot for the iteration
+    fig.legend(handles, labels, loc='center left', bbox_to_anchor=(0.87, 0.5), ncol=1);
+    plt.tight_layout(rect=[0, 0, 0.85, 0.95]);  # Adjust the rect parameter to make space for the legend
+    fig.suptitle(f"Iteration {iteration}", fontsize=10, y=0.99)
+    plt.show();
+    plt.close(fig);
+
+```
+
+### System costs per MWh electricity
+
+This includes all electricity for final energy and for hydrogen production.
+
+```{python system costs per mwh, echo=FALSE, warning = FALSE, message = FALSE}
+
+# Variables to store handles and labels for the legend
+handles, labels = None, None
+
+# Iterate over iterations in df
+for iteration in df['iteration'].unique():
+        
+    # Create a figure with 3x5 subplots
+    fig, axs = plt.subplots(3, 5)
+    
+    # Counter to keep track of subplot index
+    counter = 0
+    
+    # Initialize variables to track global max for y-axis
+    global_max = float('-inf')
+
+    # Filter for the current iteration and then iterate over the years
+    for _, row in df[df['iteration'] == iteration].iterrows():
+        
+        # Load the PyPSA network
+        n = pypsa.Network(row['file_path'])
+        
+        capex_cost = n.statistics.capex(nice_names=False).to_frame()
+        installed_capex_cost = n.statistics.installed_capex(nice_names=False).to_frame()
+        opex_cost = n.statistics.opex(nice_names=False).to_frame()
+
+        # Calculate system costs
+        system_cost = capex_cost.subtract(installed_capex_cost, fill_value=0).add(opex_cost, fill_value=0)
+        system_cost = system_cost.reset_index()[["carrier", 0]].rename(columns={0: "cost"}).set_index("carrier")
+
+        system_cost = system_cost.T
+
+        # Get electricity load + electricity for additional hydrogen production
+        elec_load = n.statistics.energy_balance(comps="Load", bus_carrier="AC")
+        h2_load = n.statistics.energy_balance(comps="Load", bus_carrier="H2 demand REMIND")
+
+        # Get efficiency of electrolysis link
+        elec_eff = n.links.loc[n.links.carrier == "H2 electrolysis", "efficiency"].unique()[0]
+        elec_load_h2 = h2_load / elec_eff
+        total_elec_load = -(elec_load.values + elec_load_h2.values)[0]
+
+        # Calculate system costs per MWh electricity
+        system_cost_per_mwh = system_cost / total_elec_load
+
+        # Show system costs
+        ax = axs[counter // 5, counter % 5]
+        system_cost_per_mwh.plot(ax=ax,
+            kind="bar",
+            stacked=True,
+            color = [color_series[col] for col in system_cost.columns],
+            legend=False,
+            title=f"Year: {row['year']}");
+       
+        # Remove x-axis label
+        ax.set_xticks([])
+
+        # Make the title smaller
+        ax.title.set_fontsize(8)
+
+        # Update global max for y-axis
+        global_max = max(global_max, system_cost_per_mwh.values.sum())
+
+        # Collect handles and labels from the first subplot only
+        if counter == 0:
+            handles, labels = ax.get_legend_handles_labels()
+        
+        counter += 1
+
+    # Set the same y-axis limits for all subplots
+    for ax in axs.flat:
+        ax.set_ylim([0, 1.1*global_max])
+        
+    # Add one big heading to the entire plot for the iteration
+    fig.legend(handles, labels, loc='center left', bbox_to_anchor=(0.87, 0.5), ncol=1);
+    plt.tight_layout(rect=[0, 0, 0.85, 0.95]);  # Adjust the rect parameter to make space for the legend
+    fig.suptitle(f"Iteration {iteration}", fontsize=10, y=0.99)
     plt.show();
     plt.close(fig);
 
@@ -4988,9 +5548,9 @@ theme_update(panel.grid.major.y = element_line(color = "grey", linewidth = 0.25)
 # ELECTRICITY LOAD
 dataLoadREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "v32_usableSeDispNet",
-    columns = c("ttot" = "year", "all_regi" = "region", "all_enty" = "technology", "value" = "value"),
-    colFilter = list("year" = years, "region" = regions, "technology" = "seel"),
+    gdxVar = "v32_load",
+    columns = c("ttot" = "year", "all_regi" = "region", "value" = "value"),
+    colFilter = list("year" = years, "region" = regions),
     restoreZeros = FALSE,
     recalcUnit = twa2twh) %>%
   filter(iteration == iter)
@@ -5288,8 +5848,8 @@ dataCapREMINDplot <- dataCapREMIND %>%
 # Calculate minimum required capacities in REMIND from peak residual load in PyPSA-Eur
 dataGenREMIND <- readREMINDgdx(
   paths = rmFiles,
-  gdxVar = "v32_usableSeDispNet",
-  columns = c("ttot" = "year", "all_regi" = "region", "value" = "v32_usableSeDispNet"),
+  gdxVar = "v32_load",
+  columns = c("ttot" = "year", "all_regi" = "region", "value" = "v32_load"),
   colFilter = list("year" = years, "region" = regions),
   restoreZeros = FALSE,
   recalcUnit = 1E3)  # TWa to GWa
@@ -5300,7 +5860,7 @@ dataPeakResLoadPyPSA <- readPyPSAcsv(
 
 dataPeakResLoadMinREMIND <- full_join(dataPeakResLoadPyPSA %>% mutate(iteration = iteration + 1),
                                       dataGenREMIND) %>%
-  mutate(minCap = relative * v32_usableSeDispNet)
+  mutate(minCap = relative * v32_load)
 
 # Read optimal capacities from the CSV files
 dataCapPyPSA <- readPyPSAcsv(
@@ -5422,7 +5982,7 @@ dataGenREMIND <- readREMINDgdx(
 # REMIND load in total
 dataLoadREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "v32_usableSeDispNet",
+    gdxVar = "v32_load",
     columns = c("ttot" = "year", "all_regi" = "region", "value" = "value"),
     colFilter = list("year" = years, "region" = regions),
     restoreZeros = FALSE,

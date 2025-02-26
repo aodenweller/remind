@@ -202,6 +202,12 @@ $include "./core/input/generisdata_flexibility.prn"
 
 display fm_dataglob;
 
+*AO* TEMPORARY: Include h2stor technology
+fm_dataglob("inco0","h2stor") = 0.2;
+fm_dataglob("omf","h2stor") = 0.03;
+fm_dataglob("lifetime","h2stor") = 100;
+fm_dataglob("tech_stat","h2stor") = 4;
+
 *** ccsinje cost scenarios
 *** low estimate: ccsinje cost prior to 03/2024; i.e. ~11 USD/tCO2 in 2025, decreasing to ~7.5USD/tCO2 as of 2035
 $if "%cm_ccsinjeCost%" == "low" fm_dataglob("tech_stat","ccsinje") = 2;
@@ -241,6 +247,8 @@ $offdelim
 p_inco0(ttot,all_regi,"windon") $ (p_inco0(ttot,all_regi,"windon") eq 0) = p_inco0(ttot,all_regi,"wind");
 p_inco0(ttot,all_regi,"wind") = 0;
 
+*AO* TEMPORARY: Hydrogen underground storage initial costs at 500 $/MWh
+p_inco0(ttot,all_regi,"h2stor")$(ttot.val ge 2015 and ttot.val le 2030) = 0.5;
 
 $if not "%cm_inco0RegiFactor%" == "off" parameter p_new_inco0RegiFactor(all_te) / %cm_inco0RegiFactor% /;
 $if not "%cm_inco0RegiFactor%" == "off"           p_inco0(ttot,regi,te)$(p_inco0(ttot,regi,te) and p_new_inco0RegiFactor(te)) = p_new_inco0RegiFactor(te) * p_inco0(ttot,regi,te);

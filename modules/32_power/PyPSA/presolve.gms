@@ -62,13 +62,13 @@ $endif.c32_windoffFree
 
 *** Fade out pre-factor if configured
 if((c32_iterPreFacFadeOut ne 0) and (iteration.val ge c32_iterPreFacFadeOut),
- s32_preFacFadeOut = 0.7**(iteration.val - c32_iterPreFacFadeOut + 1);
+  s32_preFacFadeOut = 0.7**(iteration.val - c32_iterPreFacFadeOut + 1);
 );
 
 *** Calculate p32_usableSeDispForeign, defined as the sum of v32_usableSeDisp.l over all foreign regions 
 *** This is necessary because REMIND cannot sum over multiple regions as they are optimised separately
 loop((t,regi)$(tPy32(t) and regPy32(regi)),
-p32_usableSeDispForeign(t,regi) = sum(regi2$(not sameas(regi2,regi) and regPy32(regi2)), v32_usableSeDisp.l(t,regi2,"seel"));
+  p32_usableSeDispForeign(t,regi) = sum(regi2$(not sameas(regi2,regi) and regPy32(regi2)), v32_usableSeDisp.l(t,regi2,"seel"));
 );
 
 *** EOF ./modules/32_power/PyPSA/presolve.gms

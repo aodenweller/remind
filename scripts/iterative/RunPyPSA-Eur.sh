@@ -15,6 +15,7 @@ mkdir -p ${1}/resources/${scenario}/i${2}
 cp REMIND2PyPSAEUR.gdx ${1}/resources/${scenario}/i${2}/REMIND2PyPSAEUR.gdx
 # Source conda environment
 module load anaconda/2024.10
+source activate $conda_env
 # Function to check the %QOS on a given partition/QoS combination
 # This function rounds down in order to compare integers
 check_qos_usage() {
@@ -26,6 +27,7 @@ check_qos_usage() {
 declare -a PARTITION_QOS_COMBINATIONS=(
     "standard short"
     "standard medium"
+    "standard long"
     "priority standby"
     "priority priority"
 )
@@ -70,20 +72,51 @@ TARGET_FILE="results/${scenario}/i${2}/PyPSAEUR2REMIND.gdx"
 find_partition_qos
 # Loop until file exists or maximum attempts are reached
 while [[ ! -f "${1}/${TARGET_FILE}" && $ATTEMPT -lt $MAX_RETRIES ]]; do
-    # Log attempt number
     echo "PyPSA log: Attempt $((ATTEMPT + 1)) to run PyPSA-Eur..."
-    # Call PyPSA-Eur
-    timeout $TIMEOUT conda run --name $conda_env snakemake --profile $hpc_profile \
-        -s "${1}/Snakefile_remind" --directory "${1}" "${TARGET_FILE}"
-    # Check if the timeout command was successful and move jobs if any
-    if [[ $? -eq 124 ]]; then
-        echo "PyPSA log: Timeout of ${TIMEOUT} reached. Moving jobs to a different QoS and partition..."
-        jobs_to_move=$(squeue -u $USER -o "%.18i %.9P %.10Q %.200j" | grep "scenario=${scenario}" | awk '{print $1}')
-        # Finda a new partition/QoS combination (next available in list)
-        find_partition_qos
-        for jobid in $jobs_to_move; do
-            scontrol update jobid=$jobid qos=$HPC_QOS partition=$HPC_PARTITION
-        done
+    # Call PyPSA-Eur in background
+    snakemake --profile $hpc_profile \
+        -s "${1}/Snakefile_remind" --directory "${1}" "${TARGET_FILE}" &
+    snakemake_pid=$!
+    # Check every two minutes and move to a different QoS and partition until all jobs are running
+    while true; do
+        sleep 120
+        if ps -p $snakemake_pid > /dev/null; then
+            jobs_to_move=$(squeue -u $USER -o "%.18i %.9P %.10Q %.200j %.2t" | grep "scenario=${scenario}" | awk '$5 == "PD" {print $1}')
+            num_pending_jobs=$(echo "$jobs_to_move" | wc -l)
+            if [[ ! -z "$jobs_to_move" ]]; then
+                echo "PyPSA log: 2 minutes passed. Moving $num_pending_jobs pending jobs to a different QoS and partition..."
+                find_partition_qos
+                for jobid in $jobs_to_move; do
+                    echo "PyPSA log: Updating job $jobid to qos=$HPC_QOS and partition=$HPC_PARTITION"
+                    scontrol update jobid=$jobid qos=$HPC_QOS partition=$HPC_PARTITION
+                done
+            else
+                echo "PyPSA log: All jobs are running."
+                break
+            fi
+        else
+            break
+        fi
+    done
+    # Check if the snakemake process is still running before waiting
+    if ps -p $snakemake_pid > /dev/null; then
+        # Wait for the snakemake process to finish within the timeout limit
+        timeout $TIMEOUT bash -c "while ps -p $snakemake_pid > /dev/null; do sleep 10; done"
+        # Check if the timeout command was successful and cancel jobs if any
+        if [[ $? -eq 124 ]]; then
+            echo "PyPSA log: Timeout of ${TIMEOUT} reached. Cancelling remaining jobs and restarting with a different QoS and partition..."
+            jobs_to_cancel=$(squeue -u $USER -o "%.18i %.9P %.10Q %.200j" | grep "scenario=${scenario}" | awk '{print $1}')
+            if [[ ! -z "$jobs_to_cancel" ]]; then
+                for jobid in $jobs_to_cancel; do
+                    echo "PyPSA log: Cancelling job $jobid"
+                    scancel $jobid
+                done
+            fi
+            # Find a new partition/QoS combination (next available in list)
+            find_partition_qos
+        fi
+    else
+        echo "PyPSA log: snakemake process has already finished."
     fi
     # Increment attempt counter
     ((ATTEMPT++))
@@ -99,6 +132,7 @@ else
     # If a PyPSAEUR2REMIND.gdx file exists in current folder, raise warning
     if [[ -f "PyPSAEUR2REMIND.gdx" ]]; then
         echo "PyPSA log: WARNING, using previous iteration's PyPSAEUR2REMIND.gdx file."
+    # If no PyPSAEUR2REMIND.gdx file exists, raise error
     else
         echo "PyPSA log: ERROR, failed to create ${TARGET_FILE} after $ATTEMPT attempts."
         exit 1

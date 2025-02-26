@@ -232,6 +232,7 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_PeakResLoadRel=peak_residual_load_relative;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_StoreTrans_Cap=storage_and_transmission_capacities;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_StoreTrans_CF=storage_and_transmission_capacity_factors;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_H2TurbRel=h2turb_storage_relative;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Trade=crossborder_flow;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_TradePriceImport=crossborder_price_import;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_TradePriceExport=crossborder_price_export;
@@ -298,9 +299,10 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
       sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2) * p32_PyPSA_ElecPriceElectrolysis_iter(iteration2,t,regi)) /
       sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2));
   );
-
+  
+  !! TODO: REMOVE
   !! Save v32_usableSeDispNet for next iteration's electricity trade implementation
-  p32_usableSeDispNet0(t,regi,"seel")$(tPy32(t) AND regPy32(regi)) = v32_usableSeDispNet.l(t,regi,"seel");
+  !!p32_usableSeDispNet0(t,regi,"seel")$(tPy32(t) AND regPy32(regi)) = v32_usableSeDispNet.l(t,regi,"seel");
 
 *** Activate PyPSA equations if PyPSA ran once
 sm_PyPSA_eq = 1;

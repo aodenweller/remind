@@ -1909,13 +1909,13 @@ $setglobal c32_pypsa_multiregion off !! def = off !! regexp = off|on
 $setglobal c32_pypsa_pathgdx off  !! def = off
 *** c32_pypsa_capfac
 *** Switch to enable capacity factor import from PyPSA-Eur
-$setglobal c32_pypsa_capfac off !! def = on !! regexp = off|on
+$setglobal c32_pypsa_capfac on !! def = on !! regexp = off|on
 *** cm_pypsa_markup
 *** Switch to enable markups/markdowns from PyPSA-Eur via tax module
-$setglobal cm_pypsa_markup on !! def = off !! regexp = off|on
+$setglobal cm_pypsa_markup on !! def = on !! regexp = off|on
 *** c32_pypsa_peakcap
 *** Switch to enable peak capacity constraint
-$setglobal c32_pypsa_peakcap off !! def = on !! regexp = off|on
+$setglobal c32_pypsa_peakcap on !! def = on !! regexp = off|on
 *** c32_pypsa_curtailment
 *** Switch to enable curtailment import from PyPSA-Eur
 $setglobal c32_pypsa_curtailment off !! def = off !! regexp = off|on
