@@ -13,8 +13,8 @@ cp REMIND2PyPSAEUR.gdx REMIND2PyPSAEUR_${2}.gdx
 # Copy REMIND2PyPSA.gdx file to PyPSA resources directory
 mkdir -p ${1}/resources/${scenario}/i${2}
 cp REMIND2PyPSAEUR.gdx ${1}/resources/${scenario}/i${2}/REMIND2PyPSAEUR.gdx
-# Source conda environment
-module load anaconda/2024.10
+# Load conda, surpressing output, and activate environment
+module load anaconda/2024.10 > /dev/null 2>&1
 source activate $conda_env
 # Function to check the %QOS on a given partition/QoS combination
 # This function rounds down in order to compare integers
@@ -73,9 +73,9 @@ find_partition_qos
 # Loop until file exists or maximum attempts are reached
 while [[ ! -f "${1}/${TARGET_FILE}" && $ATTEMPT -lt $MAX_RETRIES ]]; do
     echo "PyPSA log: Attempt $((ATTEMPT + 1)) to run PyPSA-Eur..."
-    # Call PyPSA-Eur in background
-    snakemake --profile $hpc_profile \
-        -s "${1}/Snakefile_remind" --directory "${1}" "${TARGET_FILE}" &
+    # Call PyPSA-Eur in background, redirecting output to log file
+    snakemake --profile "$hpc_profile" \
+        -s "${1}/Snakefile_remind" --directory "${1}" "${TARGET_FILE}" >> "log_pypsa_snakemake.txt" 2>&1 &
     snakemake_pid=$!
     # Check every two minutes and move to a different QoS and partition until all jobs are running
     while true; do
