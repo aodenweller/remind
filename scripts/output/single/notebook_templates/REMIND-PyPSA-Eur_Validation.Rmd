@@ -229,7 +229,10 @@ rm2genTech <- rm2genTech[!duplicated(names(rm2genTech))]
 rm2genTech <- c(rm2genTech,
                 c("elh2" = "electrolysis",
                   "h2turb" = "fuel_cell",
-                  "h2stor" = "hydrogen_storage"))
+                  "h2stor" = "hydrogen_storage",
+                  "btin" = "battery_charger",
+                  "btout" = "battery_discharger",
+                  "btstor" = "battery_storage"))
 
 # Create mapping from PyPSA-Eur to General
 py2genTech <- setNames(techMapping$general, techMapping$pypsa.eur)
@@ -239,6 +242,8 @@ py2genTech <- py2genTech[!duplicated(names(py2genTech))]
 py2genTech <- c(py2genTech, c("H2 electrolysis" = "electrolysis",
                               "battery discharger" = "battery_discharger",
                               "battery charger" = "battery_charger",
+                              "battery inverter" = "battery_charger",
+                              "battery" = "battery_storage",
                               "H2 fuel cell" = "fuel_cell",
                               "H2" = "hydrogen_storage",
                               "hydrogen storage underground" = "hydrogen_storage",
@@ -282,6 +287,7 @@ colorsTech <- c(
   "hydrogen_storage" = "#352447",
   "battery_discharger" = "#E8E88A",
   "battery_charger" = "#BFF574",
+  "battery_storage" = "#4c6b3c",
   "fuel_cell" = "#74E0F2",
   "solar_pv" = "#ffcc00",
   "csp" = "#ff9900",
@@ -307,6 +313,7 @@ namesTech <- c(
   "electrolysis" = "Electrolysis",
   "battery_discharger" = "Battery Discharger",
   "battery_charger" = "Battery Charger",
+  "battery_storage" = "Battery Storage",
   "fuel_cell" = "Hydrogen Turbine",  # Fuel cell is actually a hydrogen turbine
   "hydrogen_storage" = "Hydrogen Storage",
   "solar_pv" = "Solar",
@@ -324,6 +331,51 @@ namesTech <- c(
   "coal" = "Coal",  # Remove later?
   "lignite" = "Lignite",  # Remove later?
   "nuclear" = "Nuclear")
+
+# Technologies that supply energy
+supplyTech <- c(
+  "solar_pv",
+  "wind_onshore",
+  "wind_offshore",
+  "hydro",
+  "battery_discharger",
+  "fuel_cell",
+  "geothermal",
+  "biomass",
+  "CCGT",
+  "OCGT",
+  "oil",
+  "all_coal",
+  "nuclear"
+)
+
+# Primary generation technologies
+pe2seTech <- c(
+  "solar_pv",
+  "wind_onshore",
+  "wind_offshore",
+  "hydro",
+  "geothermal",
+  "biomass",
+  "CCGT",
+  "OCGT",
+  "oil",
+  "all_coal",
+  "nuclear"
+)
+
+# Technologies that withdraw energy
+withdrawTech <- c(
+  "load",
+  "electrolysis",
+  "battery_charger"
+)
+
+# Storage technologies
+storageTech <- c(
+  "hydrogen_storage",
+  "battery_storage"
+)
 
 ```
 
@@ -527,9 +579,8 @@ dataPreInvCapAvgREMIND <- readREMINDgdx(
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = TRUE,
     recalcUnit = 1e3) %>%   # TW to GW
-  filter(technology != "hydro",
-         technology != "h2stor") %>%
   revalue.levels(technology = rm2genTech) %>%
+  filter(!(technology %in% storageTech)) %>%
   group_by(year, region, technology, iteration) %>%
   summarise(preInvCap = sum(p32_preInvCap)) %>%
   order.levels(technology = names(colorsTech)) %>%
@@ -543,9 +594,8 @@ dataPreInvCapREMIND <- readREMINDgdx(
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = TRUE,
     recalcUnit = 1e3) %>%   # TW to GW
-  filter(technology != "hydro",
-         technology != "h2stor") %>%
   revalue.levels(technology = rm2genTech) %>%
+  filter(!(technology %in% storageTech)) %>%
   group_by(year, region, technology, iteration) %>%
   summarise(preInvCap = sum(p32_preInvCap)) %>%
   order.levels(technology = names(colorsTech)) %>%
@@ -733,23 +783,26 @@ dataCapexWeightedREMIND <- dataCapexREMIND %>%
   full_join(dataWeightREMIND, by = c("year", "region", "technology", "iteration")) %>%
   revalue.levels(technology = rm2genTech) %>%
   group_by(year, technology, iteration) %>%
+  mutate(weight = if_else(is.na(weight), 1, weight)) %>%
   summarise(capex = sum(p32_capCostwAdjCost * weight) / sum(weight)) %>%
   order.levels(technology = names(colorsTech)) %>%
-  filter(iteration %in% pyIterations)
+  filter(iteration %in% pyIterations,
+         !(technology %in% storageTech))
 
 # PyPSA-Eur
 dataCapexPyPSA <- readPyPSAcsv(
   paths = file.path(pyResourcesDirs, "costs.csv")) %>%
   filter(parameter == "investment",
-         technology != "hydrogen storage underground")
+         !(technology %in% c("hydrogen storage underground", "battery storage")))
 
-# Special treatment for electrolysers: Costs in costs.csv are per MWel, not per MW
+# Special treatment for electrolysers and battery inverters: Costs in costs.csv are per MW_in, not per MW_out
 dataEtaPyPSA <- readPyPSAcsv(
   paths = file.path(pyResourcesDirs, "costs.csv")) %>%
   filter(parameter == "efficiency",
-         technology == "electrolysis") %>%
-  rename(eta_electrolysis = value) %>%
-  select(iteration, year, eta_electrolysis)
+         technology %in% c("electrolysis", "battery inverter")) %>%
+  revalue.levels(technology = py2genTech) %>%
+  rename(eta = value) %>%
+  select(technology, iteration, year, eta)
 
 # Costs directly from REMIND
 dataCapexPyPSArm <- dataCapexPyPSA %>%
@@ -758,7 +811,7 @@ dataCapexPyPSArm <- dataCapexPyPSA %>%
   group_by(technology, parameter, source, iteration, year) %>%
   # Special treatment for electrolysers: Costs are per MWel not per MW
   full_join(dataEtaPyPSA) %>%
-  mutate(value = if_else(technology == "electrolysis", value / eta_electrolysis, value)) %>%
+  mutate(value = if_else(technology %in% c("electrolysis", "battery inverter"), value / eta, value)) %>%
   # Values should be the same across generic technologies
   summarise(value = unique_tolerance(value)) %>%
   order.levels(technology = names(colorsTech))
@@ -835,42 +888,83 @@ if (nrow(dataCapexPyPSApy) > 0) {
 }
 ```
 
-### Specific capital costs w/ adjustment costs (store)
+### Specific capital costs w/ adjustment costs (hydrogen underground storage)
 
-```{r cap cost store}
+```{r cap cost hydrogen}
 
 # REMIND
 dataCapexREMIND <- readREMINDgdx(
     paths = rmFiles,
     gdxVar = "p32_capCostwAdjCost",
     columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "value"),
-    colFilter = list("year" = years, "region" = regions, "technology" = c("h2stor")),
+    colFilter = list("year" = years, "region" = regions, "technology" = "h2stor"),
     restoreZeros = FALSE,
     recalcUnit = trUSDpTW2USDpMW) %>%
   filter(iteration %in% pyIterations) %>%
-  revalue.levels(technology = c("h2stor" = "hydrogen storage underground"))
+  revalue.levels(technology = rm2genTech)
 
 # PyPSA-Eur
 dataCapexPyPSA <- readPyPSAcsv(
   paths = file.path(pyResourcesDirs, "costs.csv")) %>%
   filter(parameter == "investment",
-         technology %in% c("hydrogen storage underground"))
+         technology == "hydrogen storage underground") %>%
+  revalue.levels(technology = c("hydrogen storage underground" = "hydrogen_storage"))
 
 # Plot
 pCapexYear <- ggplot() +
   geom_line(data = dataCapexREMIND, aes(x = year, y = value, color = technology)) +
   geom_point(data = dataCapexPyPSA, aes(x = year, y = value, color = technology), alpha = 0.5) +
-  scale_color_discrete(name = "Technology") +
+  scale_color_manual(name = "Technology",
+                     values = colorsTech,
+                     labels = namesTech) +
   labs(x = "Year", y = "Specific capital costs (USD/MWh)") +
   scale_y_continuous(limits = c(0, NA)) +
-  ggtitle("Specific capital costs (w/ adjustment costs) over years") +
+  ggtitle("Specific capital costs (w/ adjustment costs) of hydrogen underground storage over years") +
   facet_wrap(~ iteration)
 
 print(pCapexYear)
 
 ```
 
-#### CAPEX and adjustment costs in REMIND
+### Specific capital costs w/ adjustment costs (battery storage pack)
+
+```{r cap cost battery}
+
+# REMIND
+dataCapexREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "p32_capCostwAdjCost",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "value"),
+    colFilter = list("year" = years, "region" = regions, "technology" = "btstor"),
+    restoreZeros = FALSE,
+    recalcUnit = trUSDpTW2USDpMW) %>%
+  filter(iteration %in% pyIterations) %>%
+  revalue.levels(technology = rm2genTech)
+
+# PyPSA-Eur
+dataCapexPyPSA <- readPyPSAcsv(
+  paths = file.path(pyResourcesDirs, "costs.csv")) %>%
+  filter(parameter == "investment",
+         technology == "battery storage") %>%
+  revalue.levels(technology = c("battery storage" = "battery_storage"))
+
+# Plot
+pCapexYear <- ggplot() +
+  geom_line(data = dataCapexREMIND, aes(x = year, y = value/1E3, color = technology)) +
+  geom_point(data = dataCapexPyPSA, aes(x = year, y = value/1E3, color = technology), alpha = 0.5) +
+  scale_color_manual(name = "Technology",
+                     values = colorsTech,
+                     labels = namesTech) +
+  labs(x = "Year", y = "Specific capital costs (USD/kWh)") +
+  scale_y_continuous(limits = c(0, NA)) +
+  ggtitle("Specific capital costs (w/ adjustment costs) of battery storage pack over years") +
+  facet_wrap(~ iteration)
+
+print(pCapexYear)
+
+```
+
+### CAPEX and adjustment costs in REMIND
 
 ```{r capex and adjustment costs}
 
@@ -1007,6 +1101,7 @@ if (nrow(dataFOMPyPSApy) > 0) {
 ### Lifetimes
 
 ```{r lifetimes}
+
 # REMIND data
 dataLifetimesREMIND <- readREMINDgdx(
     paths = rmFiles,
@@ -1718,7 +1813,7 @@ The following plots show the capacity factor.
 
 ToDo: This doesn't work properly for the case of "all regions" yet as the PyPSA capacity factors cannot simply be aggregated over regions.
 
-```{r capacity factors}
+```{r capacity factors generation}
 # REMIND capacity factors (pre-factor based)
 dataCapREMIND <- readREMINDgdx(
     paths = rmFiles,
@@ -1726,7 +1821,7 @@ dataCapREMIND <- readREMINDgdx(
     columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "rlf" = "grade", "value" = "vm_cap"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech), "grade" = 1),
     restoreZeros = FALSE) %>%
-  filter(!(technology %in% c("elh2", "h2turb", "h2stor"))) %>%
+  filter(!(technology %in% c("elh2", "h2turb", "h2stor", "btin", "btout", "btstor"))) %>%
   select(-grade)
 
 dataUsableSeTeDispREMIND <- readREMINDgdx(
@@ -1757,7 +1852,7 @@ dataCapfacPyPSA <- readPyPSAcsv(
   paths = file.path(pyValidationDirs, "capacity_factors.csv")) %>%
   # Increment iteration by 1 to match REMIND
   mutate(iteration = iteration + 1) %>%
-  quitte::revalue.levels(carrier = rm2genTech) %>%
+  revalue.levels(carrier = rm2genTech) %>%
   group_by(year, region, carrier, iteration) %>%
   summarise(value = unique(value))
 
@@ -1774,14 +1869,14 @@ for (r in regList){
     group_by(year, technology, iteration) %>%
     # Second calculate weighted capacity factor for general technologies
     summarise(capfac = sum(capfac * v32_usableSeTeDispRegSum) / sum(v32_usableSeTeDispRegSum)) %>%
-    quitte::order.levels(technology = names(namesTech)) %>%
+    order.levels(technology = names(namesTech)) %>%
     rename(value = capfac)
 
   dataCapfacAvgREMINDplot <- dataCapFacAvgREMIND %>%
     filter(region %in% r) %>%
     group_by(year, technology, iteration) %>%
     summarise(p32_PyPSA_CFAvg = mean(p32_PyPSA_CFAvg)) %>%
-    quitte::order.levels(technology = names(namesTech))
+    order.levels(technology = names(namesTech))
 
   dataCapfacPyPSAplot <- dataCapfacPyPSA %>%
     filter(region %in% r,
@@ -1789,55 +1884,78 @@ for (r in regList){
     group_by(year, carrier, iteration) %>%
     rename(technology = carrier) %>%
     summarise(value = mean(value)) %>%  # ToDO: This is not exactly correct for all regions
-    quitte::order.levels(technology = names(namesTech))
+    order.levels(technology = names(namesTech))
 
-  # Plot by year
-  pCapfacYear <- ggplot() +
-    geom_line(data = dataCapfacREMINDplot, aes(x = year, y = value, color = technology)) +
-    geom_point(data = dataCapfacPyPSAplot, aes(x = year, y = value, color = technology, shape = "Non-avg. value")) +
-    geom_point(data = dataCapfacAvgREMINDplot, aes(x = year, y = p32_PyPSA_CFAvg, color = technology), alpha = 0.5) +
-    scale_shape_manual(name = NULL,
-                       values = c("Non-avg. value" = 4)) +
-    scale_color_manual(
-      name = "Technology",
-      values = colorsTech,
-      labels = namesTech,
-    ) +
-    labs(x = "Year", y = "Capacity factor") +
-    ggtitle("Capacity factors over years, averaged over iterations", regSubtitle(r))
+    if (nrow(dataCapfacREMINDplot) > 0) {
+        print("Data frame dataCapfacREMINDplot is not empty.")
+    } else {
+        print("Data frame dataCapfacREMINDplot is empty.")
+    }
 
-  print(pCapfacYear
-    + scale_y_continuous(limits = c(0, 1))
-    + facet_wrap(~ iteration))
+    if (nrow(dataCapfacPyPSAplot) > 0) {
+        print("Data frame dataCapfacPyPSAplot is not empty.")
+    } else {
+        print("Data frame dataCapfacPyPSAplot is empty.")
+    }
 
-  # Plot by iteration
-  pCapfacIter <- ggplot() +
-    geom_line(data = dataCapfacREMINDplot, aes(x = iteration, y = value, color = technology)) +
-    geom_point(data = dataCapfacPyPSAplot, aes(x = iteration, y = value, color = technology, shape = "Non-avg. value")) +
-    geom_point(data = dataCapfacAvgREMINDplot, aes(x = iteration, y = p32_PyPSA_CFAvg, color = technology), alpha = 0.5) +
-    scale_shape_manual(name = NULL,
-                       values = c("Non-avg. value" = 4)) +
-    scale_color_manual(
-      name = "Technology",
-      values = colorsTech,
-      labels = namesTech,
-    ) +
-    labs(x = "Iteration", y = "Capacity factor") +
-    scale_x_continuous(breaks = integer_breaks()) +
-    ggtitle("Capacity factors over iterations, averaged over iterations", regSubtitle(r))
+    if (nrow(dataCapfacAvgREMINDplot) > 0) {
+        print("Data frame dataCapfacAvgREMINDplot is not empty.")
+    } else {
+        print("Data frame dataCapfacAvgREMINDplot is empty.")
+    }
 
-  print(pCapfacIter
-    + scale_y_continuous(limits = c(0, 1))
-    + facet_wrap(~ year))
+    # Check if data frames are not empty
+    if (nrow(dataCapfacREMINDplot) > 0 && nrow(dataCapfacPyPSAplot) > 0 && nrow(dataCapfacAvgREMINDplot) > 0) {
 
-  print(pCapfacYear
-    + facet_grid(technology ~ iteration, scales = "free", labeller = labeller(technology = namesTech))
-    + theme(legend.position = "none"))
-  
-  print(pCapfacIter
-    + facet_grid(technology ~ year, scales = "free", labeller = labeller(technology = namesTech))
-    + theme(legend.position = "none"))
+        # Plot by year
+        pCapfacYear <- ggplot() +
+            geom_line(data = dataCapfacREMINDplot, aes(x = year, y = value, color = technology)) +
+            geom_point(data = dataCapfacPyPSAplot, aes(x = year, y = value, color = technology, shape = "Non-avg. value")) +
+            geom_point(data = dataCapfacAvgREMINDplot, aes(x = year, y = p32_PyPSA_CFAvg, color = technology), alpha = 0.5) +
+            scale_shape_manual(name = NULL,
+                            values = c("Non-avg. value" = 4)) +
+            scale_color_manual(
+            name = "Technology",
+            values = colorsTech,
+            labels = namesTech,
+            ) +
+            labs(x = "Year", y = "Capacity factor") +
+            ggtitle("Capacity factors over years, averaged over iterations", regSubtitle(r))
 
+        print(pCapfacYear
+            + scale_y_continuous(limits = c(0, 1))
+            + facet_wrap(~ iteration))
+
+        # Plot by iteration
+        pCapfacIter <- ggplot() +
+            geom_line(data = dataCapfacREMINDplot, aes(x = iteration, y = value, color = technology)) +
+            geom_point(data = dataCapfacPyPSAplot, aes(x = iteration, y = value, color = technology, shape = "Non-avg. value")) +
+            geom_point(data = dataCapfacAvgREMINDplot, aes(x = iteration, y = p32_PyPSA_CFAvg, color = technology), alpha = 0.5) +
+            scale_shape_manual(name = NULL,
+                            values = c("Non-avg. value" = 4)) +
+            scale_color_manual(
+            name = "Technology",
+            values = colorsTech,
+            labels = namesTech,
+            ) +
+            labs(x = "Iteration", y = "Capacity factor") +
+            scale_x_continuous(breaks = integer_breaks()) +
+            ggtitle("Capacity factors over iterations, averaged over iterations", regSubtitle(r))
+
+        print(pCapfacIter
+            + scale_y_continuous(limits = c(0, 1))
+            + facet_wrap(~ year))
+
+        print(pCapfacYear
+            + facet_grid(technology ~ iteration, scales = "free", labeller = labeller(technology = namesTech))
+            + theme(legend.position = "none"))
+        
+        print(pCapfacIter
+            + facet_grid(technology ~ year, scales = "free", labeller = labeller(technology = namesTech))
+            + theme(legend.position = "none"))
+    } else {
+        print("One or more data frames are empty. Skipping plots.")
+    }
 }
 ```
 
@@ -2277,9 +2395,152 @@ print(pCapH2Iter)
 
 ```
 
+### Battery storage: Capacity factors
+
+```{r battery capacity factors}
+
+# REMIND capacity factors (hydrogen storage)
+dataCapFacStorREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "vm_capFac",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "value"),
+    colFilter = list("year" = years, "region" = regions, "technology" = c("btin", "btout")),
+    restoreZeros = FALSE) %>%
+  revalue.levels(technology = rm2genTech)
+
+# PyPSA capacita 
+dataCapFacStorPyPSA <- readPyPSAcsv(
+    paths = file.path(pyValidationDirs, "capacity_factors_links.csv")) %>%
+    filter(carrier %in% c("battery charger", "battery discharger")) %>%
+  mutate(iteration = iteration + 1) %>%
+  revalue.levels(carrier = py2genTech)
+
+# Plot by year
+pCapFacStorYear <- ggplot() +
+  geom_line(data = dataCapFacStorREMIND, aes(x = year, y = value, color = technology)) +
+  geom_point(data = dataCapFacStorPyPSA, aes(x = year, y = value, color = carrier)) +
+  scale_color_manual(name = "Technology",
+                     values = colorsTech,
+                     labels = namesTech) +
+  labs(x = "Year", y = "Capacity factor") +
+  ggtitle("Battery storage capacity factors over years") +
+  facet_wrap(~ iteration)
+
+print(pCapFacStorYear)
+
+# Plot by iteration
+pCapFacStorIter <- ggplot() +
+  geom_line(data = dataCapFacStorREMIND, aes(x = iteration, y = value, color = technology)) +
+  geom_point(data = dataCapFacStorPyPSA, aes(x = iteration, y = value, color = carrier)) +
+  scale_color_manual(name = "Technology",
+                     values = colorsTech,
+                     labels = namesTech) +
+  labs(x = "Iteration", y = "Capacity factor") +
+  ggtitle("Battery storage capacity factors over iterations") +
+  facet_wrap(~ year)
+
+print(pCapFacStorIter)
+
+```
+
+### Battery storage: Battery discharging share of load
+
+```{r battery storage relative}
+
+# REMIND battery discharging
+dataBatDisREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "vm_prodSe",
+    columns = c("tall" = "year", "all_regi" = "region", "all_enty" = "enty1", "all_enty1" = "enty2", "all_te" = "technology", "value" = "value"),
+    colFilter = list("year" = years, "region" = regions, "enty1" = "seelstor", "enty2" ="seel", "technology" = "btout"),
+    restoreZeros = FALSE,
+    recalcUnit = twa2twh) %>%  # TWa to TWh
+  revalue.levels(technology = rm2genTech) %>%
+  select(year, region, technology, value, iteration)
+
+# REMIND load
+dataLoadREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "v32_load",
+    columns = c("ttot" = "year", "all_regi" = "region", "value" = "v32_load"),
+    colFilter = list("year" = years, "region" = regions),
+    restoreZeros = FALSE,
+    recalcUnit = twa2twh)
+
+# Calculate share of battery discharging w.r.t. load
+dataBatDisShareREMIND <- dataBatDisREMIND %>%
+  left_join(dataLoadREMIND, by = c("year", "region", "iteration")) %>%
+  mutate(value = value / v32_load)
+
+# PyPSA data
+dataBatPyPSA <- readPyPSAcsv(
+    paths = file.path(pyValidationDirs, "battery_storages.csv")) %>%
+  # Increment iteration by 1 to match REMIND
+  mutate(iteration = iteration + 1)
+
+# Plot
+pBatRelYear <- ggplot() +
+  geom_line(data = dataBatDisShareREMIND, aes(x = year, y = value, color = region)) +
+  geom_point(data = dataBatPyPSA, aes(x = year, y = relative, color = region)) +
+  labs(x = "Year", y = "Relative battery discharging") +
+  ggtitle("Battery discharging relative to load over years") +
+  facet_wrap(~ iteration)
+
+print(pBatRelYear)
+
+pBatRelIter <- ggplot() +
+  geom_line(data = dataBatDisShareREMIND, aes(x = iteration, y = value, color = region)) +
+  geom_point(data = dataBatPyPSA, aes(x = iteration, y = relative, color = region)) +
+  labs(x = "Iteration",  y = "Relative battery discharging") +
+  ggtitle("Battery discharging relative to load over iterations") +
+  facet_wrap(~ year)
+
+print(pBatRelIter)
+
+```
+
+### Battery strorage: Storage pack capacity
+
+```{r battery storage pack}
+
+dataCapBatREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "vm_cap",
+    columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "rlf" = "grade", "value" = "value"),
+    colFilter = list("year" = years, "region" = regions, "grade" = 1, "technology" = "btstor"),
+    restoreZeros = FALSE,
+    recalcUnit = 1E3)
+
+dataCapBatPyPSA <- readPyPSAcsv(
+    paths = file.path(pyValidationDirs, "optimal_capacities.csv")) %>%
+  filter(carrier == "battery") %>%
+  # Increment iteration by 1 to match REMIND
+  mutate(iteration = iteration + 1) %>%
+  mutate(value = value / 1E3)  # MWh to GWh
+
+pCapBatYear <- ggplot() +
+  geom_line(data = dataCapBatREMIND, aes(x = year, y = value, color = region)) +
+  geom_point(data = dataCapBatPyPSA, aes(x = year, y = value, color = region)) +
+  labs(x = "Year", y = "Battery storage capacity (GWh)") +
+  ggtitle("Battery storage pack capacity over years") +
+  facet_wrap(~ iteration)
+
+print(pCapBatYear)
+
+pCapBatIter <- ggplot() +
+  geom_line(data = dataCapBatREMIND, aes(x = iteration, y = value, color = region)) +
+  geom_point(data = dataCapBatPyPSA, aes(x = iteration, y = value, color = region)) +
+  labs(x = "Iteration", y = "Battery storage capacity (GWh)") +
+  ggtitle("Battery storage pack capacity over iterations") +
+  facet_wrap(~ year)
+
+print(pCapBatIter)
+
+```
+
 ### Transmission: Grid losses
 
-```{r}
+```{r transmission grid losses}
 
 # REMIND grid losses
 dataGridLossREMIND <- readREMINDgdx(
@@ -2635,7 +2896,8 @@ dataCapREMIND <- readREMINDgdx(
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech), "grade" = 1),
     restoreZeros = FALSE,
     recalcUnit = 1e3) %>%   # TW to GW
-  select(-grade)  # Remove grade column
+  select(-grade) %>%
+  filter(!(technology %in% c("h2stor", "btstor")))
 
 # PyPSA capacities
 dataCapPyPSA <- readPyPSAcsv(
@@ -2660,7 +2922,8 @@ dataEtaPyPSA <- readPyPSAcsv(
 dataCapPyPSA <- dataCapPyPSA %>%
   left_join(dataEtaPyPSA, by = c("year", "technology", "iteration")) %>%
   mutate(value = ifelse(type == "Link", value * eta, value)) %>%
-  filter(technology %in% rm2genTech)
+  filter(technology %in% rm2genTech,
+         type != "Store")
 
 for (r in regList) {
 
@@ -2707,6 +2970,68 @@ for (r in regList) {
 }
 ```
 
+### Optimal storage capacities line charts
+
+```{r optimal storage capacities line charts}
+
+# REMIND capacity
+dataCapREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "vm_cap",
+    columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "rlf" = "grade", "value" = "vm_cap"),
+    colFilter = list("year" = years, "region" = regions, "technology" = c("h2stor", "btstor"), "grade" = 1),
+    restoreZeros = FALSE,
+    recalcUnit = 1E3) %>%  # TWh to GWh
+  select(-grade) %>%
+  revalue.levels(technology = rm2genTech)
+
+# PyPSA capacities
+dataCapPyPSA <- readPyPSAcsv(
+    paths = file.path(pyValidationDirs, "optimal_capacities.csv")) %>%
+  filter(carrier %in% c("H2", "battery")) %>%
+  revalue.levels(carrier = c("H2" = "hydrogen_storage", "battery" = "battery_storage")) %>%
+  rename(technology = carrier) %>%
+  mutate(value = value / 1E3)  # MWh to GWh
+
+for (r in regList) {
+
+  dataCapREMINDplot <- dataCapREMIND %>% 
+    mutate(cap = vm_cap) %>%
+    filter(region %in% r) %>%
+    revalue.levels(technology = rm2genTech) %>%
+    group_by(year, technology, iteration) %>%
+    summarise(cap = sum(cap)) %>%
+    order.levels(technology = names(colorsTech))
+
+  dataCapPyPSAplot <- dataCapPyPSA %>%
+    filter(region %in% r) %>%
+    group_by(year, technology, iteration) %>%
+    summarise(cap = sum(value)) %>%
+    order.levels(technology = names(colorsTech))
+
+  pYear <- ggplot() +
+    geom_line(data = dataCapREMINDplot, aes(x = year, y = cap, color = technology, linetype = "REMIND")) +
+    geom_line(data = dataCapPyPSAplot, aes(x = year, y = cap, color = technology, linetype = "PyPSA-Eur")) +
+    scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
+    scale_linetype_manual(name = NULL, values = c("REMIND" = "solid", "PyPSA-Eur" = "dashed")) +
+    labs(x = "Year", y = "Capacity (GWh)") +
+    ggtitle("Optimal storage capacities over years", regSubtitle(r))
+  
+  print(pYear + facet_grid(technology ~ iteration, scales = "free", labeller = labeller(technology = namesTech)))
+
+  pIter <- ggplot() +
+    geom_line(data = dataCapREMINDplot, aes(x = iteration, y = cap, color = technology, linetype = "REMIND")) +
+    geom_line(data = dataCapPyPSAplot, aes(x = iteration, y = cap, color = technology, linetype = "PyPSA-Eur")) +
+    scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
+    scale_linetype_manual(name = NULL, values = c("REMIND" = "solid", "PyPSA-Eur" = "dashed")) +
+    labs(x = "Iteration", y = "Capacity (GWh)") +
+    scale_x_continuous(breaks = integer_breaks()) +
+    ggtitle("Optimal storage capacities over iterations", regSubtitle(r))
+
+  print(pIter + facet_grid(technology ~ year, scales = "free", labeller = labeller(technology = namesTech)))
+}
+```
+
 ### Pre-investment capacities and investment decision
 
 The following plots contain the pre-investment capacities and each model's capacity expansion decision.
@@ -2722,8 +3047,7 @@ dataPreInvCapREMIND <- readREMINDgdx(
     columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_preInvCap"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = TRUE,
-    recalcUnit = 1e3) %>%
-  mutate(p32_preInvCap = ifelse(technology == "h2stor", p32_preInvCap / 1e3, p32_preInvCap))
+    recalcUnit = 1e3)
 
 dataPreInvCapAvgREMIND <- readREMINDgdx(
     paths = rmFiles,
@@ -2732,7 +3056,6 @@ dataPreInvCapAvgREMIND <- readREMINDgdx(
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = TRUE,
     recalcUnit = 1e3) %>%
-  mutate(p32_preInvCapAvg = ifelse(technology == "h2stor", p32_preInvCapAvg / 1e3, p32_preInvCapAvg)) %>%
   revalue.levels(technology = rm2genTech) %>%
   group_by(year, region, technology, iteration) %>%
   summarise(p32_preInvCapAvg = sum(p32_preInvCapAvg))
@@ -2744,7 +3067,6 @@ dataCapREMIND <- readREMINDgdx(
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech), "grade" = 1),
     restoreZeros = FALSE,
     recalcUnit = 1e3) %>%   # TW to GW
-  mutate(vm_cap = ifelse(technology == "h2stor", vm_cap / 1e3, vm_cap)) %>%
   select(-grade)  # Remove grade column
 
 dataCapInvestREMIND <- full_join(dataPreInvCapREMIND, dataCapREMIND) %>%
@@ -2762,15 +3084,15 @@ dataCapInvestREMIND <- full_join(dataPreInvCapREMIND, dataCapREMIND) %>%
 # Read PyPSA-Eur data
 dataPreInvCapPyPSA <- readPyPSAcsv(
   paths = file.path(pyValidationDirs, "preinstalled_capacities.csv")) %>%
-  # Convert MW to GW and MWh to TWh
-  mutate(value = ifelse(component == "Store", value / 1e6, value / 1e3)) %>%
+  # Convert MW to GW and MWh to GWh
+  mutate(value = value / 1e3) %>%
   rename(preInvCap = value)
 
 dataCapPyPSA <- readPyPSAcsv(
   paths = file.path(pyValidationDirs, "optimal_capacities.csv")) %>%
   filter(carrier %in% names(py2genTech)) %>%
-  # Convert MW to GW and MWh to TWh
-  mutate(value = ifelse(carrier == "H2", value / 1e6, value / 1e3)) %>%
+  # Convert MW to GW and MWh to GWh
+  mutate(value = value / 1e3) %>%
   select(-type) %>%
   rename(cap = value)
 
@@ -2865,7 +3187,7 @@ for (r in regList) {
                   "PyPSA-Eur" = "dashed")) +
       guides(linetype = guide_legend(override.aes = list(fill = NA)),
              fill = "none") +
-      labs(x = "Year", y = "Capacity (GW)") +
+      labs(x = "Year", y = "Capacity (GW or GWh)") +
       ggtitle(paste("Pre-investment capacities and capacity expansion over years, iteration", i), regSubtitle(r)) +
       facet_wrap(~ technology, ncol = 2, scales = "free", labeller = labeller(technology = namesTech))
 
@@ -2889,10 +3211,10 @@ for (r in regList) {
 
 dataCapREMINDplot <- dataCapREMIND %>%
   revalue.levels(technology = rm2genTech) %>%
-  filter(!(technology %in% c("electrolysis", "fuel_cell", "hydrogen_storage"))) %>%
+  filter(technology %in% supplyTech) %>%
   group_by(year, region, technology, iteration) %>%
   summarise(value = sum(vm_cap)) %>%
-  order.levels(technology = names(colorsTech))
+  order.levels(technology = supplyTech)
 
 # Calculate minimum required capacities in REMIND from peak residual load in PyPSA-Eur
 dataGenREMIND <- readREMINDgdx(
@@ -2916,15 +3238,28 @@ dataCapPyPSA <- readPyPSAcsv(
   paths = file.path(pyValidationDirs, "optimal_capacities.csv")) %>%
   rename(technology = carrier) %>%
   mutate(value = value / 1e3) %>%  # Convert capacities to GW
-  filter(!is.na(value),
-         technology != "Load shedding")
+  filter(!is.na(value))
 
+# Read eta for links
+dataEtaPyPSA <- readPyPSAcsv(
+  paths = file.path(pyResourcesDirs, "costs.csv")) %>%
+  filter(parameter == "efficiency",
+         technology %in% c("battery inverter", "fuel cell")) %>%
+  revalue.levels(technology = c("battery inverter" = "battery_discharger",
+                                "fuel cell" = "fuel_cell")) %>%
+  rename(eta = value) %>%
+  mutate(eta = ifelse(technology == "battery_discharger", eta**0.5, eta)) %>%
+  select(year, technology, iteration, eta)
+
+# Adjust link capacities for eta
 dataCapPyPSAplot <- dataCapPyPSA %>%
-  filter(type == "Generator") %>%
   revalue.levels(technology = py2genTech) %>%
-  group_by(year, region, technology, iteration) %>%
+  filter(technology %in% supplyTech) %>%
+  group_by(year, region, type, technology, iteration) %>%
   summarise(value = sum(value)) %>%
-  order.levels(technology = names(colorsTech))
+  full_join(dataEtaPyPSA) %>%
+  mutate(value = ifelse(type == "Link", value * eta, value)) %>%
+  order.levels(technology = supplyTech)
 
 for (r in regList){
   for (i in pyIterations){
@@ -3060,25 +3395,28 @@ for (r in regList){
 ### Generation line charts
 
 ```{r generation line charts}
+
+# Seel production
 dataGenREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "v32_usableSeTeDisp",
-    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "value"),
-    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+    gdxVar = "vm_prodSe",
+    columns = c("tall" = "year", "all_regi" = "region", "all_enty" = "enty1", "all_enty1" = "enty2", "all_te" = "technology", "value" = "value"),
+    colFilter = list("year" = years, "region" = regions, "enty2" ="seel", "technology" = names(rm2genTech)),
     restoreZeros = FALSE,
     recalcUnit = twa2twh) %>%  # TWa to TWh
   revalue.levels(technology = rm2genTech) %>%
-  group_by(year, region, technology, iteration) %>%
-  summarise(value = sum(value)) %>%
-  order.levels(technology = names(colorsTech))
+  select(year, region, technology, value, iteration) %>%
+  filter(technology %in% supplyTech) %>%
+  order.levels(technology = supplyTech)
 
+# PyPSA electricity supply
 dataGenPyPSA <- readPyPSAcsv(
   paths = file.path(pyValidationDirs, "energy_balances.csv")) %>%
-  filter(component == "Generator") %>%
-  select(!component) %>%
   mutate(value = value / 1e6) %>%  # MWh to TWh
   rename(technology = carrier) %>%
-  revalue.levels(technology = py2genTech)
+  revalue.levels(technology = py2genTech) %>%
+  filter(technology %in% supplyTech) %>%
+  order.levels(technology = supplyTech)
 
 for (r in regList) {
   dataGenREMINDplot <- dataGenREMIND %>%
@@ -3118,6 +3456,7 @@ for (r in regList) {
   print(pGenIter + facet_grid(technology ~ year, scales = "free", labeller = labeller(technology = namesTech)) +
           theme(legend.position = "none"))
 }
+
 ```
 
 ### Electricity balance charts side-by-side
@@ -3207,10 +3546,22 @@ dataElectrolysisAddREMIND <- dataElectrolysisREMIND %>%
   mutate(technology = "electrolysis_add") %>%
   select(year, region, technology, iteration, value)
 
+# REMIND battery charging
+dataBatteryChargeREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "vm_demSe",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_enty" = "enty1", "all_enty1" = "enty2", "all_te" = "technology", "value" = "value"),
+    colFilter = list("year" = years, "region" = regions, "enty1" = "seel", "enty2" = "seelstor", "technology" = "btin"),
+    restoreZeros = FALSE,
+    recalcUnit = twa2twh) %>%
+  revalue.levels(technology = rm2genTech) %>%
+  select(year, region, technology, iteration, value)
+
 # Combine load with electrolysers to withdrawal
 dataWithdrawalREMIND <- bind_rows(dataLoadREMIND, dataElectrolysisStorREMIND) %>%
   bind_rows(dataElectrolysisAddREMIND) %>%
   bind_rows(dataGridLossesREMIND) %>%
+  bind_rows(dataBatteryChargeREMIND) %>%
   mutate(value = -value)
 
 # PyPSA-Eur generation by technology
@@ -4633,6 +4984,15 @@ dataHourlyElecPricesPyPSA <- readPyPSAcsv(
   mutate(hour.sorted = 1:n(),
          year.fraction = hour.sorted / n())
 
+pPriceDuration <- ggplot() +
+  geom_line(data = dataHourlyElecPricesPyPSA, aes(x = year.fraction, y = value, alpha = as.factor(year))) +
+  scale_alpha_discrete(name = "Year") +
+  labs(x = "Hours of year (fraction)", y = "Electricity price ($/MWh)") +
+  ggtitle("Price duration curve") +
+  facet_wrap(~ iteration)
+
+print(pPriceDuration)
+
 pPriceDurationLog <- ggplot() +
   geom_line(data = dataHourlyElecPricesPyPSA, aes(x = year.fraction, y = value, alpha = as.factor(year))) +
   scale_alpha_discrete(name = "Year") +
@@ -4642,15 +5002,6 @@ pPriceDurationLog <- ggplot() +
   facet_wrap(~ iteration)
 
 print(pPriceDurationLog)
-
-pPriceDuration <- ggplot() +
-  geom_line(data = dataHourlyElecPricesPyPSA, aes(x = year.fraction, y = value, alpha = as.factor(year))) +
-  scale_alpha_discrete(name = "Year") +
-  labs(x = "Hours of year (fraction)", y = "Electricity price ($/MWh)") +
-  ggtitle("Price duration curve") +
-  facet_wrap(~ iteration)
-
-print(pPriceDuration)
 
 pPriceDurationCut <- ggplot() +
   geom_line(data = dataHourlyElecPricesPyPSA, aes(x = year.fraction, y = value, alpha = as.factor(year))) +
@@ -4662,6 +5013,12 @@ pPriceDurationCut <- ggplot() +
 
 print(pPriceDurationCut)
 
+```
+
+### Price duration curves (last iteration)
+
+```{r price duration curves last iteration}
+
 # Price duration curves for last iteration only
 maxiter <- dataHourlyElecPricesPyPSA %>%
   ungroup() %>%
@@ -4672,9 +5029,34 @@ dataHourlyElecPricesPyPSA <- dataHourlyElecPricesPyPSA %>%
   ungroup() %>%
   filter(iteration == maxiter)
 
+# Simple time average
+dataTimeAverage <- dataHourlyElecPricesPyPSA %>%
+  group_by(year, region) %>%
+  summarise(value = mean(value))
+
+# Load-weighted average
+dataLoadPrices <- readPyPSAcsv(
+  paths = file.path(pyValidationDirs, "load_prices.csv")) %>%
+  filter(carrier == "AC") %>%
+  select(-carrier) %>%
+  filter(iteration == maxiter)
+
+pPriceDuration <- ggplot() +
+  geom_line(data = dataHourlyElecPricesPyPSA, aes(x = year.fraction, y = value)) +
+  geom_hline(data = dataTimeAverage, aes(yintercept = value, color = "Time average")) +
+  geom_hline(data = dataLoadPrices, aes(yintercept = value, color = "Load-weighted average")) +
+  scale_color_discrete("Average") +
+  labs(x = "Hours of year (fraction)", y = "Electricity price ($/MWh)") +
+  ggtitle(paste("Price duration curve, iteration", maxiter)) +
+  facet_wrap(~ year)
+
+print(pPriceDuration)
+
 pPriceDurationLog <- ggplot() +
   geom_line(data = dataHourlyElecPricesPyPSA, aes(x = year.fraction, y = value)) +
-  scale_alpha_discrete(name = "Year") +
+  geom_hline(data = dataTimeAverage, aes(yintercept = value, color = "Time average")) +
+  geom_hline(data = dataLoadPrices, aes(yintercept = value, color = "Load-weighted average")) +
+  scale_color_discrete("Average") +
   labs(x = "Hours of year (fraction)", y = "Electricity price ($/MWh)") +
   ggtitle(paste("Price duration curve, log scale, iteration", maxiter)) +
   scale_y_continuous(trans = "log10") +
@@ -4682,17 +5064,11 @@ pPriceDurationLog <- ggplot() +
 
 print(pPriceDurationLog)
 
-pPriceDuration <- ggplot() +
-  geom_line(data = dataHourlyElecPricesPyPSA, aes(x = year.fraction, y = value)) +
-  scale_alpha_discrete(name = "Year") +
-  labs(x = "Hours of year (fraction)", y = "Electricity price ($/MWh)") +
-  ggtitle(paste("Price duration curve, cut off at 200 $/MWh, iteration", maxiter)) +
-  facet_wrap(~ year)
-
-print(pPriceDuration)
-
 pPriceDurationCut <- ggplot() +
   geom_line(data = dataHourlyElecPricesPyPSA, aes(x = year.fraction, y = value)) +
+  geom_hline(data = dataTimeAverage, aes(yintercept = value, color = "Time average")) +
+  geom_hline(data = dataLoadPrices, aes(yintercept = value, color = "Load-weighted average")) +
+  scale_color_discrete("Average") +
   scale_alpha_discrete(name = "Year") +
   labs(x = "Hours of year (fraction)", y = "Electricity price ($/MWh)") +
   ggtitle(paste("Price duration curve, cut off at 200 $/MWh, iteration", maxiter)) +
