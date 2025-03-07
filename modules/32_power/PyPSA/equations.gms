@@ -338,10 +338,11 @@ q32_flexAdj(t,regi,te)$(teFlexTax(te))..
 ***------------------------------------------------------------
 ***            REMIND to PyPSA-Eur: Electricity load
 ***------------------------------------------------------------
+*** See postsolve.gms for all variables and parameters that are passed to PyPSA-Eur.
 
 *** Calculate electricity load passed to PyPSA
 *** This is based on the harmonisation of the electricity balance equation of REMIND and PyPSA-Eur.
-*** Additional electricity demand for hydrogen production is included separately elsewhere.
+*** Additional electricity demand for hydrogen production is included separately.
 q32_load(t,regi,enty2)$(tPy32(t) and regPy32(regi) and sameas(enty2,"seel"))..
   v32_load(t,regi)
   =e=
@@ -367,6 +368,7 @@ q32_load(t,regi,enty2)$(tPy32(t) and regPy32(regi) and sameas(enty2,"seel"))..
 ***------------------------------------------------------------
 ***            REMIND to PyPSA-Eur: Helper equations
 ***------------------------------------------------------------
+*** TODO: Clean up
 
 *** Calculate domestic generation of electricity from PE
 q32_usableSeDisp(t,regi,entySe)$(tPy32(t) and regPy32(regi) and sameas(entySe,"seel"))..
@@ -392,8 +394,11 @@ q32_shSeElDisp(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te))..
 ***------------------------------------------------------------
 ***            PyPSA-Eur to REMIND: Capacity factors
 ***------------------------------------------------------------
-*** Pre-factor equation to set capacity factors
+*** Equation to set capacity factors with anticipation factors.
 *** This equation basically requires that v32_usableSeTeDisp / vm_cap = p32_PyPSA_CF
+*** The reason why we cannot simply set vm_capFac is because REMIND has different grades (dimension "rlf")
+*** with different pre-assigned capacity factors, which we don't want to deal with.
+*** Instead, we free vm_capFac (in bounds.gms) and use it as a correction factor. 
 *** The pre-factor should depend on the technology:
 *** (1) For baseload technologies: When the share increases, the capacity factor increases.
 *** (2) For peaker technologies and VREs: When the share increases, the capacity factor decreases.
@@ -422,9 +427,9 @@ $endif.c32_pypsa_capfac
 ***------------------------------------------------------------
 ***            PyPSA-Eur to REMIND: Markups (supply)
 ***------------------------------------------------------------
-*** Pre-factor equation to calculate markups and markdowns of technologies
+*** Equation to calculate markups and markdowns of technologies with anticipation factors.
 *** This equation calculates vm_PyPSAMarkup, which is used in 21_tax/on to subsidise or penalise technologies.
-*** The pre-factor is based on the following intuition.
+*** The anticipation is based on the following intuition.
 *** For all technologies: When the share increases, the market value (and thus the markup) decreases.
 *** The slope of this decrease depends depends on the negative of the value factor (- p32_PyPSA_ValueFactor).
 *** To fine tune the convergence process, we use another slope parameter, currently set to 1.
@@ -451,7 +456,7 @@ $endif.cm_pypsa_markup
 ***------------------------------------------------------------
 ***            PyPSA-Eur to REMIND: Peak residual load
 ***------------------------------------------------------------
-*** Pre-factor equation to set the minimum dispatchable capacity to always cover peak residual load.
+*** Equation that requires the minimum dispatchable capacity for peak residual load.
 *** This constraint is formulated relative to the average load, v32_load [TWa/a].
 *** The pre-factor can be based on the following intuition:
 *** If the sum of VRE shares increases, peak residual load decreases.
@@ -459,7 +464,7 @@ $endif.cm_pypsa_markup
 *** Currently deactivate pre-factors.
 $ifthen "%c32_pypsa_peakcap%" == "on"
 q32_PeakResCap(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
-  sum(tePyDisp32, vm_cap(t,regi,tePyDisp32, "1"))  !! TODO: Hydro included or not, h2turb included or not?
+  sum(tePyDisp32, vm_cap(t,regi,tePyDisp32, "1"))
   =g=
     p32_PyPSA_PeakResLoadRel(t,regi)
 *$ifthen.c32_pypsa_preFac "%c32_pypsa_preFac%" == "on"
@@ -479,8 +484,9 @@ $endif
 *** 2. Equation that requires all hydrogen consumed by turbines to be produced by electrolysers.
 ***    This then also implies that the additional hydrogen demand (p32_ElecH2Demand) is positive.
 *** Jointly, these two equations ensure that hydrogen storage is harmonised, while giving REMIND
-*** freedom to decide on the production of hydrogen for other end-uses.
-*** Note that capacity factors of elh2 and h2turb are fixed to PyPSA values in bounds.gms
+*** freedom to decide on the production of electrolytic hydrogen for other end-uses.
+*** Note: Capacity factors of elh2 and h2turb are fixed to PyPSA values in bounds.gms.
+*** Note: The lower bound of hydrogen storage capacity (h2stor) is set to PyPSA values in bounds.gms.
 
 *** Equation 1: Set the required production of hydrogen turbines relative to the load.
 $ifthen "%c32_pypsa_h2stor%" == "on"
@@ -501,6 +507,55 @@ q32_elh2forh2turb(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
 $endif
 
 ***------------------------------------------------------------
+***            PyPSA-Eur to REMIND: Battery storage
+***------------------------------------------------------------
+*** Battery storage is endogenously optimised and dispatched in PyPSA.
+*** In REMIND battery storage consist of the following three technologies
+*** and another secondary energy carrier (seelstor) to store electricity:
+*** 1. Battery charging (btin) that converts seel to seelstor (unit TW)
+*** 2. Battery discharging (btout) that converts seelstor to seel (unit TW)
+*** 3. Battery storage (btstor) used to store energy (unit TWh)
+*** Note that btin and btout are the same phyiscal technology (inverter + balance of system).
+*** Therefore, btout does not have capital or FOM costs and the capacity
+*** of btin and btout should be the same when accounting for the efficiency.
+*** Note: Capacity factors of btin and btout are fixed to PyPSA values in bounds.gms.
+*** Note: The lower bound of battery storage capacity (btstor) is set to PyPSA values in bounds.gms.
+
+*** The implementation of battery storage only needs one equation to set the required production
+*** of battery discharging relative to the load from PyPSA. This drives the investment into btout.
+*** Due to (i) fixed capacity factors and (ii) the energy balance equation (in core/equations.gms)
+*** this then also drives investment into battery charging (btin).
+$ifthen "%c32_pypsa_btstor%" == "on"
+q32_battery(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
+  vm_prodSe(t,regi,"seelstor","seel","btout")
+  =e=
+  p32_PyPSA_BatteryDischargeRel(t,regi) * v32_load(t,regi)
+;
+
+* TEMPORARY: Set btin to btout, in theory this shouldn't be necessary
+* when fixing the capacity factors of btin and btout to PyPSA values.
+* This only works when there is a bit of freedom to the capacity factors
+* as otherwise REMIND is overconstrained, leading to a small numerical infeasibility
+q32_batinEQbatout(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
+  vm_cap(t,regi,"btin","1")
+  =e=
+  vm_cap(t,regi,"btout","1") * pm_eta_conv(t,regi,"btout")
+;
+$endif
+
+***------------------------------------------------------------
+***            PyPSA-Eur to REMIND: Transmission losses 
+***------------------------------------------------------------
+*** Transmission losses are providede relative to the total load from PyPSA.
+*** They are added to the withdrawal side of the electricity balance equation (see above).
+q32_gridLosses(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
+  v32_gridLosses(t,regi)
+  =e=
+  p32_PyPSA_gridLossesRel(t,regi) * v32_load(t,regi)
+;
+
+
+***------------------------------------------------------------
 ***            PyPSA-Eur to REMIND: Electricity prices paid by electrolysis
 ***------------------------------------------------------------
 *** This is the equivalent to supply-side markups and can be regarded as demand-side markups.
@@ -511,18 +566,12 @@ q32_MarkUpDemand(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (sm_P
   (p32_PyPSA_ElecPriceElectrolysisAvg(t,regi) - p32_PyPSA_LoadPriceAvg(t,regi,"AC")) * sm_TWa_2_MWh / 1e12
 ;
 
-***------------------------------------------------------------
-***            PyPSA-Eur to REMIND: Transmission losses 
-***------------------------------------------------------------
-q32_gridLosses(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
-  v32_gridLosses(t,regi)
-  =e=
-  p32_gridLossesRel(t,regi) * v32_load(t,regi)
-;
 
 ***------------------------------------------------------------
 ***            PyPSA-Eur to REMIND: Electricity trade
 ***------------------------------------------------------------
+*** Electricity trade is currently work in progress.
+
 $ifthen.c32_pypsa_trade "%c32_pypsa_trade%" == "on"
 * Parametrise anticipation for electricity trade
 q32_shSeElRegi(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..

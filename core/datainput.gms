@@ -203,10 +203,30 @@ $include "./core/input/generisdata_flexibility.prn"
 display fm_dataglob;
 
 *AO* TEMPORARY: Include h2stor technology
-fm_dataglob("inco0","h2stor") = 0.2;
+fm_dataglob("inco0","h2stor") = 0.2; !! $/kWh long-term = 200 $/MWh
 fm_dataglob("omf","h2stor") = 0.03;
 fm_dataglob("lifetime","h2stor") = 100;
 fm_dataglob("tech_stat","h2stor") = 4;
+
+*AO* TEMPORARY: Include btin technology
+fm_dataglob("inco0","btin") = 100;  !! $/kW long-term
+fm_dataglob("eta","btin") = 0.97;  !! 97% efficiency
+fm_dataglob("omf","btin") = 0.01;  !! 1% FOM
+fm_dataglob("lifetime","btin") = 20;  !! 20 years lifetime
+fm_dataglob("tech_stat","btin") = 4;
+
+*AO* TEMPORARY: Include btout technology
+fm_dataglob("inco0","btout") = 0;  !! CAPEX accounted in btin
+fm_dataglob("eta","btout") = 0.97;  !! 97% efficiency
+fm_dataglob("omf","btout") = 0;  !! FOM accounted in btin
+fm_dataglob("lifetime","btout") = 20;  !! 20 years lifetime
+fm_dataglob("tech_stat","btout") = 4;
+
+*AO* TEMPORARY: Include btstor technology
+fm_dataglob("inco0","btstor") = 50; !! $/kWh long-term
+fm_dataglob("omf","btstor") = 0.015;  !! 1.5% FOM
+fm_dataglob("lifetime","btstor") = 10;  !! 10 years lifetime
+fm_dataglob("tech_stat","btstor") = 4;
 
 *** ccsinje cost scenarios
 *** low estimate: ccsinje cost prior to 03/2024; i.e. ~11 USD/tCO2 in 2025, decreasing to ~7.5USD/tCO2 as of 2035
@@ -249,6 +269,12 @@ p_inco0(ttot,all_regi,"wind") = 0;
 
 *AO* TEMPORARY: Hydrogen underground storage initial costs at 500 $/MWh
 p_inco0(ttot,all_regi,"h2stor")$(ttot.val ge 2015 and ttot.val le 2030) = 0.5;
+
+*AO* TEMPORARY: Battery charger initial costs at 200 $/kW
+p_inco0(ttot,all_regi,"btin")$(ttot.val ge 2015 and ttot.val le 2030) = 200;
+
+*AO* TEMPORARY: Battery storage initial costs at 150 $/kWh
+p_inco0(ttot,all_regi,"btstor")$(ttot.val ge 2015 and ttot.val le 2030) = 150;
 
 $if not "%cm_inco0RegiFactor%" == "off" parameter p_new_inco0RegiFactor(all_te) / %cm_inco0RegiFactor% /;
 $if not "%cm_inco0RegiFactor%" == "off"           p_inco0(ttot,regi,te)$(p_inco0(ttot,regi,te) and p_new_inco0RegiFactor(te)) = p_new_inco0RegiFactor(te) * p_inco0(ttot,regi,te);

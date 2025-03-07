@@ -81,6 +81,7 @@ v32_flexPriceShareMin(ttot,all_regi,all_te)         "possible minimum of share o
 *** (3) PyPSA coupling parameters: Parameters that are used within the coupling, mostly in equations.gms
 *** (4) PyPSA reporting parameters: Parameters that are calculated for reporting and plotting
 parameters
+    !! Parameters for exporting data to PyPSA-Eur
     p32_load(ttot,all_regi)                                         "PyPSA export: Electricity load [TWa]"
     p32_preInvCap(ttot,all_regi,all_te)                             "PyPSA export: Pre-investment capacities [TW for generation/link, TWh for storage]"
     p32_preInvCap_iter(iteration,ttot,all_regi,all_te)              "PyPSA export: Pre-investment capacities in iterations [TW for generation/link, TWh for storage]"
@@ -95,6 +96,7 @@ parameters
     p32_weightPEprice(ttot,all_regi,all_enty)                       "PyPSA export: Weights for primary energy prices [TWa]"
     p32_hydroCap(ttot,all_regi)                                     "PyPSA export: Hydro capacity [TW]"
     p32_hydroGen(ttot,all_regi)                                     "PyPSA export: Hydro generation [TWa]"
+    !! Parameters for importing data from PyPSA-Eur
     p32_PyPSA_CF(ttot,all_regi,all_te)                              "PyPSA import: Capacity factors [1]"
     p32_PyPSA_CF_iter(iteration,ttot,all_regi,all_te)               "PyPSA import calc: Capacity factors in iterations [1]"
     p32_PyPSA_CFAvg(ttot,all_regi,all_te)                           "PyPSA import calc: Capacity factors averaged over iterations [1]"
@@ -111,9 +113,10 @@ parameters
     p32_PyPSA_PeakResLoadRel(ttot,all_regi)                         "PyPSA import: Peak residual load relative to average load [1]"
     p32_PyPSA_shSeEl(ttot,all_regi,all_te)                          "PyPSA import: Electricity generation share by technology within region [1]"
     p32_PyPSA_ValueFactor(ttot,all_regi,all_te)                     "PyPSA import calc: Value factor = Market value / electricity price [1]"
-    p32_PyPSA_StoreTrans_Cap(ttot,all_regi,storeTransPy32)          "PyPSA import: Storage and transmission capacities [MW] (links, lines) or [MWh] (stores). Attention: w.r.t. input!"
+    p32_PyPSA_StoreTrans_Cap(ttot,all_regi,storeTransPy32)          "PyPSA import: Storage and transmission capacities [MW] (links, lines) or [MWh] (stores). Attention: Links w.r.t. input!"
     p32_PyPSA_StoreTrans_CF(ttot,all_regi,storeTransPy32)           "PyPSA import: Storage and transmission capacity factors [1]"
     p32_PyPSA_H2TurbRel(ttot,all_regi)                              "PyPSA import: Hydrogen turbine supply relative to total load [1]"
+    p32_PyPSA_BatteryDischargeRel(ttot,all_regi)                    "PyPSA import: Battery discharge relative to total load [1]"
     p32_PyPSA_Trade(ttot,all_regi,all_regi)                         "PyPSA import: Electricity exports from region 1 to region 2 [MWh]" 
     p32_PyPSA_TradePriceImport(ttot,all_regi,all_regi)              "PyPSA import: Price for electricity imports paid by region 2 due to trade with region 1 [$/MWh]"
     p32_PyPSA_TradePriceExport(ttot,all_regi,all_regi)              "PyPSA import: Price for electricity exports received by region 1 due to trade with region 2 [$/MWh]"
@@ -123,7 +126,8 @@ parameters
     p32_PyPSA_ElecPriceElectrolysis(ttot,all_regi)                  "PyPSA import: Electricity price paid by electrolysis [$/MWh]"
     p32_PyPSA_ElecPriceElectrolysis_iter(iteration,ttot,all_regi)   "PyPSA import calc: Electricity price paid by electrolysis in iterations [$/MWh]"
     p32_PyPSA_ElecPriceElectrolysisAvg(ttot,all_regi)               "PyPSA import calc: Electricity price paid by electrolysis averaged over iterations [$/MWh]"
-    p32_gridLossesRel(ttot,all_regi)                                "PyPSA import: Transmission losses relative to total load [1]"
+    p32_PyPSA_gridLossesRel(ttot,all_regi)                          "PyPSA import: Transmission losses relative to total load [1]"
+    !! Parameters for the PyPSA coupling
     p32_preFactor_CF(all_regi,all_te)                               "PyPSA coupling: Pre-factor for the capacity factor [1]"
     p32_preFactor_MV(all_regi,all_te)                               "PyPSA coupling: Pre-factor for the market value [1]"
     p32_usableSeDispForeign(ttot,all_regi)                          "PyPSA coupling: Foreign usable SE electricity generation, without own consumption, without imports/exports [TWa]"
@@ -133,6 +137,7 @@ parameters
     s32_checkPrice_iter(iteration)                                  "PyPSA coupling: s32_checkPrice in iterations"
     s32_preFacFadeOut                                               "PyPSA coupling: Multiplicative factor to fade out pre-factors [1]"
     s32_PyPSA_called(iteration)                                     "PyPSA coupling: Boolean that tracks if PyPSA was called over iterations, necessary for averaging (1 = yes, 0 = no)"
+    !! Reporting parameters for the PyPSA coupling
     p32_PeakResLoadShadowPrice(ttot,all_regi,all_te)                "PyPSA reporting: Shadow price of peak residual load constraint, used for plotting LCOEs vs. market values [T$/TWa]"
     p32_ElecBalance(ttot,all_regi,rep32)                            "PyPSA reporting: Electricity balance [TWa]"
 ;
@@ -154,7 +159,7 @@ $endif
 *** Variables for the PyPSA coupling
 $ifthen "%cm_pypsa_markup%" == "on"
 variables
-    vm_PyPSAMarkup(ttot,all_regi,all_te)                            "PyPSA coupling: Markups for electricity generation technologies  [T$/TWa]"
+    vm_PyPSAMarkup(ttot,all_regi,all_te)                            "PyPSA coupling: Markups for electricity generation technologies [T$/TWa]"
     vm_PyPSAMarkupDemand(ttot,all_regi,all_te)                      "PyPSA coupling: Markups for electricity consumption technologies [T$/TWa]"
 ;
 $endif
@@ -185,6 +190,10 @@ $endif
 $ifthen "%c32_pypsa_h2stor%" == "on"
     q32_h2turb(ttot,all_regi)                                       "PyPSA coupling: Equation for hydrogen turbine supply requirements"
     q32_elh2forh2turb(ttot,all_regi)                                "PyPSA coupling: Equation requiring electrolysis production for hydrogen turbines"
+$endif
+$ifthen "%c32_pypsa_btstor%" == "on"
+    q32_battery(ttot,all_regi)                                      "PyPSA coupling: Equation for battery discharge requirements"
+    q32_batinEQbatout(ttot,all_regi)                                "PyPSA coupling: Equation that equals capacities of battery charge and discharge"
 $endif
     q32_gridLosses(ttot,all_regi)                                   "PyPSA coupling: Equation to calculate grid losses"
 ;

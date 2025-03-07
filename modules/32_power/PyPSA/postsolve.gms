@@ -233,6 +233,7 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_StoreTrans_Cap=storage_and_transmission_capacities;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_StoreTrans_CF=storage_and_transmission_capacity_factors;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_H2TurbRel=h2turb_storage_relative;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_BatteryDischargeRel=battery_storage_relative;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Trade=crossborder_flow;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_TradePriceImport=crossborder_price_import;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_TradePriceExport=crossborder_price_export;
@@ -240,7 +241,7 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Potential=potential;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_AF=availability_factor;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_ElecPriceElectrolysis=electricity_price_electrolysis;
-  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_gridLossesRel=grid_loss_relative;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_gridLossesRel=grid_loss_relative;
 
   !! Temporary workaround to avoid overinvestment in REMIND:
   !! Limit markup to between -50 and +150 EUR/MWh

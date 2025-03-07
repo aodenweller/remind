@@ -128,17 +128,35 @@ $ifthen "%c32_pypsa_h2stor%" == "on"
 if ((sm_PyPSA_eq eq 1),
   !! Fix capacitiy factor of electrolysis to PyPSA value
   vm_capFac.fx(tPy32,regPy32,"elh2") = p32_PyPSA_StoreTrans_CF(tPy32,regPy32,"H2 electrolysis");
-  !! Allow hydrogen turbine capacity factor to be lower than PyPSA value
-  !! q32_h2turb fixes the production of h2turb, but due to adjustment costs
-  !! REMIND might build more capacity early on but shouldn't be forced to use it more than PyPSA does
-  vm_capFac.up(tPy32,regPy32,"h2turb") = p32_PyPSA_StoreTrans_CF(tPy32,regPy32,"H2 fuel cell");
-  !! Fix hydrogen   
+  !! Fix capacitiy factor of hydrogen turbines to PyPSA value
+  vm_capFac.fx(tPy32,regPy32,"h2turb") = p32_PyPSA_StoreTrans_CF(tPy32,regPy32,"H2 fuel cell");
+  !! Lower bound of hydrogen underground storage capacity from PyPSA value
   vm_cap.lo(tPy32,regPy32,"h2stor","1") = p32_PyPSA_StoreTrans_Cap(tPy32,regPy32,"H2") / 1E6;  !! MWh to TWh
   !! Enable h2 turbines in all modelled years
   vm_deltaCap.up(tPy32,regPy32,"h2turb","1") = Inf;
   !! Disable hydrogen storage before cm_startyear
   vm_deltaCap.fx(ttot,regPy32,"h2stor","1")$(ttot.val lt cm_startyear) = 0;
   vm_cap.fx(ttot,regPy32,"h2stor","1")$(ttot.val lt cm_startyear) = 0;
+);
+$endif
+
+$ifthen "%c32_pypsa_btstor%" == "on"
+if ((sm_PyPSA_eq eq 1),
+  !! Fix capacity factor of battery charger to PyPSA value
+  vm_capFac.lo(tPy32,regPy32,"btin") = 0.5*p32_PyPSA_StoreTrans_CF(tPy32,regPy32,"battery charger");
+  vm_capFac.up(tPy32,regPy32,"btin") = p32_PyPSA_StoreTrans_CF(tPy32,regPy32,"battery charger");
+  !! Fix capacity factor of battery discharger to PyPSA value
+  vm_capFac.lo(tPy32,regPy32,"btout") = 0.5*p32_PyPSA_StoreTrans_CF(tPy32,regPy32,"battery discharger");
+  vm_capFac.up(tPy32,regPy32,"btout") = p32_PyPSA_StoreTrans_CF(tPy32,regPy32,"battery discharger");
+  !! Lower bound of battery storage capacity from PyPSA value
+  vm_cap.lo(tPy32,regPy32,"btstor","1") = p32_PyPSA_StoreTrans_Cap(tPy32,regPy32,"battery") / 1E6;  !! MWh to TWh
+  !! Disable all kinds of storage before cm_startyear
+  vm_deltaCap.fx(ttot,regPy32,"btin","1")$(ttot.val lt cm_startyear) = 0;
+  vm_cap.fx(ttot,regPy32,"btin","1")$(ttot.val lt cm_startyear) = 0;
+  vm_deltaCap.fx(ttot,regPy32,"btout","1")$(ttot.val lt cm_startyear) = 0;
+  vm_cap.fx(ttot,regPy32,"btout","1")$(ttot.val lt cm_startyear) = 0;
+  vm_deltaCap.fx(ttot,regPy32,"btstor","1")$(ttot.val lt cm_startyear) = 0;
+  vm_cap.fx(ttot,regPy32,"btstor","1")$(ttot.val lt cm_startyear) = 0;
 );
 $endif
 

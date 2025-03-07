@@ -26,20 +26,20 @@ $endif
     tePy32(all_te)              "Electricity generation technologies coupled to PyPSA"
         /biochp, bioigcc, bioigccc, ngcc, ngccc, gaschp, igcc, igccc, pc, coalchp, tnrs, fnrs, ngt, windoff, dot, windon, hydro, spv/  !! TODO: What about CSP and geohdr?
 
-    teStoreTransPy32(all_te)    "Storage and transmission technologies coupled to PyPSA"
-        /elh2, h2turb, h2stor/
-
     tePyDisp32(all_te)          "Dispatchable electricity technologies coupled to PyPSA (without grades), used for peak residual load"
         /biochp, bioigcc, bioigccc, ngcc, ngccc, gaschp, igcc, igccc, pc, coalchp, tnrs, fnrs, ngt, dot/
 
     tePyVRE32(all_te)           "Variable renewable electricity technologies coupled to PyPSA (with grades), used for potentials if applicable"
         /windoff, windon, hydro, spv/
-    
-    teStorePy32(all_te)         "Storage technologies coupled to PyPSA (not conversion, but size of store in TWa)"
-        /h2stor/
 
     entyPePy32(all_enty)        "Primary energy carriers for which prices are coupled to PyPSA"
-        /peoil, pegas, pecoal, peur, pehyd, pewin, pesol, pebiolc/ !! TODO: Remove pehyd, pewin, pesol
+        /peoil, pegas, pecoal, peur, pebiolc/
+
+    teStoreTransPy32(all_te)    "Storage and transmission technologies coupled to PyPSA"
+        /elh2, h2turb, h2stor, btin, btout, btstor/
+
+    teStorePy32(all_te)         "Storage technologies coupled to PyPSA (not conversion, but size of store in TWa)"
+        /h2stor, btstor/
 
     rep32                       "Generic set for PyPSA reporting"
         /1*20/
