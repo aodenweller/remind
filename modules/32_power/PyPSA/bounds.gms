@@ -28,7 +28,7 @@ $else
   v32_storloss.fx(tPy32,regPy32,teVRE) = 0;
 $endif
 
-* Calculate value factor to parametrise the pre-factor equation for markups
+* Calculate value factor to parametrise the anticipation factor equation for markups
 $ifthen "%cm_pypsa_markup%" == "on"
   p32_PyPSA_ValueFactor(tPy32,regPy32,tePy32)$(p32_PyPSA_LoadPriceAvg(tPy32,regPy32,"AC") ne 0) = 
     p32_PyPSA_MVAvg(tPy32,regPy32,tePy32) / p32_PyPSA_LoadPriceAvg(tPy32,regPy32,"AC");
@@ -150,7 +150,7 @@ if ((sm_PyPSA_eq eq 1),
   vm_capFac.up(tPy32,regPy32,"btout") = p32_PyPSA_StoreTrans_CF(tPy32,regPy32,"battery discharger");
   !! Lower bound of battery storage capacity from PyPSA value
   vm_cap.lo(tPy32,regPy32,"btstor","1") = p32_PyPSA_StoreTrans_Cap(tPy32,regPy32,"battery") / 1E6;  !! MWh to TWh
-  !! Disable all kinds of storage before cm_startyear
+  !! Disable all battery technologies only forced in from PyPSA before cm_startyear
   vm_deltaCap.fx(ttot,regPy32,"btin","1")$(ttot.val lt cm_startyear) = 0;
   vm_cap.fx(ttot,regPy32,"btin","1")$(ttot.val lt cm_startyear) = 0;
   vm_deltaCap.fx(ttot,regPy32,"btout","1")$(ttot.val lt cm_startyear) = 0;
@@ -160,9 +160,9 @@ if ((sm_PyPSA_eq eq 1),
 );
 $endif
 
-*** Restrict v32_shSeElDisp between 0 and 1
-v32_shSeElDisp.lo(tPy32,regPy32,tePy32) = 0;
-v32_shSeElDisp.up(tPy32,regPy32,tePy32) = 1;
+*** Restrict v32_shPe2seel between 0 and 1
+v32_shPe2seel.lo(tPy32,regPy32,tePy32) = 0;
+v32_shPe2seel.up(tPy32,regPy32,tePy32) = 1;
 
 *** Set starting values for vm_PyPSAMarkup
 $ifthen "%cm_pypsa_markup%" == "on"
@@ -197,7 +197,7 @@ if ((sm_PyPSA_eq eq 1),
   vm_Mport.l(tPy32,regPy32,"seel") = sum(regPy32_2, p32_PyPSA_Trade(tPy32,regPy32_2,regPy32)) / sm_TWa_2_MWh;
   vm_Xport.l(tPy32,regPy32,"seel") = sum(regPy32_2, p32_PyPSA_Trade(tPy32,regPy32,regPy32_2)) / sm_TWa_2_MWh;
   !! Set starting value of v32_shSeElRegi
-  v32_shSeElRegi.l(tPy32,regPy32) = v32_usableSeDisp.l(tPy32,regPy32,"seel") / sum(regPy32_2, v32_usableSeDisp.l(tPy32,regPy32_2,"seel"));
+  v32_shSeElRegi.l(tPy32,regPy32) = v32_pe2seel.l(tPy32,regPy32) / sum(regPy32_2, v32_pe2seel.l(tPy32,regPy32_2));
   !! Read in electricity trade prices
   !! These are weighted averages of the prices of the regions that are traded with
   !! Remember to also change the seTrade set to include "seel" as otherwise the budget equation won't see these costs
@@ -212,12 +212,12 @@ $ifthen.c32_pypsa_trade_prices "%c32_pypsa_trade_prices%" == "abs"
     / sum(regPy32_2, p32_PyPSA_Trade(tPy32,regPy32,regPy32_2)) * sm_TWa_2_MWh / 1e12;
 $endif.c32_pypsa_trade_prices
   !! Set starting value and restrict v32_shSeELTradeImport
-  v32_shSeELTradeImport.l(tPy32,regPy32)$(v32_usableSeDisp.l(tPy32,regPy32,"seel") gt sm_eps) =
-    vm_Mport.l(tPy32,regPy32,"seel") / v32_usableSeDisp.l(tPy32,regPy32,"seel");
+  v32_shSeELTradeImport.l(tPy32,regPy32)$(v32_pe2seel.l(tPy32,regPy32) gt sm_eps) =
+    vm_Mport.l(tPy32,regPy32,"seel") / v32_pe2seel.l(tPy32,regPy32);
   v32_shSeELTradeImport.up(tPy32,regPy32) = c32_pypsa_trade_max;
   !! Set starting value and restrict v32_shSeELTradeExport
-  v32_shSeELTradeExport.l(tPy32,regPy32)$(v32_usableSeDisp.l(tPy32,regPy32,"seel") gt sm_eps) =
-    vm_Xport.l(tPy32,regPy32,"seel") / v32_usableSeDisp.l(tPy32,regPy32,"seel");
+  v32_shSeELTradeExport.l(tPy32,regPy32)$(v32_pe2seel.l(tPy32,regPy32) gt sm_eps) =
+    vm_Xport.l(tPy32,regPy32,"seel") / v32_pe2seel.l(tPy32,regPy32);
   v32_shSeELTradeExport.up(tPy32,regPy32) = c32_pypsa_trade_max;
 );
 $endif.c32_pypsa_trade

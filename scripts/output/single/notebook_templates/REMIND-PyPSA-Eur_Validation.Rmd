@@ -121,6 +121,10 @@ pyResourcesDirs <- list.dirs(pyResourcesDir,
                              recursive = TRUE,
                              full.names = TRUE) %>%
   keep(str_detect(., "y\\d{4}$"))
+pyResourcesIterDirs <- list.dirs(pyResourcesDir,
+                                recursive = TRUE,
+                                full.names = TRUE) %>%
+  keep(str_detect(., "i\\d{1,}$"))
 # Get iteration from PyPSA-Eur validation directories
 pyIterations <- as.numeric(gsub(".*i([0-9]+).*", "\\1", pyValidationDirs)) %>%
   sort()
@@ -1686,7 +1690,7 @@ dataCO2PriceREMIND <- readREMINDgdx(
 
 # PyPSA data
 dataCO2PricePyPSA <- readPyPSAcsv(
-    paths = file.path(pyResultsDirs, "co2_price_scenarios.csv")) %>% 
+    paths = file.path(pyResourcesIterDirs, "co2_price_scenarios.csv")) %>% 
   # Extract the CO2 price from the opts columns which starts with Ep followed by a number of format 0.0
   mutate(value = as.numeric(str_extract(opts, "(?<=Ep)\\d+\\.\\d{1,2}")))
 
@@ -1814,7 +1818,7 @@ The following plots show the capacity factor.
 ToDo: This doesn't work properly for the case of "all regions" yet as the PyPSA capacity factors cannot simply be aggregated over regions.
 
 ```{r capacity factors generation}
-# REMIND capacity factors (pre-factor based)
+# REMIND capacity factors (ancitipation factor based)
 dataCapREMIND <- readREMINDgdx(
     paths = rmFiles,
     gdxVar = "vm_cap",
@@ -1826,12 +1830,11 @@ dataCapREMIND <- readREMINDgdx(
 
 dataUsableSeTeDispREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "v32_usableSeTeDisp",
-    columns = c("ttot" = "year", "all_regi" = "region", "all_enty" = "secarrier", "all_te" = "technology", "value" = "v32_usableSeTeDisp"),
+    gdxVar = "v32_pe2seelTe",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "v32_pe2seelTe"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = FALSE) %>%
-  filter(!(technology %in% c("elh2", "h2turb"))) %>%
-  select(-secarrier)
+  filter(!(technology %in% c("elh2", "h2turb")))
 
 # REMIND averaged capacity factors
 dataCapFacAvgREMIND <- readREMINDgdx(
@@ -1863,12 +1866,12 @@ for (r in regList){
            vm_cap != 0) %>%
     group_by(year, technology, iteration) %>%
     # First calculate capacity factor for each REMIND technology across all regions
-    summarise(capfac = sum(v32_usableSeTeDisp) / sum(vm_cap),
-              v32_usableSeTeDispRegSum = sum(v32_usableSeTeDisp)) %>%
+    summarise(capfac = sum(v32_pe2seelTe) / sum(vm_cap),
+              v32_pe2seelTeRegSum = sum(v32_pe2seelTe)) %>%
     revalue.levels(technology = rm2genTech) %>%
     group_by(year, technology, iteration) %>%
     # Second calculate weighted capacity factor for general technologies
-    summarise(capfac = sum(capfac * v32_usableSeTeDispRegSum) / sum(v32_usableSeTeDispRegSum)) %>%
+    summarise(capfac = sum(capfac * v32_pe2seelTeRegSum) / sum(v32_pe2seelTeRegSum)) %>%
     order.levels(technology = names(namesTech)) %>%
     rename(value = capfac)
 
@@ -1964,7 +1967,7 @@ for (r in regList){
 Markups and markdowns are read into REMIND from PyPSA-Eur. Markup = Average market value - Average electricity price
 
 ```{r markups}
-# REMIND (pre-factor based)
+# REMIND (anticipation factor based)
 dataMarkupREMIND <- readREMINDgdx(
     paths = rmFiles,
     gdxVar = "vm_PyPSAMarkup",
@@ -1975,18 +1978,17 @@ dataMarkupREMIND <- readREMINDgdx(
 
 dataGenREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "v32_usableSeTeDisp",
-    columns = c("ttot" = "year", "all_regi" = "region", "all_enty" = "secarrier", "all_te" = "technology", "value" = "v32_usableSeTeDisp"),
+    gdxVar = "v32_pe2seelTe",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "v32_pe2seelTe"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = FALSE,
-    recalcUnit = twa2twh) %>%
-  select(-secarrier)
+    recalcUnit = twa2twh)
 
 dataMarkupWeightedREMIND <- dataMarkupREMIND %>%
   right_join(dataGenREMIND, by = c("year", "region", "technology", "iteration")) %>%
   revalue.levels(technology = rm2genTech) %>%
   group_by(year, region, technology, iteration) %>%
-  summarise(value = sum(value * v32_usableSeTeDisp) / sum(v32_usableSeTeDisp)) %>%
+  summarise(value = sum(value * v32_pe2seelTe) / sum(v32_pe2seelTe)) %>%
   order.levels(technology = names(namesTech))
 
 # PyPSA-Eur
@@ -3966,17 +3968,17 @@ if (isTRUE(cfg$gms$c32_pypsa_trade == "on")) {
 }
 ```
 
-## Pre-factor/anticipation parametrisation
+## Anticipation parametrisation
 
 ### Generation shares of REMIND technologies
 
-Generation shares are not explicitly coupled between REMIND and PyPSA-Eur, but used to parametrise the pre-factor equations to avoid oscillations. If they don't converge, there is a always a distortion in the variables passed from PyPSA-Eur to REMIND.
+Generation shares are not explicitly coupled between REMIND and PyPSA-Eur, but used to parametrise the anticipation factor equations to avoid oscillations. If they don't converge, there is a always a distortion in the variables passed from PyPSA-Eur to REMIND.
 
 ```{r generation shares}
 
 dataGenShareREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "v32_shSeElDisp",
+    gdxVar = "v32_shPe2seel",
     columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "value"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = FALSE)
@@ -4028,7 +4030,7 @@ for (r in regions) {
 
 ### Generation shares of REMIND regions
 
-The following plots show the generation shares of REMIND regions. They are not explicitly coupled between REMIND and PyPSA-Eur, but used to parametrise the pre-factor equations for electricity trade. If they don't converge, there is a always a distortion in the electricity trade volume passed from PyPSA-Eur to REMIND.
+The following plots show the generation shares of REMIND regions. They are not explicitly coupled between REMIND and PyPSA-Eur, but used to parametrise the anticipation factor equations for electricity trade. If they don't converge, there is a always a distortion in the electricity trade volume passed from PyPSA-Eur to REMIND.
 
 ```{r generation region shares}
 
@@ -4469,11 +4471,10 @@ lcoe.co2 <- full_join(p_priceCO2, eta) %>%
 # Weights
 dataGenTechREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "v32_usableSeTeDisp",
-    columns = c("ttot" = "year", "all_regi" = "region", "all_enty" = "secarrier", "all_te" = "technology", "value" = "v32_usableSeTeDisp"),
+    gdxVar = "v32_pe2seelTe",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "v32_pe2seelTe"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
-    restoreZeros = FALSE) %>%
-  select(-secarrier)
+    restoreZeros = FALSE)
 
 # Toal LCOEs
 lcoeREMIND <- bind_rows(lcoe.investment, lcoe.fom, lcoe.vom, lcoe.fuel, lcoe.co2) %>%
@@ -4481,7 +4482,7 @@ lcoeREMIND <- bind_rows(lcoe.investment, lcoe.fom, lcoe.vom, lcoe.fuel, lcoe.co2
   full_join(dataGenTechREMIND) %>%
   revalue.levels(technology = rm2genTech) %>%
   group_by(year, region, technology, type, iteration) %>%
-  summarise(lcoe = sum(lcoe * v32_usableSeTeDisp) / sum(v32_usableSeTeDisp))
+  summarise(lcoe = sum(lcoe * v32_pe2seelTe) / sum(v32_pe2seelTe))
 
 # Market value = electricity price and markups
 dataElecPriceREMIND <- readREMINDgdx(
@@ -4530,7 +4531,7 @@ dataPricesREMIND <- bind_rows(dataElecPriceREMIND, dataElecPlusMarkupREMIND, dat
   full_join(dataGenTechREMIND) %>%
   revalue.levels(technology = rm2genTech) %>%
   group_by(year, region, technology, iteration, type) %>%
-  summarise(value = sum(value * v32_usableSeTeDisp) / sum(v32_usableSeTeDisp))
+  summarise(value = sum(value * v32_pe2seelTe) / sum(v32_pe2seelTe))
 
 colorsInvest <- c(
   "co2" = "#e41a1c",
@@ -4638,7 +4639,7 @@ lcoe.fuel <- dataCostsPyPSA %>%
 
 # PyPSA-Eur: CO2 costs
 dataCO2PricePyPSA <- readPyPSAcsv(
-    paths = file.path(pyResultsDirs, "co2_price_scenarios.csv")) %>% 
+    paths = file.path(pyResourcesIterDirs, "co2_price_scenarios.csv")) %>% 
   # Extract the CO2 price from the opts columns which starts with Ep followed by a number of format 0.0
   mutate(co2 = as.numeric(str_extract(opts, "(?<=Ep)\\d+\\.\\d{1,2}"))) %>%
   select(year, iteration, co2)
@@ -5181,12 +5182,12 @@ df['year'] = pd.to_numeric(df['year'])
 df['iteration'] = pd.to_numeric(df['iteration'])
 df = df.sort_values(by=['year', 'iteration'])
 
+# Only show the last iteration
+df = df[df['iteration'] == df['iteration'].max()]
+
 # Set the scale for the bus and line sizes
 bus_scale = 2e5
 line_scale = 3e3
-
-# Only show the last iteration
-df = df[df['iteration'] == df['iteration'].max()]
 
 # Iterate over iterations in df
 for iteration in df['iteration'].unique():
@@ -5616,6 +5617,9 @@ for iteration in df['iteration'].unique():
         installed_capex_cost = n.statistics.installed_capex(nice_names=False).to_frame()
         opex_cost = n.statistics.opex(nice_names=False).to_frame()
 
+        # Exclude H2 transfer to H2 demand REMIND links (can have costs due to noisy_costs)
+        opex_cost = opex_cost.drop(index=opex_cost.filter(like="H2 demand", axis="rows").index)
+
         # Calculate system costs
         system_cost = capex_cost.subtract(installed_capex_cost, fill_value=0).add(opex_cost, fill_value=0)
         system_cost = system_cost.reset_index()[["carrier", 0]].rename(columns={0: "cost"}).set_index("carrier")
@@ -5623,7 +5627,12 @@ for iteration in df['iteration'].unique():
         system_cost = system_cost.T
         
         # Objective value (total system costs) for cross checking
-        objective = n.objective
+
+        # Try to get objective, if not available leave empty
+        try:
+            objective = n.objective
+        except AttributeError:
+            objective = None
 
         # Show system costs
         ax = axs[counter // 5, counter % 5]
@@ -5635,7 +5644,8 @@ for iteration in df['iteration'].unique():
             title=f"Year: {row['year']}");
        
         # Add a cross for the value of n.objective
-        ax.scatter(x=0, y=objective, color='black', marker='x', s=10, label='Objective');
+        if objective is not None:
+            ax.scatter(x=0, y=objective, color='black', marker='x', s=10, label='Objective');
 
         # Remove x-axis label
         ax.set_xticks([])
@@ -5645,92 +5655,6 @@ for iteration in df['iteration'].unique():
 
         # Update global max for y-axis
         global_max = max(global_max, system_cost.values.sum())
-
-        # Collect handles and labels from the first subplot only
-        if counter == 0:
-            handles, labels = ax.get_legend_handles_labels()
-        
-        counter += 1
-
-    # Set the same y-axis limits for all subplots
-    for ax in axs.flat:
-        ax.set_ylim([0, 1.1*global_max])
-        
-    # Add one big heading to the entire plot for the iteration
-    fig.legend(handles, labels, loc='center left', bbox_to_anchor=(0.87, 0.5), ncol=1);
-    plt.tight_layout(rect=[0, 0, 0.85, 0.95]);  # Adjust the rect parameter to make space for the legend
-    fig.suptitle(f"Iteration {iteration}", fontsize=10, y=0.99)
-    plt.show();
-    plt.close(fig);
-
-```
-
-### System costs per MWh electricity
-
-This includes all electricity for final energy and for hydrogen production.
-
-```{python system costs per mwh, echo=FALSE, warning = FALSE, message = FALSE}
-
-# Variables to store handles and labels for the legend
-handles, labels = None, None
-
-# Iterate over iterations in df
-for iteration in df['iteration'].unique():
-        
-    # Create a figure with 3x5 subplots
-    fig, axs = plt.subplots(3, 5)
-    
-    # Counter to keep track of subplot index
-    counter = 0
-    
-    # Initialize variables to track global max for y-axis
-    global_max = float('-inf')
-
-    # Filter for the current iteration and then iterate over the years
-    for _, row in df[df['iteration'] == iteration].iterrows():
-        
-        # Load the PyPSA network
-        n = pypsa.Network(row['file_path'])
-        
-        capex_cost = n.statistics.capex(nice_names=False).to_frame()
-        installed_capex_cost = n.statistics.installed_capex(nice_names=False).to_frame()
-        opex_cost = n.statistics.opex(nice_names=False).to_frame()
-
-        # Calculate system costs
-        system_cost = capex_cost.subtract(installed_capex_cost, fill_value=0).add(opex_cost, fill_value=0)
-        system_cost = system_cost.reset_index()[["carrier", 0]].rename(columns={0: "cost"}).set_index("carrier")
-
-        system_cost = system_cost.T
-
-        # Get electricity load + electricity for additional hydrogen production
-        elec_load = n.statistics.energy_balance(comps="Load", bus_carrier="AC")
-        h2_load = n.statistics.energy_balance(comps="Load", bus_carrier="H2 demand REMIND")
-
-        # Get efficiency of electrolysis link
-        elec_eff = n.links.loc[n.links.carrier == "H2 electrolysis", "efficiency"].unique()[0]
-        elec_load_h2 = h2_load / elec_eff
-        total_elec_load = -(elec_load.values + elec_load_h2.values)[0]
-
-        # Calculate system costs per MWh electricity
-        system_cost_per_mwh = system_cost / total_elec_load
-
-        # Show system costs
-        ax = axs[counter // 5, counter % 5]
-        system_cost_per_mwh.plot(ax=ax,
-            kind="bar",
-            stacked=True,
-            color = [color_series[col] for col in system_cost.columns],
-            legend=False,
-            title=f"Year: {row['year']}");
-       
-        # Remove x-axis label
-        ax.set_xticks([])
-
-        # Make the title smaller
-        ax.title.set_fontsize(8)
-
-        # Update global max for y-axis
-        global_max = max(global_max, system_cost_per_mwh.values.sum())
 
         # Collect handles and labels from the first subplot only
         if counter == 0:
@@ -6091,18 +6015,17 @@ dataMarkupREMIND <- readREMINDgdx(
 
 dataGenREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "v32_usableSeTeDisp",
-    columns = c("ttot" = "year", "all_regi" = "region", "all_enty" = "secarrier", "all_te" = "technology", "value" = "v32_usableSeTeDisp"),
+    gdxVar = "v32_pe2seelTe",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "v32_pe2seelTe"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = FALSE,
-    recalcUnit = twa2twh) %>%
-  select(-secarrier)
+    recalcUnit = twa2twh)
 
 dataMarkupWeightedREMIND <- dataMarkupREMIND %>%
   right_join(dataGenREMIND, by = c("year", "region", "technology", "iteration")) %>%
   revalue.levels(technology = rm2genTech) %>%
   group_by(year, region, technology, iteration) %>%
-  summarise(value = sum(value * v32_usableSeTeDisp) / sum(v32_usableSeTeDisp)) %>%
+  summarise(value = sum(value * v32_pe2seelTe) / sum(v32_pe2seelTe)) %>%
   order.levels(technology = names(namesTech)) %>%
   filter(iteration == iter)
 
@@ -6345,7 +6268,7 @@ ggsave("capcomp_year_new.png", width = 30, height = 14, units = "cm", dpi = 300,
 # GENERATION
 dataGenREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "v32_usableSeTeDisp",
+    gdxVar = "v32_pe2seelTe",
     columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "value"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = FALSE,

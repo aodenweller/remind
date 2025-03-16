@@ -101,45 +101,45 @@ p32_phaseInElh2VREcap(t)$(t.val > 2035) = 1;
 ***                  PyPSA-Eur
 ***------------------------------------------------------------
 
-*** Technology-specific pre-factor values for capacity factors
-p32_preFactor_CF("DEU","biochp") = -0.5;
-p32_preFactor_CF("DEU","bioigcc") = -0.5;
-p32_preFactor_CF("DEU","bioigccc") = -0.5;
-p32_preFactor_CF("DEU","ngcc") = -1;
-p32_preFactor_CF("DEU","ngccc") = -1;
-p32_preFactor_CF("DEU","gaschp") = -1;
-p32_preFactor_CF("DEU","igcc") = -2;
-p32_preFactor_CF("DEU","igccc") = -2;
-p32_preFactor_CF("DEU","pc") = -2;
-p32_preFactor_CF("DEU","coalchp") = -2;
-p32_preFactor_CF("DEU","tnrs") = 0.2;
-p32_preFactor_CF("DEU","fnrs") = 0.2;
-p32_preFactor_CF("DEU","ngt") = -1;
-p32_preFactor_CF("DEU","windoff") = -0.2;
-p32_preFactor_CF("DEU","dot") = 0;
-p32_preFactor_CF("DEU","windon") = -0.2;
-p32_preFactor_CF("DEU","hydro") = 0;
-p32_preFactor_CF("DEU","spv") = -0.2;
+*** Technology-specific anticipation factor values for capacity factors
+p32_anticipation_CF(tPy32,"DEU","biochp") = -0.5;
+p32_anticipation_CF(tPy32,"DEU","bioigcc") = -0.5;
+p32_anticipation_CF(tPy32,"DEU","bioigccc") = -0.5;
+p32_anticipation_CF(tPy32,"DEU","ngcc") = -1;
+p32_anticipation_CF(tPy32,"DEU","ngccc") = -1;
+p32_anticipation_CF(tPy32,"DEU","gaschp") = -1;
+p32_anticipation_CF(tPy32,"DEU","igcc") = -2;
+p32_anticipation_CF(tPy32,"DEU","igccc") = -2;
+p32_anticipation_CF(tPy32,"DEU","pc") = -2;
+p32_anticipation_CF(tPy32,"DEU","coalchp") = -2;
+p32_anticipation_CF(tPy32,"DEU","tnrs") = 0.2;
+p32_anticipation_CF(tPy32,"DEU","fnrs") = 0.2;
+p32_anticipation_CF(tPy32,"DEU","ngt") = -1;
+p32_anticipation_CF(tPy32,"DEU","dot") = 0;
+p32_anticipation_CF(tPy32,"DEU","hydro") = 0;
+p32_anticipation_CF(tPy32,"DEU","windoff") = -0.4;
+p32_anticipation_CF(tPy32,"DEU","windon") = -0.4;
+p32_anticipation_CF(tPy32,"DEU","spv") = -0.4;
 
-*** Technology-specific pre-factor values for market values
-p32_preFactor_MV("DEU","biochp") = -4;
-p32_preFactor_MV("DEU","bioigcc") = -4;
-p32_preFactor_MV("DEU","bioigccc") = -4;
-p32_preFactor_MV("DEU","ngcc") = -8;
-p32_preFactor_MV("DEU","ngccc") = -8;
-p32_preFactor_MV("DEU","gaschp") = -8;
-p32_preFactor_MV("DEU","igcc") = -5;
-p32_preFactor_MV("DEU","igccc") = -5;
-p32_preFactor_MV("DEU","pc") = -5;
-p32_preFactor_MV("DEU","coalchp") = -5;
-p32_preFactor_MV("DEU","tnrs") = -1;
-p32_preFactor_MV("DEU","fnrs") = -1;
-p32_preFactor_MV("DEU","ngt") = -8;
-p32_preFactor_MV("DEU","windoff") = -0.5;
-p32_preFactor_MV("DEU","dot") = -2;
-p32_preFactor_MV("DEU","windon") = -0.5;
-p32_preFactor_MV("DEU","hydro") = -1;
-p32_preFactor_MV("DEU","spv") = -0.5;
+*** Technology-specific anticipation factor values for market values
+p32_anticipation_MV("DEU","biochp") = -4;
+p32_anticipation_MV("DEU","bioigcc") = -4;
+p32_anticipation_MV("DEU","bioigccc") = -4;
+p32_anticipation_MV("DEU","ngcc") = -8;
+p32_anticipation_MV("DEU","ngccc") = -8;
+p32_anticipation_MV("DEU","gaschp") = -8;
+p32_anticipation_MV("DEU","igcc") = -5;
+p32_anticipation_MV("DEU","igccc") = -5;
+p32_anticipation_MV("DEU","pc") = -5;
+p32_anticipation_MV("DEU","coalchp") = -5;
+p32_anticipation_MV("DEU","tnrs") = -1;
+p32_anticipation_MV("DEU","fnrs") = -1;
+p32_anticipation_MV("DEU","ngt") = -8;
+p32_anticipation_MV("DEU","windoff") = -0.5;
+p32_anticipation_MV("DEU","dot") = -2;
+p32_anticipation_MV("DEU","windon") = -0.5;
+p32_anticipation_MV("DEU","hydro") = -1;
+p32_anticipation_MV("DEU","spv") = -0.5;
 
 *** Write efficiencies into pm_eta_conv for btin and btout
 *** This is necessary, because in 05_initialCap/on/preloop.gms

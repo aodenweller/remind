@@ -218,6 +218,7 @@ all_te          "all energy technologies, including from modules"
         btin            "PyPSA coupling: Battery charging (inverter + balance of system) [TW]"
         btout           "PyPSA coupling: Battery discharging (inverter + balance of system) [TW]"
         btstor          "PyPSA coupling: Stationary battery storage capacity [TWh, not TWa]"
+*        grid            "PyPSA coupling: Transmission grid capacity [TW*km]"
         h22ch4          "Methanation, H2 + 4 CO2 --> CH4 + 2 H20"
         MeOH            "Methanol production /liquid fuel, CO2 hydrogenation, CO2 + 3 H2 --> CH3OH + H20"
         tdels           "transmission and distribution for electricity to stationary users"
@@ -1217,10 +1218,6 @@ te(all_te)              "energy technologies"
         fnrs            "fast nuclear reactor (simple structure)"
         elh2            "hydrogen elecrolysis"
         h2turb          "hydrogen turbine for electricity production"
-        h2stor          "PyPSA coupling: Hydrogen underground storage [TWh, not TWa]"
-        btin            "PyPSA coupling: Battery charging [TW]"
-        btout           "PyPSA coupling: Battery discharging [TW]"
-        btstor          "PyPSA coupling: Stationary battery storage capacity [TWh, not TWa]"
         elh2VRE         "dummy technology: hydrogen electrolysis; to demonstrate the capacities and SE flows inside the storXXX technologies"
         h2turbVRE       "dummy technology: hydrogen turbine for electricity production; to demonstrate the capacities and SE flows inside the storXXX technologies"
         h2curt          "hydrogen production from curtailment"
@@ -1278,6 +1275,13 @@ $ifthen.cm_subsec_model_steel "%cm_subsec_model_steel%" == "processes"
         bfcc            "Blast furnace CCS"
         idrcc           "Direct reduction CCS"
 $endif.cm_subsec_model_steel
+$ifthen.pypsa "%power%" == "PyPSA"
+        h2stor          "PyPSA coupling: Hydrogen underground storage [TWh, not TWa]"
+        btin            "PyPSA coupling: Battery charging [TW]"
+        btout           "PyPSA coupling: Battery discharging [TW]"
+        btstor          "PyPSA coupling: Stationary battery storage capacity [TWh, not TWa]"
+*        grid            "PyPSA coupling: Transmission grid capacity [TW*km]"
+$endif.pypsa
 /
 teAdj(all_te)           "technologies with adjustment costs on capacity additions"
 /
@@ -1354,6 +1358,13 @@ $ifthen.cm_subsec_model_steel "%cm_subsec_model_steel%" == "processes"
   bfcc            "Blast furnace CCS"
   idrcc           "Direct reduction CCS"
 $endif.cm_subsec_model_steel
+$ifthen.pypsa "%power%" == "PyPSA"
+        h2stor          "PyPSA coupling: Hydrogen underground storage [TWh, not TWa]"
+        btin            "PyPSA coupling: Battery charging [TW]"
+        btout           "PyPSA coupling: Battery discharging [TW]"
+        btstor          "PyPSA coupling: Stationary battery storage capacity [TWh, not TWa]"
+***        grid           "PyPSA coupling: Transmission grid capacity [TW*km]"
+$endif.pypsa
 /
 
 ***-----------------------------------------------------------------------------
@@ -1568,8 +1579,11 @@ teNoTransform(all_te) "all technologies that do not transform energy but still h
 ***       gridwind        "grid between areas with high wind onshore production and the rest"
        gridwindon      "grid between areas with high wind onshore production and the rest"
        gridwindoff     "grid between areas with high wind offshore production and the rest"
-       h2stor          "PyPSA coupling: Hydrogen underground storage [TWh, not TWa]"
-       btstor          "PyPSA coupling: Stationary battery storage capacity [TWh, not TWa]"
+$ifthen.pypsa "%power%" == "PyPSA"
+        h2stor          "PyPSA coupling: Hydrogen underground storage [TWh, not TWa]"
+        btstor          "PyPSA coupling: Stationary battery storage capacity [TWh, not TWa]"
+*        grid            "PyPSA coupling: Transmission grid capacity [TW*km]"
+$endif.pypsa
 /
 teRegTechCosts(all_te) "all technologies for which we differantiate tech costs"
 /
@@ -1589,10 +1603,12 @@ teRegTechCosts(all_te) "all technologies for which we differantiate tech costs"
        csp
 ***       wind
        windon
-       h2stor
-       btin
-       btout
-       btstor
+$ifthen.pypsa "%power%" == "PyPSA"
+        h2stor          "PyPSA coupling: Hydrogen underground storage [TWh, not TWa]"
+        btin            "PyPSA coupling: Battery charging [TW]"
+        btout           "PyPSA coupling: Battery discharging [TW]"
+        btstor          "PyPSA coupling: Stationary battery storage capacity [TWh, not TWa]"
+$endif.pypsa
 /
 
 teFlex(all_te)       "all technologies which can benefit from flexibility tax"
@@ -2537,8 +2553,10 @@ se2se(all_enty,all_enty,all_te)  "map secondary energy to secondary energy using
         seh2.seel.h2turb
         seel.seh2.elh2VRE
         seh2.seel.h2turbVRE
+$ifthen.pypsa "%power%" == "PyPSA"
         seel.seelstor.btin
         seelstor.seel.btout
+$endif.pypsa
 /
 
 se2fe(all_enty,all_enty,all_te)   "map secondary energy to end-use energy using a technology"
@@ -2850,7 +2868,10 @@ teSe2rlf(all_te,rlf)        "mapping for techologies to grades. Currently, the i
       (windon,windoff,spv,csp,refliq,hydro,geohe,geohdr,solhe,ngcc,ngccc,ngt,gaschp,gashp,gash2,gash2c,gastr,gasftrec,gasftcrec,dot,
        igcc,igccc,pc,coaltr,coalgas,coalh2,coalh2c,coalchp,coalhp,coalftrec,coalftcrec,
        biotr,biotrmod,biogas,biogasc,bioftrec,bioftcrec,bioh2,bioh2c,biohp,biochp,bioigcc,bioigccc,
-       elh2,h2turb,elh2VRE,h2turbVRE,bioethl,bioeths,biodiesel,tnrs,fnrs,btin,btout
+       elh2,h2turb,elh2VRE,h2turbVRE,bioethl,bioeths,biodiesel,tnrs,fnrs
+$ifthen.pypsa "%power%" == "PyPSA"
+        ,btin,btout
+$endif.pypsa
        ) . 1
 /
 
@@ -2888,10 +2909,13 @@ teCCS2rlf(all_te,rlf)     "mapping for CCS technologies to grades"
       (ccsinje) . 1
 /
 
-teNoTransform2rlf(all_te,rlf)         "mapping for no transformation technologies to grades"
-/
-*** storwind, gridwind
-      (storspv,storcsp,storwindon,storwindoff,gridwindon,gridwindoff,gridspv,gridcsp,h2curt,h2stor,btstor) . 1
+teNoTransform2rlf(all_te,rlf) "mapping for no transformation technologies to grades"
+/ 
+    (storspv,storcsp,storwindon,storwindoff,gridwindon,gridwindoff,gridspv,gridcsp,h2curt
+$ifthen.pypsa "%power%" == "PyPSA"
+        ,h2stor,btstor
+$endif.pypsa
+    ) . 1
 /
 
 

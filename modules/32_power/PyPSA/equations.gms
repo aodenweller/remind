@@ -368,59 +368,58 @@ q32_load(t,regi,enty2)$(tPy32(t) and regPy32(regi) and sameas(enty2,"seel"))..
 ***------------------------------------------------------------
 ***            REMIND to PyPSA-Eur: Helper equations
 ***------------------------------------------------------------
-*** TODO: Clean up
 
-*** Calculate domestic generation of electricity from PE
-q32_usableSeDisp(t,regi,entySe)$(tPy32(t) and regPy32(regi) and sameas(entySe,"seel"))..
-	v32_usableSeDisp(t,regi,entySe)
+*** Calculate generation of secondary energy electricity (seel) from PE
+q32_pe2seel(t,regi)$(tPy32(t) and regPy32(regi))..
+	v32_pe2seel(t,regi)
 	=e=
-	sum(pe2se(enty,entySe,te)$(tePy32(te)), vm_prodSe(t,regi,enty,entySe,te))
+	sum(pe2se(enty,"seel",tePy32), vm_prodSe(t,regi,enty,"seel",tePy32))
 ;
 
-*** Calculate domestic generation of electricity from PE by technology
-q32_usableSeTeDisp(t,regi,entySe,te)$(tPy32(t) and regPy32(regi) and sameas(entySe,"seel") AND tePy32(te))..
- 	v32_usableSeTeDisp(t,regi,entySe,te)
+*** Calculate generation of secondary energy electricity (seel) from PE by technology
+q32_pe2seelTe(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te))..
+ 	v32_pe2seelTe(t,regi,te)
  	=e=
- 	sum(pe2se(enty,entySe,te), vm_prodSe(t,regi,enty,entySe,te) )
+ 	sum(pe2se(enty,"seel",te), vm_prodSe(t,regi,enty,"seel",te) )
 ;
 
-*** Calculate electricity generation shares by technology
-q32_shSeElDisp(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te))..
-  v32_shSeElDisp(t,regi,te) * v32_usableSeDisp(t,regi,"seel")
-  =e=
-  v32_usableSeTeDisp(t,regi,"seel",te)
+*** Calculate shares of generation of secondary energy electricity (seel) from PE by technology
+q32_shPe2seel(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te))..
+    v32_shPe2seel(t,regi,te) * v32_pe2seel(t,regi)
+    =e=
+    v32_pe2seelTe(t,regi,te)
 ;
 
 ***------------------------------------------------------------
 ***            PyPSA-Eur to REMIND: Capacity factors
 ***------------------------------------------------------------
 *** Equation to set capacity factors with anticipation factors.
-*** This equation basically requires that v32_usableSeTeDisp / vm_cap = p32_PyPSA_CF
+*** This equation basically requires that v32_pe2seelTe / vm_cap = p32_PyPSA_CF
 *** The reason why we cannot simply set vm_capFac is because REMIND has different grades (dimension "rlf")
 *** with different pre-assigned capacity factors, which we don't want to deal with.
 *** Instead, we free vm_capFac (in bounds.gms) and use it as a correction factor. 
-*** The pre-factor should depend on the technology:
+*** The anticipation factor should depend on the technology:
 *** (1) For baseload technologies: When the share increases, the capacity factor increases.
 *** (2) For peaker technologies and VREs: When the share increases, the capacity factor decreases.
-*** There are two parameters we need to set to define the pre-factor:
+*** There are two parameters we need to set to define the anticipation factor:
 *** (i) Cutoff value between (1) and (2) in terms of the capacity factor. Currently set to 0.5.
-*** (ii) Slope of the pre-factor. Currently set to 0.5.
+*** (ii) Slope of the anticipation factor. Currently set to 0.5.
 $ifthen.c32_pypsa_capfac "%c32_pypsa_capfac%" == "on"
 q32_capFac(t,regi,te)$(tPy32(t) and regPy32(regi) AND tePy32(te) AND (sm_PyPSA_eq eq 1) AND NOT sameas(te, "hydro"))..
-  v32_usableSeTeDisp(t,regi,"seel",te)
+  v32_pe2seelTe(t,regi,te)
   =e=
     vm_cap(t,regi,te,"1")
-$ifthen.c32_pypsa_preFac "%c32_pypsa_preFac%" == "on"
-$ifthen.c32_pypsa_preFacManual "%c32_pypsa_preFacManual%" == "on"
-  * p32_PyPSA_CFAvg(t,regi,te) * ( 1 + s32_preFacFadeOut * p32_preFactor_CF(regi,te) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
-$elseif.c32_pypsa_preFacManual "%c32_pypsa_preFacManual%" == "off"
-  * (   p32_PyPSA_CFAvg(t,regi,te) * ( 1 + s32_preFacFadeOut * 0.5 * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )$(p32_PyPSA_CFAvg(t,regi,te) ge 0.5)
-      + p32_PyPSA_CFAvg(t,regi,te) * ( 1 - s32_preFacFadeOut * 0.5 * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )$(p32_PyPSA_CFAvg(t,regi,te) lt 0.5)
+$ifthen.c32_pypsa_anticipation "%c32_pypsa_anticipation%" == "on"
+$ifthen.c32_pypsa_anticipationManual "%c32_pypsa_anticipationManual%" == "on"
+  * p32_PyPSA_CFAvg(t,regi,te) * ( 1 + s32_anticipationFactorFadeOut * p32_anticipation_CF(t,regi,te) * ( v32_shPe2seel(t,regi,te) - p32_PyPSA_shPe2seel(t,regi,te) ) )
+$elseif.c32_pypsa_anticipationManual "%c32_pypsa_anticipationManual%" == "off"
+  * (   p32_PyPSA_CFAvg(t,regi,te) * ( 1 + s32_anticipationFactorFadeOut * 0.5 * ( v32_shPe2seel(t,regi,te) - p32_PyPSA_shPe2seel(t,regi,te) ) )$(p32_PyPSA_CFAvg(t,regi,te) ge 0.5)
+      + p32_PyPSA_CFAvg(t,regi,te) * ( 1 - s32_anticipationFactorFadeOut * 0.5 * ( v32_shPe2seel(t,regi,te) - p32_PyPSA_shPe2seel(t,regi,te) ) )$(p32_PyPSA_CFAvg(t,regi,te) lt 0.5)
     )
-$endif.c32_pypsa_preFacManual
-$elseif.c32_pypsa_preFac "%c32_pypsa_preFac%" == "off"
+$endif.c32_pypsa_anticipationManual
+$elseif.c32_pypsa_anticipation "%c32_pypsa_anticipation%" == "off"
   * p32_PyPSA_CFAvg(t,regi,te)
-$endif.c32_pypsa_preFac
+$endif.c32_pypsa_anticipation
 ;
 $endif.c32_pypsa_capfac
 
@@ -440,15 +439,15 @@ $ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
 q32_MarkUp(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (sm_PyPSA_eq eq 1))..
 	vm_PyPSAMarkup(t,regi,te)
 	=e=
-$ifthen.c32_pypsa_preFac "%c32_pypsa_preFac%" == "on"
-$ifthen.c32_pypsa_preFacManual "%c32_pypsa_preFacManual%" == "on"
-    ( p32_PyPSA_MarkupAvg(t,regi,te) + abs(p32_PyPSA_MarkupAvg(t,regi,te)) * s32_preFacFadeOut * p32_preFactor_MV(regi,te) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
-$elseif.c32_pypsa_preFacManual "%c32_pypsa_preFacManual%" == "off"
-    ( p32_PyPSA_MarkupAvg(t,regi,te) + abs(p32_PyPSA_MarkupAvg(t,regi,te)) * s32_preFacFadeOut * (-p32_PyPSA_ValueFactor(t,regi,te)) * ( v32_shSeElDisp(t,regi,te) - p32_PyPSA_shSeEl(t,regi,te) ) )
-$endif.c32_pypsa_preFacManual
-$elseif.c32_pypsa_preFac "%c32_pypsa_preFac%" == "off"
+$ifthen.c32_pypsa_anticipation "%c32_pypsa_anticipation%" == "on"
+$ifthen.c32_pypsa_anticipationManual "%c32_pypsa_anticipationManual%" == "on"
+    ( p32_PyPSA_MarkupAvg(t,regi,te) + abs(p32_PyPSA_MarkupAvg(t,regi,te)) * s32_anticipationFactorFadeOut * p32_anticipation_MV(regi,te) * ( v32_shPe2seel(t,regi,te) - p32_PyPSA_shPe2seel(t,regi,te) ) )
+$elseif.c32_pypsa_anticipationManual "%c32_pypsa_anticipationManual%" == "off"
+    ( p32_PyPSA_MarkupAvg(t,regi,te) + abs(p32_PyPSA_MarkupAvg(t,regi,te)) * s32_anticipationFactorFadeOut * (-p32_PyPSA_ValueFactor(t,regi,te)) * ( v32_shPe2seel(t,regi,te) - p32_PyPSA_shPe2seel(t,regi,te) ) )
+$endif.c32_pypsa_anticipationManual
+$elseif.c32_pypsa_anticipation "%c32_pypsa_anticipation%" == "off"
     p32_PyPSA_MarkupAvg(t,regi,te)
-$endif.c32_pypsa_preFac
+$endif.c32_pypsa_anticipation
   * sm_TWa_2_MWh / 1e12
 ;
 $endif.cm_pypsa_markup
@@ -458,18 +457,18 @@ $endif.cm_pypsa_markup
 ***------------------------------------------------------------
 *** Equation that requires the minimum dispatchable capacity for peak residual load.
 *** This constraint is formulated relative to the average load, v32_load [TWa/a].
-*** The pre-factor can be based on the following intuition:
+*** The anticipation factor can be based on the following intuition:
 *** If the sum of VRE shares increases, peak residual load decreases.
 *** However, since VREs have a small capacity credit, this effect is also small.
-*** Currently deactivate pre-factors.
+*** Currently deactivate anticipation factors.
 $ifthen "%c32_pypsa_peakcap%" == "on"
 q32_PeakResCap(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
   sum(tePyDisp32, vm_cap(t,regi,tePyDisp32, "1"))
   =g=
     p32_PyPSA_PeakResLoadRel(t,regi)
-*$ifthen.c32_pypsa_preFac "%c32_pypsa_preFac%" == "on"
-*    * ( 1 - 0.3 * ( sum(tePyVRE32, v32_shSeElDisp(t,regi,tePyVRE32) - p32_PyPSA_shSeEl(t,regi,tePyVRE32)) ) )
-*$endif.c32_pypsa_preFac
+*$ifthen.c32_pypsa_anticipation "%c32_pypsa_anticipation%" == "on"
+*    * ( 1 - 0.3 * ( sum(tePyVRE32, v32_shPe2seel(t,regi,tePyVRE32) - p32_PyPSA_shPe2seel(t,regi,tePyVRE32)) ) )
+*$endif.c32_pypsa_anticipation
   * v32_load(t,regi)
 ;
 $endif
@@ -560,6 +559,7 @@ q32_gridLosses(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
 ***------------------------------------------------------------
 *** This is the equivalent to supply-side markups and can be regarded as demand-side markups.
 *** Currently this only includes electricity prices paid by electrolysis.
+*** vm_PyPSAMarkupDemand is used in 21_tax/on to subsidise or penalise technologies.
 q32_MarkUpDemand(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (sm_PyPSA_eq eq 1))..
   vm_PyPSAMarkupDemand(t,regi,"elh2")
   =e=
@@ -575,9 +575,9 @@ q32_MarkUpDemand(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (sm_P
 $ifthen.c32_pypsa_trade "%c32_pypsa_trade%" == "on"
 * Parametrise anticipation for electricity trade
 q32_shSeElRegi(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
-  v32_shSeElRegi(t,regi) * ( p32_usableSeDispForeign(t,regi) + v32_usableSeDisp(t,regi,"seel") )
+  v32_shSeElRegi(t,regi) * ( p32_usableSeDispForeign(t,regi) + v32_pe2seel(t,regi) )
   =e=
-  v32_usableSeDisp(t,regi,"seel")
+  v32_pe2seel(t,regi)
 ;
 *** The anticipation is based on the following intuition:
 *** If the electricity generation share of a region (relative to the sum of generation in all regions) increases,
@@ -591,7 +591,7 @@ q32_TradeImport(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
   =e=
     sum(regPy32, p32_PyPSA_Trade(t,regPy32,regi)) * (1 / sm_TWa_2_MWh)
 $ifthen "%c32_pypsa_trade_anticipation%" == "on"
-  * ( 1 - s32_preFacFadeOut * 0.2 * ( v32_shSeElRegi(t,regi) - p32_PyPSA_shSeElRegi(t,regi) ) )
+  * ( 1 - s32_anticipationFactorFadeOut * 0.2 * ( v32_shSeElRegi(t,regi) - p32_PyPSA_shPe2seelRegi(t,regi) ) )
 $endif
 ;
 
@@ -601,7 +601,7 @@ q32_TradeExport(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
   =e=
     sum(regPy32, p32_PyPSA_Trade(t,regi,regPy32)) * (1 / sm_TWa_2_MWh)
 $ifthen "%c32_pypsa_trade_anticipation%" == "on"
-  * ( 1 + s32_preFacFadeOut * 0.2 * ( v32_shSeElRegi(t,regi) - p32_PyPSA_shSeElRegi(t,regi) ) )
+  * ( 1 + s32_anticipationFactorFadeOut * 0.2 * ( v32_shSeElRegi(t,regi) - p32_PyPSA_shPe2seelRegi(t,regi) ) )
 $endif
 ;
 
@@ -615,7 +615,7 @@ q32_TradeImport(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
     sum(regPy32, p32_PyPSA_Trade(t,regPy32,regi)) * (1 / sm_TWa_2_MWh)
   * v32_usableSeDispNet(t,regi,"seel")
 $ifthen "%c32_pypsa_trade_anticipation%" == "on"
-  * ( 1 - s32_preFacFadeOut * 0.5 * ( v32_shSeElRegi(t,regi) - p32_PyPSA_shSeElRegi(t,regi) ) )
+  * ( 1 - s32_anticipationFactorFadeOut * 0.5 * ( v32_shSeElRegi(t,regi) - p32_PyPSA_shPe2seelRegi(t,regi) ) )
 $endif
 ;
 
@@ -628,7 +628,7 @@ q32_TradeExport(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
     sum(regPy32, p32_PyPSA_Trade(t,regi,regPy32)) * (1 / sm_TWa_2_MWh)
   * v32_usableSeDispNet(t,regi,"seel")
 $ifthen "%c32_pypsa_trade_anticipation%" == "on"
-  * ( 1 + s32_preFacFadeOut * 0.5 * ( v32_shSeElRegi(t,regi) - p32_PyPSA_shSeElRegi(t,regi) ) )
+  * ( 1 + s32_anticipationFactorFadeOut * 0.5 * ( v32_shSeElRegi(t,regi) - p32_PyPSA_shPe2seelRegi(t,regi) ) )
 $endif
 ;
 

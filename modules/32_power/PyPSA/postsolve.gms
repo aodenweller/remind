@@ -39,10 +39,10 @@ if ((sm_PyPSA_eq eq 0 AND c32_checkPrice eq 1),
       break;
     );
   );
-*** If prefactors are used, check that v32_shSeElDisp is within reasonable bounds
-$ifthen "%c32_pypsa_preFac%" == "on"
+*** If anticipation factors are used, check that v32_shPe2seel is within reasonable bounds
+$ifthen "%c32_pypsa_anticipation%" == "on"
   loop ((tPy32,regPy32),
-    if ((sum(tePy32, v32_shSeElDisp.l(tPy32,regPy32,tePy32)) gt 1.5) OR (sum(tePy32, v32_shSeElDisp.l(tPy32,regPy32,tePy32)) lt 0.5),
+    if ((sum(tePy32, v32_shPe2seel.l(tPy32,regPy32,tePy32)) gt 1.5) OR (sum(tePy32, v32_shPe2seel.l(tPy32,regPy32,tePy32)) lt 0.5),
       s32_checkPrice = EPS;
       break;
     );
@@ -72,14 +72,7 @@ p32_preInvCap_iter(iteration,t,regi,te) = p32_preInvCap(t,regi,te);
 *** Special treatment for hydro: Don't use pre-investment capacity, but post-investment capacity instead
 *** Also pass hydro generation to PyPSA, this is used to force PyPSA to REMIND's capacity factor
 p32_hydroCap(t,regi)$(tPy32(t) AND regPy32(regi)) = vm_cap.l(t,regi,"hydro","1");
-$ontext
-*** Only calculate hydro generation if PyPSA is not executed yet because this determines the availability factor (not the capacity factor)
-*** As the capacity factor (< availability factor) is returned from PyPSA this would otherwise trigger a downward spiral
-if (sm_PyPSA_eq eq 0,
-  p32_hydroGen(t,regi)$(tPy32(t) AND regPy32(regi)) = v32_usableSeTeDisp.l(t,regi,"seel","hydro");
-);
-$offtext
-p32_hydroGen(t,regi)$(tPy32(t) AND regPy32(regi)) = v32_usableSeTeDisp.l(t,regi,"seel","hydro") * p32_hydroCorrectionFactor(t,regi);
+p32_hydroGen(t,regi)$(tPy32(t) AND regPy32(regi)) = v32_pe2seelTe.l(t,regi,"hydro") * p32_hydroCorrectionFactor(t,regi);
 
 ***------------------------------------------------------------
 ***                  PyPSA-Eur coupling
@@ -168,7 +161,7 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
       2 * p32_capCostwAdjCost(t,regi,te) + EPS;
 
   !! Parameters to calculate weighted averages across technologies and regions in PyPSA
-  p32_weightGen(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te)) = v32_usableSeTeDisp.l(t,regi,"seel",te) + EPS;
+  p32_weightGen(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te)) = v32_pe2seelTe.l(t,regi,te) + EPS;
   p32_weightStor(t,regi,te)$(tPy32(t) AND regPy32(regi) AND sameas(te,"elh2")) = vm_prodSe.l(t,regi,"seel","seh2","elh2") + EPS;
   p32_weightStor(t,regi,te)$(tPy32(t) AND regPy32(regi) AND sameas(te,"h2turb")) = vm_prodSe.l(t,regi,"seh2","seel","h2turb") + EPS;
   p32_weightPEprice(t,regi,entyPe)$(tPy32(t) AND regPy32(regi) AND entyPePy32(entyPe)) = vm_prodPe.l(t,regi,entyPe) + EPS;
@@ -197,10 +190,17 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
     p32_preInvCapAvg,
     !! Hydro capacities and generation
     p32_hydroCap, p32_hydroGen,
+    !! Switches to set functionalities in PyPSA-Eur
+    !! In PyPSA-Eur see config2remind.yaml and import_REMIND_config.py
+    c32_pypsa_nodes,
+    c32_pypsa_hourlyRes,
+    c32_pypsa_rcl_generators,
+    c32_pypsa_rcl_links,
+    c32_pypsa_rcl_stores,
     !! -- PyPSA-Eur to REMIND -- 
     !! Generation shares in REMIND to downscale generation shares in PyPSA
-    !! (this is required to parametrise the pre-factor equations) 
-    v32_shSeElDisp
+    !! (this is required to parametrise the anticipation factor equations) 
+    v32_shPe2seel
   ;
   option epsToZero=off;
 
@@ -224,7 +224,7 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
 
   !! Import PyPSA data for REMIND (PyPSAEUR2REMIND.gdx)
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_CF=capacity_factor;
-  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_shSeEl=generation_share;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_shPe2seel=generation_share;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_MV=market_value;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_LoadPrice=load_price;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Markup=markup;
@@ -237,7 +237,7 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Trade=crossborder_flow;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_TradePriceImport=crossborder_price_import;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_TradePriceExport=crossborder_price_export;
-  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_shSeElRegi=generation_region_share;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_shPe2seelRegi=generation_region_share;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Potential=potential;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_AF=availability_factor;
   Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_ElecPriceElectrolysis=electricity_price_electrolysis;
