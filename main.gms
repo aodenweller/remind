@@ -1243,31 +1243,31 @@ c32_pypsa_capacity = 0;  !! def = 0 !! regexp = 0|1
 *' Switch that specifies whether the pre-investment capacity or the full capacity is passed to PyPSA
 *' 0 = pre-investment capacity, 1 = full capacity
 parameter
-    c32_pypsa_nodes             "Number of spatial nodes in PyPSA-Eur"
+    c32_pypsa_cfg_nodes              "PyPSA config: Number of spatial nodes in PyPSA-Eur"
 ;
-c32_pypsa_nodes = 1;  !! def = 1 !! regexp = [1-500]
+c32_pypsa_cfg_nodes = 1;  !! def = 1 !! regexp = [1-500]
 *' Switch to set number of nodes in PyPSA
 parameter
-    c32_pypsa_hourlyRes         "Temporal resolution in PyPSA-Eur in hours"
+    c32_pypsa_cfg_hourly_res         "PyPSA config: Temporal resolution in PyPSA-Eur in hours"
 ;
-c32_pypsa_hourlyRes = 3;  !! def = 3 !! regexp = [1-6]
+c32_pypsa_cfg_hourly_res = 3;  !! def = 3 !! regexp = [1-6]
 *' Set temporal resolution in PyPSA
 parameter
-    c32_pypsa_rcl_generators    "Switch to activate feature in PyPSA: RCL generators"
+    c32_pypsa_cfg_rcl_generators     "PyPSA config: Activate RCL generators (preinstalled capacities)"
 ;
-c32_pypsa_rcl_generators = 1;  !! def = 1 !! regexp = 0|1
+c32_pypsa_cfg_rcl_generators = 1;  !! def = 1 !! regexp = 0|1
 *' Switch to activate feature in PyPSA: RCL generators
 *' 0 = off, 1 = on
 parameter
-    c32_pypsa_rcl_links         "Switch to activate feature in PyPSA: RCL links"
+    c32_pypsa_cfg_rcl_links          "PyPSA config: Activate RCL links (preinstalled capacities)"
 ;
-c32_pypsa_rcl_links = 3;  !! def = 0 !! regexp = [0-3]
+c32_pypsa_cfg_rcl_links = 3;  !! def = 0 !! regexp = [0-3]
 *' Switch to activate feature in PyPSA: RCL links (for storage)
 *' 0 = none, 1 = hydrogen (elh2 + h2turb), 2 = battery charger (batin), 3 = all
 parameter
-    c32_pypsa_rcl_stores        "Switch to activate feature in PyPSA: RCL stores"
+    c32_pypsa_cfg_rcl_stores        "Switch to activate feature in PyPSA: RCL stores"
 ;
-c32_pypsa_rcl_stores = 3;  !! def = 0 !! regexp = [0-3]
+c32_pypsa_cfg_rcl_stores = 3;  !! def = 0 !! regexp = [0-3]
 *' Switch to activate feature in PyPSA: RCL links (for storage)
 *' 0 = none, 1 = hydrogen underground storage (h2stor), 2 = battery storage (btstor), 3 = all
 
@@ -1932,9 +1932,6 @@ $setglobal c32_pypsa_dir /p/tmp/adrianod/pypsa-eur_v0.13.0
 *** c32_pypsa_multiregion
 *** Switch to enable PyPSA in multiple regions (changes PyPSA/sets.gms)
 $setglobal c32_pypsa_multiregion off !! def = off !! regexp = off|on
-*** c32_pypsa_pathgdx
-*** Path to a PyPSAEUR2REMIND.gdx from which parameters are read in the beginning
-$setglobal c32_pypsa_pathgdx off  !! def = off
 *** c32_pypsa_capfac
 *** Switch to enable capacity factor import from PyPSA-Eur
 $setglobal c32_pypsa_capfac on !! def = on !! regexp = off|on
@@ -1944,15 +1941,9 @@ $setglobal cm_pypsa_markup on !! def = on !! regexp = off|on
 *** c32_pypsa_peakcap
 *** Switch to enable peak capacity constraint
 $setglobal c32_pypsa_peakcap on !! def = on !! regexp = off|on
-*** c32_pypsa_curtailment
-*** Switch to enable curtailment import from PyPSA-Eur
-$setglobal c32_pypsa_curtailment off !! def = off !! regexp = off|on
 *** c32_pypsa_anticipation
-*** Switch to enable anticipation factor
-$setglobal c32_pypsa_anticipation on !! def = on !! regexp = off|on
-*** c32_pypsa_anticipationManual
-*** Switch to enable manual specification of ancitipation factors in datainput.gms
-$setglobal c32_pypsa_anticipationManual off !! def = on !! regexp = off|on
+*** Switch to enable anticipation factor, if using diffQuot this also enables the calculation of perturbed runs in PyPSA (computationally expensive!)
+$setglobal c32_pypsa_anticipation diffQuot !! def = manual !! regexp = off|manual|diffQuot
 *** c32_pypsa_trade
 *** Switch to enable electricity trade
 $setglobal c32_pypsa_trade off !! def = off !! regexp = off|on

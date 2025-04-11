@@ -40,7 +40,7 @@ if ((sm_PyPSA_eq eq 0 AND c32_checkPrice eq 1),
     );
   );
 *** If anticipation factors are used, check that v32_shPe2seel is within reasonable bounds
-$ifthen "%c32_pypsa_anticipation%" == "on"
+$ifthen "%c32_pypsa_anticipation%" == "manual"
   loop ((tPy32,regPy32),
     if ((sum(tePy32, v32_shPe2seel.l(tPy32,regPy32,tePy32)) gt 1.5) OR (sum(tePy32, v32_shPe2seel.l(tPy32,regPy32,tePy32)) lt 0.5),
       s32_checkPrice = EPS;
@@ -77,26 +77,27 @@ p32_hydroGen(t,regi)$(tPy32(t) AND regPy32(regi)) = v32_pe2seelTe.l(t,regi,"hydr
 ***------------------------------------------------------------
 ***                  PyPSA-Eur coupling
 ***------------------------------------------------------------
-if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_startIter_PyPSA
-    ( mod(iteration.val - c32_startIter_PyPSA, c32_everyIter_PyPSA) eq 0 ) AND  !! Only couple every c32_everyIter_PyPSA iterations
-    ( s32_checkPrice eq 1 ),  !! Only couple if budget equation is binding
+if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startIter_PyPSA
+    ( mod(iteration.val - c32_startIter_PyPSA, c32_everyIter_PyPSA) eq 0 ) AND  !! Only start every c32_everyIter_PyPSA iterations
+    ( s32_checkPrice eq 1 ),  !! Only start if budget equation is binding
 
-  !! Track iterations in which PyPSA was executed
+  !! Track iterations in which PyPSA was executed, this is necessary to calculate averages
   s32_PyPSA_called(iteration) = 1;
 
   !! Electricity load
+  !! TODO: Remove and just pass v32_load instead
   p32_load(t,regi)$(tPy32(t) and regPy32(regi)) = v32_load.l(t,regi);
 
-  !! Additional electrolytic hydrogen demand that is not used for storage
-  !! vm_prodSe.l(t,regi,"seel","seh2","elh2") is the production of hydrogen from electrolysis (TWa w.r.t. hydrogen)
-  !! vm_demSe.l(t,regi,"seh2","seel","h2turb") is the demand of hydrogen for electricity production (TWa w.r.t. hydrogen)
-  !! The electrolyser efficiency is taken into account in PyPSA
+  !! Additional electrolytic hydrogen demand that is not used for storage. This is the difference between:
+  !! (1) vm_prodSe.l(t,regi,"seel","seh2","elh2") is the production of hydrogen from electrolysis (TWa hydrogen)
+  !! (2) vm_demSe.l(t,regi,"seh2","seel","h2turb") is the demand of hydrogen for electricity production (TWa hydrogen)
+  !! Note that electrolyser efficiency is taken into account in PyPSA
   p32_ElecH2Demand(t,regi)$(tPy32(t) AND regPy32(regi)) =
       max(1E-8, vm_prodSe.l(t,regi,"seel","seh2","elh2") - vm_demSe.l(t,regi,"seh2","seel","h2turb")) + EPS;
 
 *** REMIND to PyPSA-Eur: Calculate averages to reduce oscillations
 *** (i) Pre-investment capacities
-*** (ii) PE prices
+*** (ii) Primary energy (PE) prices
 *** The idea behind averaging follows three steps:
 *** (1) Allow at least x iterations (until max(c32_startIter_PyPSA, x)) without averaging
 *** (2) Allow another y iterations (until max(c32_startIter_PyPSA, x) + y) without averaging 
@@ -136,11 +137,11 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
     + sum(regPy32(regi), pm_prtp(regi)) / card(regPy32)
     ;
 
-  !! Limit p32_discountRate to 3-10%%
+  !! Limit p32_discountRate to 3-10%
   p32_discountRate(ttot)$(tPy32(ttot) and ttot.val le 2100) = 
     min(0.1, max(0.02, p32_discountRate(ttot)));  !! Limit between 2% and 10%
 
-  !! Set the interest rate to 0.03 after 2100
+  !! Set the interest rate to 3% after 2100
   p32_discountRate(ttot)$(ttot.val gt 2100) = 0.03;
 
   !! Specific capital costs plus adjustment costs
@@ -155,9 +156,10 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
       max(0, vm_costTeCapital.l(t,regi,te) + o_margAdjCostInv(t,regi,te)$( sum(te2rlf(te,rlf), vm_deltaCap.l(t,regi,te,rlf)) ge 1e-5 )) + EPS;
   );
 
-  !! Hack: Disincentivise oil by increasing their capital costs by factor 2
-  !! Oil is sometimes used by PyPSA in 2025 only, which doesn't make sense as the investment wouldn't be profitable
-  p32_capCostwAdjCost(t,regi,te)$(tPy32(t) and regPy32(regi) and sameas(te,"dot")) = 
+  !! Hack: Disincentivise oil and nuclear by increasing capital costs by factor 2
+  !! Oil and nuclear are sometimes used by PyPSA in 2025 only, which doesn't make sense as the investment wouldn't be profitable
+  !! TODO: Find a way to properly include foresight of key metrics (capacity factors, markups) into capital cost
+  p32_capCostwAdjCost(t,regi,te)$(tPy32(t) and regPy32(regi) and (sameas(te,"dot") or sameas(te,"tnrs") or sameas(te, "fnrs")) ) = 
       2 * p32_capCostwAdjCost(t,regi,te) + EPS;
 
   !! Parameters to calculate weighted averages across technologies and regions in PyPSA
@@ -169,37 +171,39 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
   !! Also export zeros for CO2 price
   p_priceCO2(t,regi)$(tPy32(t) AND regPy32(regi)) = p_priceCO2(t,regi) + EPS;
 
-  !! Export REMIND output data for PyPSA (REMIND2PyPSAEUR.gdx)
-  !! Don't use fulldata.gdx so that we keep track of which variables are exported to PyPSA
+  !! Export REMIND config for PyPSA (REMIND2PyPSAEUR_config.gdx)
+  !! This contains switches, which are read in in PyPSA with import_REMIND_config.py
+  !! See main.gms for the definition of the switches
   option epsToZero=on;
+  Execute_Unload "REMIND2PyPSAEUR_config.gdx"
+    c32_pypsa_cfg_nodes,  !! Number of nodes
+    c32_pypsa_cfg_hourly_res,  !! Hourly resolution
+    c32_pypsa_cfg_rcl_generators,  !! Enable RCL constraint for generators
+    c32_pypsa_cfg_rcl_links,  !! Enable RCL constraint for links
+    c32_pypsa_cfg_rcl_stores,  !! Enable RCL constraint for stores
+    c32_pypsa_perturb  !! Automatically set if c32_pypsa_anticipation=="diffQuot"
+  ;
+  !! Export REMIND data for PyPSA (REMIND2PyPSAEUR.gdx)
   Execute_Unload "REMIND2PyPSAEUR.gdx",
     !! -- REMIND to PyPSA-Eur --
     !! Coupled time steps, regions and technologies
     tPy32, regPy32, tePy32,
-    !! Total electricity load
+    !! Electricity load
     p32_load,
-    !! Additional electrolytic hydrogen demand (from other sectors)
+    !! Additional electrolytic hydrogen demand (from outside power sector)
     p32_ElecH2Demand,
     !! Capital cost components
     p32_capCostwAdjCost, pm_data, p32_discountRate,
     !! Marginal cost components
     pm_eta_conv, pm_dataeta, p32_PEPriceAvg, pe2se, p_priceCO2, fm_dataemiglob,
     !! Weights to calculate weighted averages
-    p32_weightGen, p32_weightStor, p32_weightPEprice, 
-    !! Pre-investment capacities
+    p32_weightGen, p32_weightStor, p32_weightPEprice,
+    !! Pre-installed capacities
     p32_preInvCapAvg,
-    !! Hydro capacities and generation
+    !! Hydro capacities and generation (special treatment in PyPSA)
     p32_hydroCap, p32_hydroGen,
-    !! Switches to set functionalities in PyPSA-Eur
-    !! In PyPSA-Eur see config2remind.yaml and import_REMIND_config.py
-    c32_pypsa_nodes,
-    c32_pypsa_hourlyRes,
-    c32_pypsa_rcl_generators,
-    c32_pypsa_rcl_links,
-    c32_pypsa_rcl_stores,
     !! -- PyPSA-Eur to REMIND -- 
     !! Generation shares in REMIND to downscale generation shares in PyPSA
-    !! (this is required to parametrise the anticipation factor equations) 
     v32_shPe2seel
   ;
   option epsToZero=off;
@@ -210,11 +214,13 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
   logfile.nr = 1;
   logfile.nd = 0;
 
-  !! Execute PyPSA-Eur
-  !! This executes a shell script (copied from scripts/iterative) and starts the full coupling workflow in snakemake:
-  !! (1) Copy REMIND2PyPSAEUR.gdx to PyPSA-Eur directory
-  !! (2) Start PyPSA-Eur, including all data processing steps
-  !! (3) Copy PyPSAEUR2REMIND.gdx to REMIND directory
+  !! Run PyPSA-Eur
+  !! This executes a shell script (copied from scripts/iterative) and starts the full coupling workflow in snakemake
+  !! (1) Copy REMIND2PyPSAEUR_config.gdx and REMIND2PyPSAEUR.gdx to PyPSA-Eur resources directory
+  !! (2) Create PyPSA config yaml file using REMIND2PyPSAEUR_config.gdx (first snakemake command)
+  !! (3) Run PyPSA, including all data pre- and postprocessing, using the the yaml file (second snakemake command)
+  !! (3) Copy PyPSAEUR2REMIND.gdx to REMIND scenario output folder
+  !! The PyPSA directory and the current iteration are passed as arguments to the shell script
   Put_utility logfile, "Exec" /
   "./RunPyPSA-Eur.sh %c32_pypsa_dir% " iteration.val:0:0;
 
@@ -223,87 +229,57 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only couple after c32_start
   logfile.nd = sm_tmp2;
 
   !! Import PyPSA data for REMIND (PyPSAEUR2REMIND.gdx)
-  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_CF=capacity_factor;
-  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_shPe2seel=generation_share;
-  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_MV=market_value;
-  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_LoadPrice=load_price;
-  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Markup=markup;
-  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Curtailment=curtailment;
-  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_PeakResLoadRel=peak_residual_load_relative;
-  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_StoreTrans_Cap=storage_and_transmission_capacities;
-  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_StoreTrans_CF=storage_and_transmission_capacity_factors;
-  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_H2TurbRel=h2turb_storage_relative;
-  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_BatteryDischargeRel=battery_storage_relative;
-  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Trade=crossborder_flow;
-  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_TradePriceImport=crossborder_price_import;
-  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_TradePriceExport=crossborder_price_export;
-  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_shPe2seelRegi=generation_region_share;
-  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Potential=potential;
-  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_AF=availability_factor;
-  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_ElecPriceElectrolysis=electricity_price_electrolysis;
-  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_gridLossesRel=grid_loss_relative;
-
-  !! Temporary workaround to avoid overinvestment in REMIND:
-  !! Limit markup to between -50 and +150 EUR/MWh
-  !!p32_PyPSA_Markup(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te)) = 
-  !!  min(150, max(-50, p32_PyPSA_Markup(t,regi,te)));
+  !! The PyPSAEUR2REMIND.gdx is created by export_to_REMIND in PyPSA-Eur
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_CF=capacity_factors;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_MarkupSupply=markups_supply;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_PeakResLoadRel=peak_residual_loads;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_MarkupDemand=markups_demand;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_shPe2seel=generation_shares;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_OptCap=optimal_capacities;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Potential=potentials;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_H2TurbRel=hydrogen_storage_generation;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_BatteryDischargeRel=battery_storage_generation;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_GridLossesRel=grid_losses;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_AF=availability_factors;
+$ifthen "%c32_pypsa_anticipation%" == "diffQuot"
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_DQ_CF=difference_quotient_capacity_factors;
+  Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_DQ_MarkupSupply=difference_quotient_markups_supply;
+$endif
 
   !! Track capacity factors in iterations
   p32_PyPSA_CF_iter(iteration,t,regi,te) = p32_PyPSA_CF(t,regi,te);
-  !! Track market values in iterations
-  p32_PyPSA_MV_iter(iteration,t,regi,te) = p32_PyPSA_MV(t,regi,te);
-  !! Track load price in iterations
-  p32_PyPSA_LoadPrice_iter(iteration,t,regi,carrierPy32) = p32_PyPSA_LoadPrice(t,regi,carrierPy32);
-  !! Track markup in iterations
-  p32_PyPSA_Markup_iter(iteration,t,regi,te) = p32_PyPSA_Markup(t,regi,te);
-  !! Track electricity price paid by electrolysis in iterations
-  p32_PyPSA_ElecPriceElectrolysis_iter(iteration,t,regi) = p32_PyPSA_ElecPriceElectrolysis(t,regi);
+  !! Track supply-side markup in iterations
+  p32_PyPSA_MarkupSupply_iter(iteration,t,regi,te) = p32_PyPSA_MarkupSupply(t,regi,te);
+  !! Track demand-side markup in iterations
+  p32_PyPSA_MarkupDemand_iter(iteration,t,regi,loadPy32) = p32_PyPSA_MarkupDemand(t,regi,loadPy32);
 
 *** PyPSA-Eur to REMIND: Calculate averages to reduce oscillations
 *** (1) Capacity factors
-*** (2) Market values (--> TODO:REMOVE)
-*** (3) Electricity prices (--> TODO:REMOVE)
-*** (4) Markups
+*** (2) Markups
 *** The idea behind averaging is the same as for REMIND to PyPSA-Eur. See above.
 *** Currently set x to 3 and y to 4
   if ((c32_avg_py2rm eq 0) or (iteration.val lt max(c32_startIter_PyPSA, 3) + 4 - 1),  !! c32_startIter_PYPSA + x + y - 1
     !! Non-averaged capacity factors
     p32_PyPSA_CFAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_PyPSA_CF(t,regi,te);
-    !! Non-averaged market values
-    p32_PyPSA_MVAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_PyPSA_MV(t,regi,te);
-    !! Non-averaged electricity prices
-    p32_PyPSA_LoadPriceAvg(t,regi,carrierPy32)$(tPy32(t) and regPy32(regi)) = p32_PyPSA_LoadPrice(t,regi,carrierPy32);
-    !! Non averaged markups
-    p32_PyPSA_MarkupAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_PyPSA_Markup(t,regi,te);
-    !! Non averaged electricity price paid by electrolysis
-    p32_PyPSA_ElecPriceElectrolysisAvg(t,regi)$(tPy32(t) and regPy32(regi)) = p32_PyPSA_ElecPriceElectrolysis(t,regi);
+    !! Non averaged supply-side markup
+    p32_PyPSA_MarkupSupplyAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_PyPSA_MarkupSupply(t,regi,te);
+    !! Non averaged demand-side markup
+    p32_PyPSA_MarkupDemandAvg(t,regi,loadPy32)$(tPy32(t) and regPy32(regi)) = p32_PyPSA_MarkupDemand(t,regi,loadPy32);
   !! Implement step (3)
   elseif (c32_avg_py2rm eq 1),
     !! Averaged capacity factors over iterations
     p32_PyPSA_CFAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) =
       sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2) * p32_PyPSA_CF_iter(iteration2,t,regi,te)) /
       sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2));
-    !! Averaged market values over iterations
-    p32_PyPSA_MVAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) =
-      sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2) * p32_PyPSA_MV_iter(iteration2,t,regi,te)) /
-      sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2));
-    !! Averaged electricity prices over iterations
-    p32_PyPSA_LoadPriceAvg(t,regi,carrierPy32)$(tPy32(t) and regPy32(regi)) =
-      sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2) * p32_PyPSA_LoadPrice_iter(iteration2,t,regi,carrierPy32)) /
+    !! Averaged markups over iterations
+    p32_PyPSA_MarkupSupplyAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) =
+      sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2) * p32_PyPSA_MarkupSupply_iter(iteration2,t,regi,te)) /
       sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2));
     !! Averaged markups over iterations
-    p32_PyPSA_MarkupAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) =
-      sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2) * p32_PyPSA_Markup_iter(iteration2,t,regi,te)) /
-      sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2));
-    !! Averaged electricity price paid by electrolysis over iterations
-    p32_PyPSA_ElecPriceElectrolysisAvg(t,regi)$(tPy32(t) and regPy32(regi)) =
-      sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2) * p32_PyPSA_ElecPriceElectrolysis_iter(iteration2,t,regi)) /
+    p32_PyPSA_MarkupDemandAvg(t,regi,loadPy32)$(tPy32(t) and regPy32(regi)) =
+      sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2) * p32_PyPSA_MarkupDemand_iter(iteration2,t,regi,loadPy32)) /
       sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2));
   );
-  
-  !! TODO: REMOVE
-  !! Save v32_usableSeDispNet for next iteration's electricity trade implementation
-  !!p32_usableSeDispNet0(t,regi,"seel")$(tPy32(t) AND regPy32(regi)) = v32_usableSeDispNet.l(t,regi,"seel");
 
 *** Activate PyPSA equations if PyPSA ran once
 sm_PyPSA_eq = 1;
@@ -331,13 +307,14 @@ p32_ElecBalance(t,regi,"5")$(tPy32(t) and regPy32(regi)) = sum(pc2te(enty,enty3,
                                 sum(teCCS2rlf(te,rlf),
                                   pm_prodCouple(regi,enty,enty3,te,enty2) * vm_co2CCS.l(t,regi,enty,enty3,te,rlf) ) );
 p32_ElecBalance(t,regi,"6")$(tPy32(t) and regPy32(regi)) = vm_Mport.l(t,regi,"seel");
+p32_ElecBalance(t,regi,"7")$(tPy32(t) and regPy32(regi)) = v32_gridLosses.l(t,regi)$(tPy32(t) AND regPy32(regi) AND sm_PyPSA_eq eq 1);
 *** Withdrawal
-p32_ElecBalance(t,regi,"7")$(tPy32(t) and regPy32(regi)) = sum(se2fe(enty2,enty3,te)$(sameas(enty2,"seel")), vm_demSe.l(t,regi,enty2,enty3,te) );
-p32_ElecBalance(t,regi,"8")$(tPy32(t) and regPy32(regi)) = sum(se2se(enty2,enty3,te)$(sameas(enty2,"seel")), vm_demSe.l(t,regi,enty2,enty3,te) );
-p32_ElecBalance(t,regi,"9")$(tPy32(t) and regPy32(regi)) = sum(teVRE, v32_storloss.l(t,regi,teVRE) );
-p32_ElecBalance(t,regi,"10")$(tPy32(t) and regPy32(regi)) = sum(pe2rlf(enty3,rlf2), (pm_fuExtrOwnCons(regi, "seel", enty3) * vm_fuExtr.l(t,regi,enty3,rlf2))$(pm_fuExtrOwnCons(regi, "seel", enty3) gt 0))$(t.val > 2005);
-p32_ElecBalance(t,regi,"11")$(tPy32(t) and regPy32(regi)) = vm_Xport.l(t,regi,"seel");
-p32_ElecBalance(t,regi,"12")$(tPy32(t) and regPy32(regi)) = v32_gridLosses.l(t,regi);
+p32_ElecBalance(t,regi,"8")$(tPy32(t) and regPy32(regi)) = sum(se2fe(enty2,enty3,te)$(sameas(enty2,"seel")), vm_demSe.l(t,regi,enty2,enty3,te) );
+p32_ElecBalance(t,regi,"9")$(tPy32(t) and regPy32(regi)) = sum(se2se(enty2,enty3,te)$(sameas(enty2,"seel")), vm_demSe.l(t,regi,enty2,enty3,te) );
+p32_ElecBalance(t,regi,"10")$(tPy32(t) and regPy32(regi)) = sum(teVRE, v32_storloss.l(t,regi,teVRE) );
+p32_ElecBalance(t,regi,"11")$(tPy32(t) and regPy32(regi)) = sum(pe2rlf(enty3,rlf2), (pm_fuExtrOwnCons(regi, "seel", enty3) * vm_fuExtr.l(t,regi,enty3,rlf2))$(pm_fuExtrOwnCons(regi, "seel", enty3) gt 0))$(t.val > 2005);
+p32_ElecBalance(t,regi,"12")$(tPy32(t) and regPy32(regi)) = vm_Xport.l(t,regi,"seel");
+p32_ElecBalance(t,regi,"13")$(tPy32(t) and regPy32(regi)) = v32_gridLosses.l(t,regi);
 );
 $endif
 

@@ -35,10 +35,11 @@ $endif
     entyPePy32(all_enty)        "Primary energy carriers for which prices are coupled to PyPSA"
         /peoil, pegas, pecoal, peur, pebiolc/
 
+    !! TODO: Rename?
     teStoreTransPy32(all_te)    "Storage and transmission technologies coupled to PyPSA"
         /elh2, h2turb, h2stor, btin, btout, btstor/
 
-    teStorePy32(all_te)         "Storage technologies coupled to PyPSA (not conversion, but size of store in TWa)"
+    teStorePy32(all_te)         "Storage technologies coupled to PyPSA (not conversion, but size of store in TWh)"
         /h2stor, btstor/
 
     rep32                       "Generic set for PyPSA reporting"
@@ -50,13 +51,12 @@ If (cm_startyear = 2030, tPy32("2025") = no);
 
 *** Sets to import PyPSA data
 sets
-    carrierPy32                 "Energy carrier from PyPSA"
-        /"AC", "H2 demand REMIND"/
-
-    storeTransPy32              "Storage and transmission technologies from PyPSA"
-        /"AC", "DC", "H2", "H2 fuel cell", "H2 electrolysis", "battery", "battery charger", "battery discharger"/
+    loadPy32                    "Loads for which specific electricity prices / demand-side markups are reported in PyPSA"
+        /"electrolysis"/
 ;
 
+*** Make alises for use in equations
+alias(tePy32,tePy32_2);
 alias(regPy32,regPy32_2);
 
 *** EOF ./modules/32_power/PyPSA/sets.gms

@@ -15,28 +15,19 @@ if ((sm_PyPSA_eq eq 1),
 
 * Capacity factors: Overwrite pm_cf for dispatchable technologies
 * This is probably redundant as vm_capfac is not fixed to pm_cf any longer, but free
-* ToDo: Check capacity factor reporting, maybe set pm_cf = vm_capfac.l in postsolve for reporting
+* TODO: Check capacity factor reporting, maybe set pm_cf = vm_capfac.l in postsolve for reporting
 $ifthen "%c32_pypsa_capfac%" == "on"
   pm_cf(tPy32,regPy32,tePyDisp32) = p32_PyPSA_CFAvg(tPy32,regPy32,tePyDisp32);
 $endif
-
-* Read in curtailment at some point?
-$ifthen "%c32_pypsa_curtailment%" == "on"
-  v32_storloss.fx(tPy32,regPy32,tePyVRE32) = p32_PyPSA_Curtailment(tPy32,regPy32,tePyVRE32) / sm_TWa_2_MWh;
-$else
+  
+  !! Set v32_storloss to zero for all technologies
   v32_storloss.fx(tPy32,regPy32,tePy32) = 0;
   v32_storloss.fx(tPy32,regPy32,teVRE) = 0;
-$endif
-
-* Calculate value factor to parametrise the anticipation factor equation for markups
-$ifthen "%cm_pypsa_markup%" == "on"
-  p32_PyPSA_ValueFactor(tPy32,regPy32,tePy32)$(p32_PyPSA_LoadPriceAvg(tPy32,regPy32,"AC") ne 0) = 
-    p32_PyPSA_MVAvg(tPy32,regPy32,tePy32) / p32_PyPSA_LoadPriceAvg(tPy32,regPy32,"AC");
-  !! Replace UNDF with 1
-  p32_PyPSA_ValueFactor(tPy32,regPy32,tePy32)$(mapVal(p32_PyPSA_ValueFactor(tPy32,regPy32,tePy32)) eq 4) = 1;
-$endif
 
   p32_hydroCorrectionFactor(tPy32,regPy32)$(p32_PyPSA_CF(tPy32,regPy32,"hydro") gt sm_eps) = p32_PyPSA_AF(tPy32,regPy32,"hydro") / p32_PyPSA_CF(tPy32,regPy32,"hydro");
+  
+  !! Replace UNDF with 0
+  !!p32_PyPSA_PartialDerivativeCF(tPy32,regPy32,tePy32,tePy32_2)$(mapVal(p32_PyPSA_PartialDerivativeCF(tPy32,regPy32,tePy32,tePy32_2)) eq 4) = 0;
 
 );
 
@@ -120,6 +111,8 @@ $ifthen "%c32_pypsa_capfac%" == "on"
 if ((sm_PyPSA_eq eq 1),
   vm_capFac.lo(tPy32,regPy32,tePy32)$(not sameas(tePy32,"hydro")) = 0;
   vm_capFac.up(tPy32,regPy32,tePy32)$(not sameas(tePy32,"hydro")) = 2;
+*  v32_capDiff.lo(tPy32,regPy32,tePy32) = -0.2*p32_PyPSA_OptCap(tPy32,regPy32,tePy32) / 1E6;  !! MW to TW
+*  v32_capDiff.up(tPy32,regPy32,tePy32) = 0.2*p32_PyPSA_OptCap(tPy32,regPy32,tePy32) / 1E6;  !! MW to TW
 );
 $endif
 
@@ -127,11 +120,11 @@ $endif
 $ifthen "%c32_pypsa_h2stor%" == "on"
 if ((sm_PyPSA_eq eq 1),
   !! Fix capacitiy factor of electrolysis to PyPSA value
-  vm_capFac.fx(tPy32,regPy32,"elh2") = p32_PyPSA_StoreTrans_CF(tPy32,regPy32,"H2 electrolysis");
+  vm_capFac.fx(tPy32,regPy32,"elh2") = p32_PyPSA_CF(tPy32,regPy32,"elh2");
   !! Fix capacitiy factor of hydrogen turbines to PyPSA value
-  vm_capFac.fx(tPy32,regPy32,"h2turb") = p32_PyPSA_StoreTrans_CF(tPy32,regPy32,"H2 fuel cell");
+  vm_capFac.fx(tPy32,regPy32,"h2turb") = p32_PyPSA_CF(tPy32,regPy32,"h2turb");
   !! Lower bound of hydrogen underground storage capacity from PyPSA value
-  vm_cap.lo(tPy32,regPy32,"h2stor","1") = p32_PyPSA_StoreTrans_Cap(tPy32,regPy32,"H2") / 1E6;  !! MWh to TWh
+  vm_cap.lo(tPy32,regPy32,"h2stor","1") = p32_PyPSA_OptCap(tPy32,regPy32,"h2stor") / 1E6;  !! MWh to TWh
   !! Enable h2 turbines in all modelled years
   vm_deltaCap.up(tPy32,regPy32,"h2turb","1") = Inf;
   !! Disable hydrogen storage before cm_startyear
@@ -143,13 +136,13 @@ $endif
 $ifthen "%c32_pypsa_btstor%" == "on"
 if ((sm_PyPSA_eq eq 1),
   !! Fix capacity factor of battery charger to PyPSA value
-  vm_capFac.lo(tPy32,regPy32,"btin") = 0.5*p32_PyPSA_StoreTrans_CF(tPy32,regPy32,"battery charger");
-  vm_capFac.up(tPy32,regPy32,"btin") = p32_PyPSA_StoreTrans_CF(tPy32,regPy32,"battery charger");
+  vm_capFac.lo(tPy32,regPy32,"btin") = 0.5*p32_PyPSA_CF(tPy32,regPy32,"btin");
+  vm_capFac.up(tPy32,regPy32,"btin") = p32_PyPSA_CF(tPy32,regPy32,"btin");
   !! Fix capacity factor of battery discharger to PyPSA value
-  vm_capFac.lo(tPy32,regPy32,"btout") = 0.5*p32_PyPSA_StoreTrans_CF(tPy32,regPy32,"battery discharger");
-  vm_capFac.up(tPy32,regPy32,"btout") = p32_PyPSA_StoreTrans_CF(tPy32,regPy32,"battery discharger");
+  vm_capFac.lo(tPy32,regPy32,"btout") = 0.5*p32_PyPSA_CF(tPy32,regPy32,"btout");
+  vm_capFac.up(tPy32,regPy32,"btout") = p32_PyPSA_CF(tPy32,regPy32,"btout");
   !! Lower bound of battery storage capacity from PyPSA value
-  vm_cap.lo(tPy32,regPy32,"btstor","1") = p32_PyPSA_StoreTrans_Cap(tPy32,regPy32,"battery") / 1E6;  !! MWh to TWh
+  vm_cap.lo(tPy32,regPy32,"btstor","1") = p32_PyPSA_OptCap(tPy32,regPy32,"btstor") / 1E6;  !! MWh to TWh
   !! Disable all battery technologies only forced in from PyPSA before cm_startyear
   vm_deltaCap.fx(ttot,regPy32,"btin","1")$(ttot.val lt cm_startyear) = 0;
   vm_cap.fx(ttot,regPy32,"btin","1")$(ttot.val lt cm_startyear) = 0;
@@ -167,11 +160,11 @@ v32_shPe2seel.up(tPy32,regPy32,tePy32) = 1;
 *** Set starting values for vm_PyPSAMarkup
 $ifthen "%cm_pypsa_markup%" == "on"
 if ((sm_PyPSA_eq eq 1),
-  vm_PyPSAMarkup.l(tPy32,regPy32,tePy32) = p32_PyPSA_MarkupAvg(tPy32,regPy32,tePy32) * sm_TWa_2_MWh / 1e12;
+  vm_PyPSAMarkup.l(tPy32,regPy32,tePy32) = p32_PyPSA_MarkupSupplyAvg(tPy32,regPy32,tePy32) * sm_TWa_2_MWh / 1e12;
 );
 $endif
 
-*** Disable some technologies for now
+*** Disable some technologies
 if ((c32_deactivateTech eq 1 and sm_PyPSA_eq eq 1),
     vm_shSeEl.fx(tPy32,regPy32,"csp") = 0;  !! Overwrite RP's hotfix above
     vm_capFac.fx(tPy32,regPy32,"csp") = 0;
@@ -230,18 +223,5 @@ if ((sm_PyPSA_eq eq 1),
     p32_PyPSA_Potential(t,regi,te) / 1E6;  !! MW to TW
 );
 $endif.c32_pypsa_potentials
-
-$ontext
-*** Hydro bounds if capacity factor comes from PyPSA
-if ((sm_PyPSA_eq eq 1),
-  !! First, set lower bound on capacity instead of production (as in core/bounds.gms) so that hydro plants in 2005 always get replaced by new ones
-  vm_cap.lo(t,regi,"hydro","1")$(tPy32(t) AND regPy32(regi)) = 0.99 * vm_cap.l("2005",regi,"hydro","1");
-  !! Second, set upper bound on capacity in addition to production (as in q_limitProd) so that hydro plants cannot be expanded beyond capacity equivalent to production limit
-  !! This is necessary because q_limitProd doesn't limit capacity expansion if the capacity factor comes from PyPSA-Eur
-  !! ISSUE: This is overwritten in p40_techpol
-  vm_cap.up(t,regi,"hydro","1")$(tPy32(t) AND regPy32(regi)) =
-    sum(rlf$(pm_dataren(regi,"nur",rlf,"hydro") gt sm_eps), pm_dataren(regi,"maxprod",rlf,"hydro") / pm_dataren(regi,"nur",rlf,"hydro"));
-);
-$offtext
 
 *** EOF ./modules/32_power/PyPSA/bounds.gms

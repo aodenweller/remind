@@ -67,8 +67,10 @@ if((c32_iterAnticipationFadeOut ne 0) and (iteration.val ge c32_iterAnticipation
 
 *** Calculate p32_usableSeDispForeign, defined as the sum of v32_pe2seel.l over all foreign regions 
 *** This is necessary because REMIND cannot sum over multiple regions as they are optimised separately
+$ifthen "%c32_pypsa_trade%" == "on"
 loop((t,regi)$(tPy32(t) and regPy32(regi)),
   p32_usableSeDispForeign(t,regi) = sum(regi2$(not sameas(regi2,regi) and regPy32(regi2)), v32_pe2seel.l(t,regi2));
 );
+$endif
 
 *** EOF ./modules/32_power/PyPSA/presolve.gms
