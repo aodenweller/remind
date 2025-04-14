@@ -131,7 +131,7 @@ parameters
     s32_anticipationFactorFadeOut                                   "PyPSA coupling: Multiplicative factor to fade out ancitipation factors [1]"
     s32_PyPSA_called(iteration)                                     "PyPSA coupling: Boolean that tracks if PyPSA was called over iterations, necessary for averaging (1 = yes, 0 = no)"
     !! Switches for the PyPSA coupling that are based on compile switches, but need to be passed to PyPSA and therefore require another parameter
-    c32_pypsa_perturb                                               "PyPSA coupling: Switch for perturbation of capacities (1 = on, 0 = off)"
+    c32_pypsa_cfg_perturb                                           "PyPSA coupling: Switch for perturbation of capacities, set automatically (1 = on, 0 = off)"
     !! Parameters for the PyPSA coupling reporting
     p32_PeakResLoadShadowPrice(ttot,all_regi,all_te)                "PyPSA reporting: Shadow price of peak residual load constraint, used for plotting LCOEs vs. market values [T$/TWa]"
     p32_ElecBalance(ttot,all_regi,rep32)                            "PyPSA reporting: Electricity balance [TWa]"

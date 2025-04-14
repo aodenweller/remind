@@ -181,7 +181,8 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startI
     c32_pypsa_cfg_rcl_generators,  !! Enable RCL constraint for generators
     c32_pypsa_cfg_rcl_links,  !! Enable RCL constraint for links
     c32_pypsa_cfg_rcl_stores,  !! Enable RCL constraint for stores
-    c32_pypsa_perturb  !! Automatically set if c32_pypsa_anticipation=="diffQuot"
+    c32_pypsa_cfg_rcl_cost,  !! Cost of RCL components
+    c32_pypsa_cfg_perturb  !! Automatically set if c32_pypsa_anticipation=="diffQuot"
   ;
   !! Export REMIND data for PyPSA (REMIND2PyPSAEUR.gdx)
   Execute_Unload "REMIND2PyPSAEUR.gdx",

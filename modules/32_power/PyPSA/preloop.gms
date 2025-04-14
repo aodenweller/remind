@@ -50,9 +50,9 @@ $ifthen "%c32_pypsa_peakcap%" == "on"
 q32_PeakResCap.m(tPy32,regPy32) = 0;
 $endif
 $ifthen "%c32_pypsa_anticipation%" == "diffQuot"
-c32_pypsa_perturb = 1;
+c32_pypsa_cfg_perturb = 1;
 $else
-c32_pypsa_perturb = 0;
+c32_pypsa_cfg_perturb = 0;
 $endif
 
 *** EOF ./modules/32_power/PyPSA/preloop.gms

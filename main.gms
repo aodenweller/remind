@@ -1265,11 +1265,16 @@ c32_pypsa_cfg_rcl_links = 3;  !! def = 0 !! regexp = [0-3]
 *' Switch to activate feature in PyPSA: RCL links (for storage)
 *' 0 = none, 1 = hydrogen (elh2 + h2turb), 2 = battery charger (batin), 3 = all
 parameter
-    c32_pypsa_cfg_rcl_stores        "Switch to activate feature in PyPSA: RCL stores"
+    c32_pypsa_cfg_rcl_stores         "PyPSA config: Activate RCL stores (preinstalled capacities)"
 ;
 c32_pypsa_cfg_rcl_stores = 3;  !! def = 0 !! regexp = [0-3]
 *' Switch to activate feature in PyPSA: RCL links (for storage)
 *' 0 = none, 1 = hydrogen underground storage (h2stor), 2 = battery storage (btstor), 3 = all
+parameter
+    c32_pypsa_cfg_rcl_cost           "PyPSA config: Cost of RCL components (preinstalled capacities) in annualised $/MW or $/MWh"
+;
+c32_pypsa_cfg_rcl_cost = 0;  !! def = 0 !! regexp = is.numeric
+*' Switch to control feature in PyPSA: Annualised capital cost of RCL components
 
 ***-----------------------------------------------------------------------------
 *' ####                     FLAGS

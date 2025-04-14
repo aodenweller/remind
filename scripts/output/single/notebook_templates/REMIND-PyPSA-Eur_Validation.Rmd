@@ -1697,7 +1697,7 @@ dataCO2PriceREMIND <- readREMINDgdx(
 
 # PyPSA data
 dataCO2PricePyPSA <- readPyPSAcsv(
-    paths = file.path(pyResourcesIterDirs, "co2_price_scenarios.csv")) %>% 
+    paths = file.path(pyResourcesIterDirs, "scenario_wildcards.csv")) %>% 
   # Extract the CO2 price from the opts columns which starts with Ep followed by a number of format 0.0
   mutate(value = as.numeric(str_extract(opts, "(?<=Ep)\\d+\\.\\d{1,2}")))
 
@@ -4690,7 +4690,7 @@ lcoe.fuel <- dataCostsPyPSA %>%
 
 # PyPSA-Eur: CO2 costs
 dataCO2PricePyPSA <- readPyPSAcsv(
-    paths = file.path(pyResourcesIterDirs, "co2_price_scenarios.csv")) %>% 
+    paths = file.path(pyResourcesIterDirs, "scenario_wildcards.csv")) %>% 
   # Extract the CO2 price from the opts columns which starts with Ep followed by a number of format 0.0
   mutate(co2 = as.numeric(str_extract(opts, "(?<=Ep)\\d+\\.\\d{1,2}"))) %>%
   select(year, iteration, co2)
