@@ -1,7 +1,8 @@
 *** SOF ./core/input/generisdata_tech.prn
 $ontext
 tech_stat   technology status: how close a technology is to market readiness. Scale: 0-3, with 0 'I can go out and build a GW plant today' to 3 'Still some research necessary'
-inco0       Initial investment costs given in $[2015] / kW[output] capacity; for dac/prc cc: $[2015] / (tC[captured]/a); for other indutry prc: $[2015]/(t[output]/a)
+inco0       Initial investment costs given in $[2015] / kW[output] capacity; for dac/prc cc: $[2015] / (tC[captured]/a); for other indutry prc: $[2015]/(t[output]/a);
+            for pypsa links (btin, btout): $[2015] / kW[output] capacity; for pypsa stores (btstor, h2stor): $[2015] / kWh storage capacity
 floorcost   Floor investment costs, given in $[2015] / kW[output]; for dac: $[2015] / (tC[captured]/a)
 constrTme   Construction time in years, needed to calculate turn-key cost premium compared to overnight costs
 lifetime    Average lifetime of a technology, given in years. Effective maximum lifetime is longer than that.
@@ -170,6 +171,16 @@ omf                 0.06        0.06
 lifetime              20          20
 $endif.cm_subsec_model_steel
 
+
+$ifthen.pypsa "%power%" == "PyPSA"
+*** PyPSA specific power technologies
++                   btin       btout      btstor      h2stor
+tech_stat
+inco0                100           0          50        0.50
+omf                 0.01           0       0.015        0.03
+eta                 0.97        0.97
+lifetime              20          20          10         100
+$endif.pypsa
 
 
 *** deprecated technologies

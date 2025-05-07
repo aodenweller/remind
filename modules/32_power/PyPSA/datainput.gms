@@ -145,8 +145,8 @@ p32_anticipation_MV("DEU","spv") = -0.5;
 *** This is necessary, because in 05_initialCap/on/preloop.gms
 *** this is only set if cm_startyear eq 2005 and otherwise read in from input_ref
 loop(regi,
-    pm_eta_conv(ttot,regi,"btin") = pm_data(regi,"eta","btin");
-    pm_eta_conv(ttot,regi,"btout") = pm_data(regi,"eta","btout");
+        pm_eta_conv(ttot,regi,"btin") = pm_data(regi,"eta","btin");
+        pm_eta_conv(ttot,regi,"btout") = pm_data(regi,"eta","btout");
     );
 
 *** EOF ./modules/32_power/PyPSA/datainput.gms

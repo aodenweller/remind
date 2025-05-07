@@ -33,7 +33,7 @@ s32_storlink                                        "how strong is the influence
 positive variables
     v32_shStor(ttot,all_regi,all_te)         		"share of seel production from a VRE te that needs to be stored based on this te's share. Unit: ~Percent"
     v32_storloss(ttot,all_regi,all_te)         		"total energy loss from storage for a given technology [TWa]"
-    vm_shSeEl(ttot,all_regi,all_te)			     	"new share of electricity production in % [%]"
+    vm_shSeEl(ttot,all_regi,all_te)				    "new share of electricity production in % [%]"
     v32_testdemSeShare(ttot,all_regi,all_te)        "test variable for tech share of SE electricity demand"
     v32_TotVREshare(ttot,all_regi)                  "Total VRE share as calculated by summing shSeEl. Unit: Percent"
     v32_shAddIntCostTotVRE(ttot,all_regi)           "Variable containing how much the total VRE share is above the threshold - needed to calculate additional integation costs due to total VRE share."
@@ -82,15 +82,17 @@ v32_flexPriceShareMin(ttot,all_regi,all_te)         "possible minimum of share o
 *** (4) PyPSA reporting: Parameters that are calculated for reporting and plotting
 parameters
     !! Parameters for exporting data to PyPSA-Eur
-    p32_load(ttot,all_regi)                                         "PyPSA export: Electricity load [TWa]"
-    p32_preInvCap(ttot,all_regi,all_te)                             "PyPSA export: Pre-investment capacities [TW for generation/link, TWh for storage]"
-    p32_preInvCap_iter(iteration,ttot,all_regi,all_te)              "PyPSA export: Pre-investment capacities in iterations [TW for generation/link, TWh for storage]"
-    p32_preInvCapAvg(ttot,all_regi,all_te)                          "PyPSA export: Pre-investment capacities averaged over iterations [TW for generation/link, TWh for storage]"
+    p32_load(ttot,all_regi)                                         "PyPSA export: Total electricity load for FE electricity [TWa]"
+    p32_load_EVs(ttot,all_regi)                                     "PyPSA export: Electricity load for EVs, corrected to corresponding SE electricity load [TWa]"
+    p32_load_heating(ttot,all_regi)                                 "PyPSA export: Electricity load for buildings heating, corrected to corresponding SE electricity load [TWa]"
+    p32_ElecH2Demand(ttot,all_regi)                                 "PyPSA export: Electrolytic hydrogen demand outside the power sector [TWa]"
+    p32_cap(ttot,all_regi,all_te)                                   "PyPSA export: Pre-investment capacities [TW for generation/link, TWh for storage]"
+    p32_cap_iter(iteration,ttot,all_regi,all_te)                    "PyPSA export: Pre-investment capacities in iterations [TW for generation/link, TWh for storage]"
+    p32_capAvg(ttot,all_regi,all_te)                                "PyPSA export: Pre-investment capacities averaged over iterations [TW for generation/link, TWh for storage]"
     p32_discountRate(ttot)                                          "PyPSA export: Interest rate / discount rate aggregated across all regions in regPy32 [1]"
     p32_capCostwAdjCost(ttot,all_regi,all_te)                       "PyPSA export: Specific capital costs plus adjustment costs [T$/TW_out for generation/link, T$/TWh for storage]"
     p32_PEPrice_iter(iteration,ttot,all_regi,all_enty)              "PyPSA export: PE price in iterations [T$/TWa, nuclear: T$/Mt]"
     p32_PEPriceAvg(ttot,all_regi,all_enty)                          "PyPSA export: PE price averaged over iterations [T$/TWa, nuclear: T$/Mt]"
-    p32_ElecH2Demand(ttot,all_regi)                                 "PyPSA export: Electrolytic hydrogen demand outside the power sector [TWa]"
     p32_weightGen(ttot,all_regi,all_te)                             "PyPSA export: Weights for generation technologies [TWa]"
     p32_weightStor(ttot,all_regi,all_te)                            "PyPSA export: Weights for storage technologies, currently electrolysis and hydrogen turbines [TWa]"
     p32_weightPEprice(ttot,all_regi,all_enty)                       "PyPSA export: Weights for primary energy prices [TWa]"
@@ -155,26 +157,23 @@ $endif
 $ifthen "%cm_pypsa_markup%" == "on"
 variables
     vm_PyPSAMarkup(ttot,all_regi,all_te)                            "PyPSA coupling: Markups for electricity generation technologies [T$/TWa]"
-    vm_PyPSAMarkupDemand(ttot,all_regi,all_te)                      "PyPSA coupling: Markups for electricity consumption technologies [T$/TWa]"
-*    v32_capDiff(ttot,all_regi,all_te)                               "PyPSA coupling: Difference between REMIND and PyPSA capacities [TW]"
+    vm_PyPSAMarkupDemand(ttot,all_regi,loadPy32)                    "PyPSA coupling: Markups for electricity consumption technologies [T$/TWa]"
 ;
 $endif
 
 *** Equations for the PyPSA coupling
 equations
     q32_load(ttot,all_regi,all_enty)                                "PyPSA coupling: Calculate electricity load"
+    q32_loadMin(ttot,all_regi,all_enty)                             "PyPSA coupling: Helper equation to ensure load is not set to zero"
     q32_pe2seel(ttot,all_regi)                                      "PyPSA coupling: Calculate v32_pe2seel"
     q32_pe2seelTe(ttot,all_regi,all_te)                             "PyPSA coupling: Calculate v32_pe2seelTe"
     q32_shPe2seel(ttot,all_regi,all_te)                             "PyPSA coupling: Calculate v32_shpe2seel"
-*    q32_capDiff(ttot,all_regi,all_te)                               "PyPSA coupling: Calculate difference between REMIND and PyPSA capacities"
 $ifthen "%c32_pypsa_capfac%" == "on"
     q32_capFac(ttot,all_regi,all_te)                                "PyPSA coupling: Anticipation factor equation for capacity factors"
-*    q32_capFacMin(ttot,all_regi,all_te)                             "PyPSA coupling: Anticipation factor equation for minimum capacity factors"
-*    q32_capFacMax(ttot,all_regi,all_te)                             "PyPSA coupling: Anticipation factor equation for maximum capacity factors"
 $endif
 $ifthen "%cm_pypsa_markup%" == "on"
     q32_MarkUp(ttot,all_regi,all_te)                                "PyPSA coupling: Anticipation factor equation to calculate technology-specific markups"
-    q32_MarkUpDemand(ttot,all_regi,all_te)                          "PyPSA coupling: Equation for markup demand"
+    q32_MarkUpDemand(ttot,all_regi,loadPy32)                        "PyPSA coupling: Equation for markup demand"
 $endif
 $ifthen "%c32_pypsa_peakcap%" == "on"
     q32_PeakResCap(ttot,all_regi)                                   "PyPSA coupling: Anticipation factor equation for peak residual load"
@@ -185,7 +184,7 @@ $ifthen "%c32_pypsa_h2stor%" == "on"
 $endif
 $ifthen "%c32_pypsa_btstor%" == "on"
     q32_battery(ttot,all_regi)                                      "PyPSA coupling: Equation for battery discharge requirements"
-    q32_batinEQbatout(ttot,all_regi)                                "PyPSA coupling: Equation that equals capacities of battery charge and discharge"
+    !!q32_batinEQbatout(ttot,all_regi)                                "PyPSA coupling: Equation that equals capacities of battery charge and discharge"
 $endif
     q32_gridLosses(ttot,all_regi)                                   "PyPSA coupling: Equation to calculate grid losses"
 $ifthen "%c32_pypsa_trade%" == "on"

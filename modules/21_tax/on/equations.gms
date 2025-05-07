@@ -70,7 +70,7 @@ $endIf.cm_implicitPePriceTarget
 $ifthen.pypsa "%power%" == "PyPSA"
 $ifthen.markup "%cm_pypsa_markup%" == "on"
   + v21_taxrevPyPSAMarkup(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))
-  + v21_taxrevPyPSAMarkupDemand(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))
+  + v21_taxrevPyPSAMarkupElectrolysis(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))
 $endif.markup
 $endif.pypsa
 ;
@@ -425,12 +425,23 @@ q21_taxrevPyPSAMarkup(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1)
   - p21_taxrevPyPSAMarkup0(t,regi) 
 ;
 
-q21_taxrevPyPSAMarkupDemand(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
-  v21_taxrevPyPSAMarkupDemand(t,regi)
+*** Markup for demand side technology electrolysis
+q21_taxrevPyPSAMarkupElectrolysis(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
+  v21_taxrevPyPSAMarkupElectrolysis(t,regi)
   =e=
-  ( vm_PyPSAMarkupDemand(t,regi,"elh2") * vm_demSe(t,regi,"seel","seh2","elh2") )
-  - p21_taxrevPyPSAMarkupDemand0(t,regi)
+  ( vm_PyPSAMarkupDemand(t,regi,"electrolysis") * vm_demSe(t,regi,"seel","seh2","elh2") )
+  - p21_taxrevPyPSAMarkupElectrolysis0(t,regi)
 ;
+
+$ontext
+*** Markup for demand side technology EVs (work in progress)
+q21_taxrevPyPSAMarkupEVs(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
+  v21_taxrevPyPSAMarkupEVs(t,regi)
+  =e=
+  ( vm_PyPSAMarkupDemand(t,regi,"EVs") * sum(emiMkt, vm_demFeSector.l(t,regi,"seel","feelt","trans",emiMkt)) / pm_eta_conv(t,regi,"tdelt") )
+  - p21_taxrevPyPSAMarkupEVs0(t,regi)
+;
+$offtext
 $endif.markup
 $endif.pypsa
 

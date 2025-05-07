@@ -1,11 +1,12 @@
 #!/bin/bash
 scenario="$(basename "$(pwd)")"
 directory="${1}"
-iteration="${2}"
+conda_env="${2}"
+snakefile="${3}"
+iteration="${4}"
 # Define PIK HPC profile and conda environment
 # TODO: Move somewhere else
 hpc_profile="${directory}/pik_hpc_profile"
-conda_env="pypsa-eur-20241119"
 # Logging info for main log.txt in REMIND
 echo "PyPSA log: Directory ${directory}"
 echo "PyPSA log: Scenario ${scenario}"
@@ -76,7 +77,7 @@ ATTEMPT=0
 CONFIG_FILE="resources/${scenario}/i${iteration}/config.remind_scenario.yaml"
 while [[ ! -f "${directory}/${CONFIG_FILE}" && $ATTEMPT -lt $MAX_ATTEMPTS ]]; do
     echo "PyPSA log: Attempt $((ATTEMPT + 1)) to create PyPSA config file..."
-    snakemake -s "${directory}/Snakefile_REMIND" --directory "${directory}" "${CONFIG_FILE}" >> "log_pypsa_snakemake.txt" 2>&1
+    snakemake -s "${directory}/${snakefile}" --directory "${directory}" "${CONFIG_FILE}" >> "log_pypsa_snakemake.txt" 2>&1
     # Increment attempt counter
     ((ATTEMPT++))
     # Sleep for 2 seconds
@@ -102,7 +103,7 @@ while [[ ! -f "${directory}/${TARGET_FILE}" && $ATTEMPT -lt $MAX_ATTEMPTS ]]; do
     echo "PyPSA log: Attempt $((ATTEMPT + 1)) to run PyPSA-Eur..."
     # Call PyPSA-Eur in background, redirecting output to log file
     snakemake --profile "$hpc_profile" \
-        -s "${directory}/Snakefile_REMIND" --directory "${directory}" "${TARGET_FILE}" \
+        -s "${directory}/${snakefile}" --directory "${directory}" "${TARGET_FILE}" \
         --configfile "${directory}/${CONFIG_FILE}" >> "log_pypsa_snakemake.txt" 2>&1 &
     snakemake_pid=$!
     # Check every two minutes and move to a different QoS and partition until all jobs are running

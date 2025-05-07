@@ -7,31 +7,6 @@
 *** SOF ./modules/32_power/PyPSA/bounds.gms
 
 ***------------------------------------------------------------
-***                  PyPSA-Eur coupling (data import))
-***------------------------------------------------------------
-
-* Read in values after first PyPSA run in previous iteration
-if ((sm_PyPSA_eq eq 1),
-
-* Capacity factors: Overwrite pm_cf for dispatchable technologies
-* This is probably redundant as vm_capfac is not fixed to pm_cf any longer, but free
-* TODO: Check capacity factor reporting, maybe set pm_cf = vm_capfac.l in postsolve for reporting
-$ifthen "%c32_pypsa_capfac%" == "on"
-  pm_cf(tPy32,regPy32,tePyDisp32) = p32_PyPSA_CFAvg(tPy32,regPy32,tePyDisp32);
-$endif
-  
-  !! Set v32_storloss to zero for all technologies
-  v32_storloss.fx(tPy32,regPy32,tePy32) = 0;
-  v32_storloss.fx(tPy32,regPy32,teVRE) = 0;
-
-  p32_hydroCorrectionFactor(tPy32,regPy32)$(p32_PyPSA_CF(tPy32,regPy32,"hydro") gt sm_eps) = p32_PyPSA_AF(tPy32,regPy32,"hydro") / p32_PyPSA_CF(tPy32,regPy32,"hydro");
-  
-  !! Replace UNDF with 0
-  !!p32_PyPSA_PartialDerivativeCF(tPy32,regPy32,tePy32,tePy32_2)$(mapVal(p32_PyPSA_PartialDerivativeCF(tPy32,regPy32,tePy32,tePy32_2)) eq 4) = 0;
-
-);
-
-***------------------------------------------------------------
 ***                  Bounds copied from IntC
 ***------------------------------------------------------------
 
@@ -100,67 +75,87 @@ vm_cap.fx(t,regi,"elh2VRE",rlf) = 0;
 ***                  PyPSA-Eur coupling (bounds)
 ***------------------------------------------------------------
 
-*** Assume that total electricity load per region cannot go down below 50% of the 2005 value of vm_usableSe
-*** This should not be binding in the solution, but might prevent the solver from setting the load to 0 in some iterations
-vm_usableSe.lo(tPy32,regPy32,"seel") = 0.5 * vm_usableSe.l("2005",regPy32,"seel");
+*** Restrict v32_shPe2seel between 0 and 1
+v32_shPe2seel.lo(tPy32,regPy32,tePy32) = 0;
+v32_shPe2seel.up(tPy32,regPy32,tePy32) = 1;
+
+*** Set bounds if PyPSA-Eur coupling is active
+if ((sm_PyPSA_eq eq 1),
+    !! Set v32_storloss to zero for all technologies
+    v32_storloss.fx(tPy32,regPy32,tePy32) = 0;
+    !! Calculate hydro correction factor
+    p32_hydroCorrectionFactor(tPy32,regPy32)$(p32_PyPSA_CF(tPy32,regPy32,"hydro") gt sm_eps) = 
+        p32_PyPSA_AF(tPy32,regPy32,"hydro") / p32_PyPSA_CF(tPy32,regPy32,"hydro");
+    !! TEMPORARY FIX to make sure the load is in a reasonable range
+    v32_load.lo(tPy32,"DEU") = 400  / 8760;  !! 400 TWn/a min
+    v32_load.up(tPy32,"DEU") = 1500 / 8760;  !! 1500 TWh/a max
+);
 
 *** All capacity factors come from PyPSA-Eur.
 *** Set vm_capFac free here, so that REMIND can adjust it freely to match the capacity factor from PyPSA-Eur (equation q32_capFac).
 *** vm_capFac can be larger than 1 since it is used as a correction factor. Limit to between 0 and 2 here.
 $ifthen "%c32_pypsa_capfac%" == "on"
 if ((sm_PyPSA_eq eq 1),
-  vm_capFac.lo(tPy32,regPy32,tePy32)$(not sameas(tePy32,"hydro")) = 0;
-  vm_capFac.up(tPy32,regPy32,tePy32)$(not sameas(tePy32,"hydro")) = 2;
-*  v32_capDiff.lo(tPy32,regPy32,tePy32) = -0.2*p32_PyPSA_OptCap(tPy32,regPy32,tePy32) / 1E6;  !! MW to TW
-*  v32_capDiff.up(tPy32,regPy32,tePy32) = 0.2*p32_PyPSA_OptCap(tPy32,regPy32,tePy32) / 1E6;  !! MW to TW
+    vm_capFac.lo(tPy32,regPy32,tePy32)$(not sameas(tePy32,"hydro")) = 0;
+    vm_capFac.up(tPy32,regPy32,tePy32)$(not sameas(tePy32,"hydro")) = 2;
 );
 $endif
 
-*** Fix capacity factor for electrolysis and hydrogen turbines
+*** Capacity factor for electrolysis and hydrogen turbines
 $ifthen "%c32_pypsa_h2stor%" == "on"
 if ((sm_PyPSA_eq eq 1),
-  !! Fix capacitiy factor of electrolysis to PyPSA value
-  vm_capFac.fx(tPy32,regPy32,"elh2") = p32_PyPSA_CF(tPy32,regPy32,"elh2");
-  !! Fix capacitiy factor of hydrogen turbines to PyPSA value
-  vm_capFac.fx(tPy32,regPy32,"h2turb") = p32_PyPSA_CF(tPy32,regPy32,"h2turb");
-  !! Lower bound of hydrogen underground storage capacity from PyPSA value
-  vm_cap.lo(tPy32,regPy32,"h2stor","1") = p32_PyPSA_OptCap(tPy32,regPy32,"h2stor") / 1E6;  !! MWh to TWh
-  !! Enable h2 turbines in all modelled years
-  vm_deltaCap.up(tPy32,regPy32,"h2turb","1") = Inf;
-  !! Disable hydrogen storage before cm_startyear
-  vm_deltaCap.fx(ttot,regPy32,"h2stor","1")$(ttot.val lt cm_startyear) = 0;
-  vm_cap.fx(ttot,regPy32,"h2stor","1")$(ttot.val lt cm_startyear) = 0;
+    !! Fix capacitiy factor of electrolysis to PyPSA value
+    vm_capFac.fx(tPy32,regPy32,"elh2") = p32_PyPSA_CF(tPy32,regPy32,"elh2");
+    !! Fix capacitiy factor of hydrogen turbines to PyPSA value
+    vm_capFac.fx(tPy32,regPy32,"h2turb") = p32_PyPSA_CF(tPy32,regPy32,"h2turb");
+    !! Lower bound of hydrogen underground storage capacity from PyPSA value
+    vm_cap.lo(tPy32,regPy32,"h2stor","1") = p32_PyPSA_OptCap(tPy32,regPy32,"h2stor") / 1E6;  !! MWh to TWh
+    !! Enable h2 turbines in all modelled years
+    vm_deltaCap.up(tPy32,regPy32,"h2turb","1") = Inf;
+    !! Disable hydrogen storage before cm_startyear
+    !! Otherwise REMIND cheekily builds hydrogen storage before cm_startyear
+    vm_deltaCap.fx(ttot,regPy32,"h2stor","1")$(ttot.val lt cm_startyear) = 0;
+    vm_cap.fx(ttot,regPy32,"h2stor","1")$(ttot.val lt cm_startyear) = 0;
 );
 $endif
 
+*** Capacity factor for battery storage
 $ifthen "%c32_pypsa_btstor%" == "on"
 if ((sm_PyPSA_eq eq 1),
-  !! Fix capacity factor of battery charger to PyPSA value
-  vm_capFac.lo(tPy32,regPy32,"btin") = 0.5*p32_PyPSA_CF(tPy32,regPy32,"btin");
-  vm_capFac.up(tPy32,regPy32,"btin") = p32_PyPSA_CF(tPy32,regPy32,"btin");
-  !! Fix capacity factor of battery discharger to PyPSA value
-  vm_capFac.lo(tPy32,regPy32,"btout") = 0.5*p32_PyPSA_CF(tPy32,regPy32,"btout");
-  vm_capFac.up(tPy32,regPy32,"btout") = p32_PyPSA_CF(tPy32,regPy32,"btout");
-  !! Lower bound of battery storage capacity from PyPSA value
-  vm_cap.lo(tPy32,regPy32,"btstor","1") = p32_PyPSA_OptCap(tPy32,regPy32,"btstor") / 1E6;  !! MWh to TWh
-  !! Disable all battery technologies only forced in from PyPSA before cm_startyear
-  vm_deltaCap.fx(ttot,regPy32,"btin","1")$(ttot.val lt cm_startyear) = 0;
-  vm_cap.fx(ttot,regPy32,"btin","1")$(ttot.val lt cm_startyear) = 0;
-  vm_deltaCap.fx(ttot,regPy32,"btout","1")$(ttot.val lt cm_startyear) = 0;
-  vm_cap.fx(ttot,regPy32,"btout","1")$(ttot.val lt cm_startyear) = 0;
-  vm_deltaCap.fx(ttot,regPy32,"btstor","1")$(ttot.val lt cm_startyear) = 0;
-  vm_cap.fx(ttot,regPy32,"btstor","1")$(ttot.val lt cm_startyear) = 0;
+    !! Fix capacity factor of battery charger to PyPSA value
+    !!vm_capFac.lo(tPy32,regPy32,"btin") = 0.5*p32_PyPSA_CF(tPy32,regPy32,"btin");
+    !!vm_capFac.up(tPy32,regPy32,"btin") = p32_PyPSA_CF(tPy32,regPy32,"btin");
+    vm_capFac.fx(tPy32,regPy32,"btin") = p32_PyPSA_CF(tPy32,regPy32,"btin");
+    !! Fix capacity factor of battery discharger to PyPSA value
+    !!vm_capFac.lo(tPy32,regPy32,"btout") = 0.5*p32_PyPSA_CF(tPy32,regPy32,"btout");
+    !!vm_capFac.up(tPy32,regPy32,"btout") = p32_PyPSA_CF(tPy32,regPy32,"btout");
+    vm_capFac.fx(tPy32,regPy32,"btout") = p32_PyPSA_CF(tPy32,regPy32,"btout");
+    !! Lower bound of battery storage capacity from PyPSA value
+    vm_cap.lo(tPy32,regPy32,"btstor","1") = p32_PyPSA_OptCap(tPy32,regPy32,"btstor") / 1E6;  !! MWh to TWh
+    !! Disable all battery technologies before cm_startyear
+    !! Otherwise REMIND cheekily builds battery storage before cm_startyear
+    vm_deltaCap.fx(ttot,regPy32,"btin","1")$(ttot.val lt cm_startyear) = 0;
+    vm_cap.fx(ttot,regPy32,"btin","1")$(ttot.val lt cm_startyear) = 0;
+    vm_deltaCap.fx(ttot,regPy32,"btout","1")$(ttot.val lt cm_startyear) = 0;
+    vm_cap.fx(ttot,regPy32,"btout","1")$(ttot.val lt cm_startyear) = 0;
+    vm_deltaCap.fx(ttot,regPy32,"btstor","1")$(ttot.val lt cm_startyear) = 0;
+    vm_cap.fx(ttot,regPy32,"btstor","1")$(ttot.val lt cm_startyear) = 0;
 );
 $endif
-
-*** Restrict v32_shPe2seel between 0 and 1
-v32_shPe2seel.lo(tPy32,regPy32,tePy32) = 0;
-v32_shPe2seel.up(tPy32,regPy32,tePy32) = 1;
 
 *** Set starting values for vm_PyPSAMarkup
 $ifthen "%cm_pypsa_markup%" == "on"
 if ((sm_PyPSA_eq eq 1),
-  vm_PyPSAMarkup.l(tPy32,regPy32,tePy32) = p32_PyPSA_MarkupSupplyAvg(tPy32,regPy32,tePy32) * sm_TWa_2_MWh / 1e12;
+    vm_PyPSAMarkup.l(tPy32,regPy32,tePy32) = p32_PyPSA_MarkupSupplyAvg(tPy32,regPy32,tePy32) * sm_TWa_2_MWh / 1e12;
+);
+$endif
+
+*** VRE potentials from PyPSA-Eur (in terms of capacity, not generation)
+$ifthen "%c32_pypsa_potentials%" == "on"
+if ((sm_PyPSA_eq eq 1),
+    !! Set upper bound for vm_cap for VRE technologies (other than hydro)
+    vm_cap.up(t,regi,te,"1")$(tPy32(t) AND regPy32(regi) AND tePyVRE32(te) AND NOT sameas(te, "hydro")) =
+        p32_PyPSA_Potential(t,regi,te) / 1E6;  !! MW to TW
 );
 $endif
 
@@ -180,48 +175,39 @@ if ((c32_deactivateTech eq 1 and sm_PyPSA_eq eq 1),
 *** Electricity trade
 $ifthen.c32_pypsa_trade "%c32_pypsa_trade%" == "on"
 if ((sm_PyPSA_eq eq 1),
-  !! Free bounds for vm_Mport and vm_Xport
-  vm_Mport.lo(tPy32,regPy32,"seel") = 0;
-  vm_Mport.up(tPy32,regPy32,"seel") = Inf;
-  vm_Xport.lo(tPy32,regPy32,"seel") = 0;
-  vm_Xport.up(tPy32,regPy32,"seel") = Inf;
-  !! Set starting values for vm_Mport and vm_Xport
-  !! This is necessary because otherwise the solver will set both to 0, despite q32_ElecTradeImport and q32_ElecTradeExport
-  vm_Mport.l(tPy32,regPy32,"seel") = sum(regPy32_2, p32_PyPSA_Trade(tPy32,regPy32_2,regPy32)) / sm_TWa_2_MWh;
-  vm_Xport.l(tPy32,regPy32,"seel") = sum(regPy32_2, p32_PyPSA_Trade(tPy32,regPy32,regPy32_2)) / sm_TWa_2_MWh;
-  !! Set starting value of v32_shSeElRegi
-  v32_shSeElRegi.l(tPy32,regPy32) = v32_pe2seel.l(tPy32,regPy32) / sum(regPy32_2, v32_pe2seel.l(tPy32,regPy32_2));
-  !! Read in electricity trade prices
-  !! These are weighted averages of the prices of the regions that are traded with
-  !! Remember to also change the seTrade set to include "seel" as otherwise the budget equation won't see these costs
+    !! Free bounds for vm_Mport and vm_Xport
+    vm_Mport.lo(tPy32,regPy32,"seel") = 0;
+    vm_Mport.up(tPy32,regPy32,"seel") = Inf;
+    vm_Xport.lo(tPy32,regPy32,"seel") = 0;
+    vm_Xport.up(tPy32,regPy32,"seel") = Inf;
+    !! Set starting values for vm_Mport and vm_Xport
+    !! This is necessary because otherwise the solver will set both to 0, despite q32_ElecTradeImport and q32_ElecTradeExport
+    vm_Mport.l(tPy32,regPy32,"seel") = sum(regPy32_2, p32_PyPSA_Trade(tPy32,regPy32_2,regPy32)) / sm_TWa_2_MWh;
+    vm_Xport.l(tPy32,regPy32,"seel") = sum(regPy32_2, p32_PyPSA_Trade(tPy32,regPy32,regPy32_2)) / sm_TWa_2_MWh;
+    !! Set starting value of v32_shSeElRegi
+    v32_shSeElRegi.l(tPy32,regPy32) = v32_pe2seel.l(tPy32,regPy32) / sum(regPy32_2, v32_pe2seel.l(tPy32,regPy32_2));
+    !! Read in electricity trade prices
+    !! These are weighted averages of the prices of the regions that are traded with
+    !! Remember to also change the seTrade set to include "seel" as otherwise the budget equation won't see these costs
 $ifthen.c32_pypsa_trade_prices "%c32_pypsa_trade_prices%" == "abs"
-  pm_MPortsPrice(tPy32,regPy32,"seel") = 0;
-  pm_MPortsPrice(tPy32,regPy32,"seel")$(sum(regPy32_2, p32_PyPSA_Trade(tPy32,regPy32_2,regPy32)) gt sm_eps) =
-      sum(regPy32_2, p32_PyPSA_TradePriceImport(tPy32,regPy32_2,regPy32) * p32_PyPSA_Trade(tPy32,regPy32_2,regPy32))
-    / sum(regPy32_2, p32_PyPSA_Trade(tPy32,regPy32_2,regPy32)) * sm_TWa_2_MWh / 1e12;
-  pm_XPortsPrice(tPy32,regPy32,"seel") = 0;
-  pm_XPortsPrice(tPy32,regPy32,"seel")$(sum(regPy32_2, p32_PyPSA_Trade(tPy32,regPy32,regPy32_2)) gt sm_eps) = 
-      sum(regPy32_2, p32_PyPSA_TradePriceExport(tPy32,regPy32,regPy32_2) * p32_PyPSA_Trade(tPy32,regPy32,regPy32_2))
-    / sum(regPy32_2, p32_PyPSA_Trade(tPy32,regPy32,regPy32_2)) * sm_TWa_2_MWh / 1e12;
+    pm_MPortsPrice(tPy32,regPy32,"seel") = 0;
+    pm_MPortsPrice(tPy32,regPy32,"seel")$(sum(regPy32_2, p32_PyPSA_Trade(tPy32,regPy32_2,regPy32)) gt sm_eps) =
+        sum(regPy32_2, p32_PyPSA_TradePriceImport(tPy32,regPy32_2,regPy32) * p32_PyPSA_Trade(tPy32,regPy32_2,regPy32))
+        / sum(regPy32_2, p32_PyPSA_Trade(tPy32,regPy32_2,regPy32)) * sm_TWa_2_MWh / 1e12;
+    pm_XPortsPrice(tPy32,regPy32,"seel") = 0;
+    pm_XPortsPrice(tPy32,regPy32,"seel")$(sum(regPy32_2, p32_PyPSA_Trade(tPy32,regPy32,regPy32_2)) gt sm_eps) = 
+        sum(regPy32_2, p32_PyPSA_TradePriceExport(tPy32,regPy32,regPy32_2) * p32_PyPSA_Trade(tPy32,regPy32,regPy32_2))
+        / sum(regPy32_2, p32_PyPSA_Trade(tPy32,regPy32,regPy32_2)) * sm_TWa_2_MWh / 1e12;
 $endif.c32_pypsa_trade_prices
-  !! Set starting value and restrict v32_shSeELTradeImport
-  v32_shSeELTradeImport.l(tPy32,regPy32)$(v32_pe2seel.l(tPy32,regPy32) gt sm_eps) =
-    vm_Mport.l(tPy32,regPy32,"seel") / v32_pe2seel.l(tPy32,regPy32);
-  v32_shSeELTradeImport.up(tPy32,regPy32) = c32_pypsa_trade_max;
-  !! Set starting value and restrict v32_shSeELTradeExport
-  v32_shSeELTradeExport.l(tPy32,regPy32)$(v32_pe2seel.l(tPy32,regPy32) gt sm_eps) =
-    vm_Xport.l(tPy32,regPy32,"seel") / v32_pe2seel.l(tPy32,regPy32);
-  v32_shSeELTradeExport.up(tPy32,regPy32) = c32_pypsa_trade_max;
+    !! Set starting value and restrict v32_shSeELTradeImport
+    v32_shSeELTradeImport.l(tPy32,regPy32)$(v32_pe2seel.l(tPy32,regPy32) gt sm_eps) =
+        vm_Mport.l(tPy32,regPy32,"seel") / v32_pe2seel.l(tPy32,regPy32);
+    v32_shSeELTradeImport.up(tPy32,regPy32) = c32_pypsa_trade_max;
+    !! Set starting value and restrict v32_shSeELTradeExport
+    v32_shSeELTradeExport.l(tPy32,regPy32)$(v32_pe2seel.l(tPy32,regPy32) gt sm_eps) =
+        vm_Xport.l(tPy32,regPy32,"seel") / v32_pe2seel.l(tPy32,regPy32);
+    v32_shSeELTradeExport.up(tPy32,regPy32) = c32_pypsa_trade_max;
 );
 $endif.c32_pypsa_trade
-
-*** VRE potentials from PyPSA-Eur (in terms of capacity, not generation)
-$ifthen.c32_pypsa_potentials "%c32_pypsa_potentials%" == "on"
-if ((sm_PyPSA_eq eq 1),
-  !! Set upper bound for vm_cap for VRE technologies (other than hydro)
-  vm_cap.up(t,regi,te,"1")$(tPy32(t) AND regPy32(regi) AND tePyVRE32(te) AND NOT sameas(te, "hydro")) =
-    p32_PyPSA_Potential(t,regi,te) / 1E6;  !! MW to TW
-);
-$endif.c32_pypsa_potentials
 
 *** EOF ./modules/32_power/PyPSA/bounds.gms

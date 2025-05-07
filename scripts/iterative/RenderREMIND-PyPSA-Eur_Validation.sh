@@ -3,8 +3,8 @@
 #SBATCH --qos=priority
 #SBATCH --job-name=REMIND-PyPSA-Eur_Validation
 #SBATCH --output=%x-%j.out
-#SBATCH --nodes=1
-#SBATCH --time=01:00:00
+#SBATCH --nodes=6
+#SBATCH --time=00:20:00
 #SBATCH --mem=32000
 
 # Check if any jobs with the same name in the same directory are running

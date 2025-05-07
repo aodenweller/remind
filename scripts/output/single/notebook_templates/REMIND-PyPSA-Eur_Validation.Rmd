@@ -37,6 +37,7 @@ knitr::opts_chunk$set(
   message = FALSE,
   cache = FALSE,
   warning = FALSE,
+  error = TRUE, # Continue despite errors
   dev = c("png", "pdf"),
   dev.args = list(png = list(type = "cairo", family = "sans"), pdf = list(family = "sans", bg = "transparent")),
   fig.align = "center",
@@ -583,30 +584,30 @@ Pre-investment capacities are used to initialize the PyPSA-Eur model. They are m
 # Average pre-investment capacities
 dataPreInvCapAvgREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "p32_preInvCapAvg",
-    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_preInvCap"),
+    gdxVar = "p32_capAvg",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_cap"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = TRUE,
     recalcUnit = 1e3) %>%   # TW to GW
   revalue.levels(technology = rm2genTech) %>%
   filter(!(technology %in% storageTech)) %>%
   group_by(year, region, technology, iteration) %>%
-  summarise(preInvCap = sum(p32_preInvCap)) %>%
+  summarise(preInvCap = sum(p32_cap)) %>%
   order.levels(technology = names(colorsTech)) %>%
   filter(iteration %in% pyIterations)
 
 # Non-averaged pre-investment capacities
 dataPreInvCapREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "p32_preInvCap",
-    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_preInvCap"),
+    gdxVar = "p32_cap",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_cap"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = TRUE,
     recalcUnit = 1e3) %>%   # TW to GW
   revalue.levels(technology = rm2genTech) %>%
   filter(!(technology %in% storageTech)) %>%
   group_by(year, region, technology, iteration) %>%
-  summarise(preInvCap = sum(p32_preInvCap)) %>%
+  summarise(preInvCap = sum(p32_cap)) %>%
   order.levels(technology = names(colorsTech)) %>%
   filter(iteration %in% pyIterations)
 
@@ -701,7 +702,7 @@ for (r in regList){
 # Average pre-investment capacities
 dataPreInvCapAvgREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "p32_preInvCapAvg",
+    gdxVar = "p32_capAvg",
     columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "value"),
     colFilter = list("year" = years, "region" = regions, "technology" = c("h2stor")),
     restoreZeros = TRUE) %>%
@@ -710,7 +711,7 @@ dataPreInvCapAvgREMIND <- readREMINDgdx(
 # Non-averaged pre-investment capacities
 dataPreInvCapREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "p32_preInvCap",
+    gdxVar = "p32_cap",
     columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "value"),
     colFilter = list("year" = years, "region" = regions, "technology" = c("h2stor")),
     restoreZeros = TRUE) %>%
@@ -1584,7 +1585,7 @@ if (nrow(dataFuelCostsPyPSApy) > 0) {
 # Read REMIND data
 dataCO2intREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "fm_dataemiglob",
+    gdxVar = "pm_emifac",
     columns = c("all_enty" = "pecarrier", "all_enty1" = "secarrier", "all_te" = "technology", "all_enty2" = "gas", "value" = "co2int"),
     colFilter = list("secarrier" = "seel", "gas" = "co2", technology = names(rm2genTech)),
     restoreZeros = FALSE,
@@ -1826,7 +1827,7 @@ ToDo: This doesn't work properly for the case of "all regions" yet as the PyPSA 
 
 ```{r capacity factors generation}
 
-# REMIND capacity factors (ancitipation factor based)
+# REMIND capacity factors (anticipation factor based)
 dataCapREMIND <- readREMINDgdx(
     paths = rmFiles,
     gdxVar = "vm_cap",
@@ -2975,7 +2976,7 @@ if (cfg$gms$c32_pypsa_anticipation == "diffQuot") {
 
 ### Anticipation: Optimal capacities of REMIND technologies
 
-```{r}
+```{r anticipation optimal capacities}
 
 tePy32 <- gdx::readGDX(rmFiles[1], "tePy32")
 
@@ -3198,22 +3199,22 @@ PyPSA-Eur should therefore only start investing into new capacity once the free 
 # Read REMIND data
 dataPreInvCapREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "p32_preInvCap",
-    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_preInvCap"),
+    gdxVar = "p32_cap",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_cap"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = TRUE,
     recalcUnit = 1e3)
 
 dataPreInvCapAvgREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "p32_preInvCapAvg",
-    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_preInvCapAvg"),
+    gdxVar = "p32_capAvg",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_capAvg"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = TRUE,
     recalcUnit = 1e3) %>%
   revalue.levels(technology = rm2genTech) %>%
   group_by(year, region, technology, iteration) %>%
-  summarise(p32_preInvCapAvg = sum(p32_preInvCapAvg))
+  summarise(p32_capAvg = sum(p32_capAvg))
   
 dataCapREMIND <- readREMINDgdx(
     paths = rmFiles,
@@ -3226,11 +3227,11 @@ dataCapREMIND <- readREMINDgdx(
 
 dataCapInvestREMIND <- full_join(dataPreInvCapREMIND, dataCapREMIND) %>%
   mutate(vm_cap = vm_cap,
-         deltaCap = vm_cap - p32_preInvCap) %>%
+         deltaCap = vm_cap - p32_cap) %>%
   revalue.levels(technology = rm2genTech) %>%
   group_by(year, region, technology, iteration) %>%
   summarise(deltaCap = sum(deltaCap),
-            preInvCap = sum(p32_preInvCap)) %>%
+            preInvCap = sum(p32_cap)) %>%
   order.levels(technology = names(colorsTech)) %>%
   pivot_longer(cols = c("deltaCap", "preInvCap"),
                names_to = "variable",
@@ -3301,8 +3302,8 @@ for (r in regList) {
       filter(region %in% r,
              iteration == i) %>%
       group_by(year, technology, iteration) %>%
-      summarise(p32_preInvCapAvg = sum(p32_preInvCapAvg)) %>%
-      filter(!is.na(p32_preInvCapAvg))
+      summarise(p32_capAvg = sum(p32_capAvg)) %>%
+      filter(!is.na(p32_capAvg))
 
     dataCapInvestPyPSAplot <- dataCapInvestPyPSA %>%
       filter(region %in% r,
@@ -3329,7 +3330,7 @@ for (r in regList) {
               linewidth = 0.25,
               width = 1.7) +
       geom_point(data = dataPreInvCapAvgREMINDplot,
-                mapping = aes(x = year, y = p32_preInvCapAvg, fill = technology, shape = "Averaged"),
+                mapping = aes(x = year, y = p32_capAvg, fill = technology, shape = "Averaged"),
                 color = "black",
                 position = position_nudge(x = -1),
                 size = 1) +
@@ -4792,15 +4793,15 @@ mapElecBalanceSupply <- c(
   "3" = "Coproduction SE",
   "4" = "Coproduction FE",
   "5" = "Coproduction CCS",
-  "6" = "Import",
-  "7" = "Grid losses")
+  "6" = "Import")
 
 mapElecBalanceWithdrawal <- c(
-  "8" = "FE demand",
-  "9" = "SE demand (electrolysis)",
-  "10" = "Storage losses (v32_storloss)",
-  "11" = "Own consumption fuel extraction",
-  "12" = "Export")
+  "7" = "FE demand",
+  "8" = "SE demand (electrolysis)",
+  "9" = "Storage losses (v32_storloss)",
+  "10" = "Own consumption fuel extraction",
+  "11" = "Export",
+  "12" = "Grid losses")
 
 # Supply
 dataElecBalanceSupply <- dataElecBalance %>%

@@ -25,7 +25,7 @@ q32_balSe(t,regi,enty2)$(sameas(enty2,"seel"))..
   + sum(pc2te(enty,enty3,te,enty2),
         sum(teCCS2rlf(te,rlf),
             pm_prodCouple(regi,enty,enty3,te,enty2) * vm_co2CCS(t,regi,enty,enty3,te,rlf) ) )
-    + vm_Mport(t,regi,enty2)
+  + vm_Mport(t,regi,enty2)
   =e=
     sum(se2fe(enty2,enty3,te), vm_demSe(t,regi,enty2,enty3,te) )
   + sum(se2se(enty2,enty3,te), vm_demSe(t,regi,enty2,enty3,te) )
@@ -365,6 +365,15 @@ q32_load(t,regi,enty2)$(tPy32(t) and regPy32(regi) and sameas(enty2,"seel"))..
             pm_prodCouple(regi,enty,enty3,te,enty2) * vm_co2CCS(t,regi,enty,enty3,te,rlf) ) )
 ;
 
+*** Require that at least 75% of the usable electricity output from comes from primary energy
+*** This should not be binding, but makes sure to constrain the solver to a meaningful solution
+q32_loadMin(t,regi,enty2)$(tPy32(t) and regPy32(regi) and sameas(enty2,"seel"))..
+  sum(pe2se(enty,enty2,te), vm_prodSe(t,regi,enty,enty2,te) )
+  =g=
+  0.75 * vm_usableSe(t,regi,"seel")
+;
+
+
 ***------------------------------------------------------------
 ***            REMIND to PyPSA-Eur: Helper equations
 ***------------------------------------------------------------
@@ -418,29 +427,11 @@ q32_capFac(t,regi,te)$(tPy32(t) and regPy32(regi) AND tePy32(te) AND (sm_PyPSA_e
     =e=
     vm_cap(t,regi,te,"1") * p32_PyPSA_CFAvg(t,regi,te)
 $ifthen.c32_pypsa_anticipation "%c32_pypsa_anticipation%" == "manual"
-    * ( 1 + s32_anticipationFactorFadeOut * p32_anticipation_CF(t,regi,te) * ( v32_shPe2seel(t,regi,te) - p32_PyPSA_shPe2seel(t,regi,te) ) )
+  * ( 1 + s32_anticipationFactorFadeOut * p32_anticipation_CF(t,regi,te) * ( v32_shPe2seel(t,regi,te) - p32_PyPSA_shPe2seel(t,regi,te) ) )
 $elseif.c32_pypsa_anticipation "%c32_pypsa_anticipation%" == "diffQuot"
-*    + sum(tePy32_2, p32_PyPSA_DQ_CF(t,regi,te,tePy32_2) * ( 1E6 * vm_cap(t,regi,tePy32_2,"1") - p32_PyPSA_OptCap(t,regi,tePy32_2) ) )
-*    + sum(tePy32_2, p32_PyPSA_DQ_CF(t,regi,te,tePy32_2) * 1E6 * v32_capDiff(t,regi,tePy32_2) )
-* Use logistic curve to limit the anticipation effect to +-20% of the real capacity factor
-    + sum(tePy32_2,
-        0.8*p32_PyPSA_CFAvg(t,regi,te) + p32_PyPSA_CFAvg(t,regi,te) / ( 1 + exp( -4*p32_PyPSA_DQ_CF(t,regi,te,tePy32_2)/p32_PyPSA_CFAvg(t,regi,te) * (vm_cap(t,regi,tePy32_2,"1") - p32_PyPSA_OptCap(t,regi,tePy32_2) ) ) )
-    )
+  + sum(tePy32_2, p32_PyPSA_DQ_CF(t,regi,te,tePy32_2) * ( 1E6 * vm_cap(t,regi,tePy32_2,"1") - p32_PyPSA_OptCap(t,regi,tePy32_2) ) )
 $endif.c32_pypsa_anticipation
 ;
-$ontext
-q32_capFacMin(t,regi,te)$(tPy32(t) and regPy32(regi) AND tePy32(te) AND (sm_PyPSA_eq eq 1) AND NOT sameas(te, "hydro"))..
-    v32_pe2seelTe(t,regi,te)
-    =g=
-    vm_cap(t,regi,te,"1") * p32_PyPSA_CFMin(t,regi,te) * X
-;
-
-q32_capFacMax(t,regi,te)$(tPy32(t) and regPy32(regi) AND tePy32(te) AND (sm_PyPSA_eq eq 1) AND NOT sameas(te, "hydro"))..
-    v32_pe2seelTe(t,regi,te)
-    =l=
-    vm_cap(t,regi,te,"1") * p32_PyPSA_CFMax(t,regi,te) * X
-;
-$offtext
 $endif.c32_pypsa_capfac
 
 ***------------------------------------------------------------
@@ -459,13 +450,16 @@ $ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
 q32_MarkUp(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (sm_PyPSA_eq eq 1))..
 	vm_PyPSAMarkup(t,regi,te)
 	=e=
-$ifthen.c32_pypsa_anticipation "%c32_pypsa_anticipation%" == "manual"
+$ifthen.c32_pypsa_anticipation "%c32_pypsa_anticipation%" == "off"
+    p32_PyPSA_MarkupSupplyAvg(t,regi,te)
+$elseif.c32_pypsa_anticipation "%c32_pypsa_anticipation%" == "manual"
     ( p32_PyPSA_MarkupSupplyAvg(t,regi,te) + abs(p32_PyPSA_MarkupSupplyAvg(t,regi,te)) * s32_anticipationFactorFadeOut * p32_anticipation_MV(regi,te) * ( v32_shPe2seel(t,regi,te) - p32_PyPSA_shPe2seel(t,regi,te) ) )
 $elseif.c32_pypsa_anticipation "%c32_pypsa_anticipation%" == "diffQuot"
 *    ( p32_PyPSA_MarkupSupplyAvg(t,regi,te) + sum(tePy32_2, p32_PyPSA_DQ_MarkupSupply(t,regi,te,tePy32_2) * ( 1E6* vm_cap(t,regi,tePy32_2,"1") - p32_PyPSA_OptCap(t,regi,tePy32_2) ) ) )
+    !! Manual anticipation copy-pasted here for now
     ( p32_PyPSA_MarkupSupplyAvg(t,regi,te) + abs(p32_PyPSA_MarkupSupplyAvg(t,regi,te)) * s32_anticipationFactorFadeOut * p32_anticipation_MV(regi,te) * ( v32_shPe2seel(t,regi,te) - p32_PyPSA_shPe2seel(t,regi,te) ) )
 $endif.c32_pypsa_anticipation
-    * sm_TWa_2_MWh / 1e12
+  * sm_TWa_2_MWh / 1e12
 ;
 $endif.cm_pypsa_markup
 
@@ -477,15 +471,16 @@ $endif.cm_pypsa_markup
 *** The anticipation factor can be based on the following intuition:
 *** If the sum of VRE shares increases, peak residual load decreases.
 *** However, since VREs have a small capacity credit, this effect is also small.
-*** Currently deactivate anticipation factors.
 $ifthen.c32_pypsa_peakcap "%c32_pypsa_peakcap%" == "on"
 q32_PeakResCap(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
-  sum(tePyDisp32, vm_cap(t,regi,tePyDisp32, "1"))
-  =g=
+    sum(tePyDisp32, vm_cap(t,regi,tePyDisp32, "1"))
+    =g=
     p32_PyPSA_PeakResLoadRel(t,regi) * v32_load(t,regi)
-*$ifthen.c32_pypsa_anticipation "%c32_pypsa_anticipation%" == "on"
-*    * ( 1 - 0.3 * ( sum(tePyVRE32, v32_shPe2seel(t,regi,tePyVRE32) - p32_PyPSA_shPe2seel(t,regi,tePyVRE32)) ) )
-*$endif.c32_pypsa_anticipation
+$ontext
+$ifthen "%c32_pypsa_anticipation%" == "on"
+    * ( 1 - 0.2 * ( sum(tePyVRE32, v32_shPe2seel(t,regi,tePyVRE32) - p32_PyPSA_shPe2seel(t,regi,tePyVRE32)) ) )
+$endif
+$offtext
 ;
 $endif.c32_pypsa_peakcap
 
@@ -506,18 +501,18 @@ $endif.c32_pypsa_peakcap
 *** Equation 1: Set the required production of hydrogen turbines relative to the load.
 $ifthen "%c32_pypsa_h2stor%" == "on"
 q32_h2turb(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
-  vm_prodSe(t,regi,"seh2","seel","h2turb")
-  =g=
-  p32_PyPSA_H2TurbRel(t,regi) * v32_load(t,regi)
+    vm_prodSe(t,regi,"seh2","seel","h2turb")
+    =g=
+    p32_PyPSA_H2TurbRel(t,regi) * v32_load(t,regi)
 ;
 $endif
 
 *** Equation 2: Ensure that enough hydrogen is produced by electrolysers to cover the demand of hydrogen turbines.
 $ifthen "%c32_pypsa_h2stor%" == "on"
 q32_elh2forh2turb(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
-  vm_prodSe(t,regi,"seel","seh2","elh2")
-  =g=
-  vm_demSe(t,regi,"seh2","seel","h2turb")
+    vm_prodSe(t,regi,"seel","seh2","elh2")
+    =g=
+    vm_demSe(t,regi,"seh2","seel","h2turb")
 ;
 $endif
 
@@ -531,8 +526,8 @@ $endif
 *** 2. Battery discharging (btout) that converts seelstor to seel (unit TW)
 *** 3. Battery storage (btstor) used to store energy (unit TWh)
 *** Note that btin and btout are the same phyiscal technology (inverter + balance of system).
-*** Therefore, btout does not have capital or FOM costs and the capacity
-*** of btin and btout should be the same when accounting for the efficiency.
+*** Therefore, btout does not have capital or FOM costs and the capacity of btin
+*** and btout should be the same when accounting for the efficiency.
 *** Note: Capacity factors of btin and btout are fixed to PyPSA values in bounds.gms.
 *** Note: The lower bound of battery storage capacity (btstor) is set to PyPSA values in bounds.gms.
 
@@ -542,20 +537,22 @@ $endif
 *** this then also drives investment into battery charging (btin).
 $ifthen "%c32_pypsa_btstor%" == "on"
 q32_battery(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
-  vm_prodSe(t,regi,"seelstor","seel","btout")
-  =e=
-  p32_PyPSA_BatteryDischargeRel(t,regi) * v32_load(t,regi)
+    vm_prodSe(t,regi,"seelstor","seel","btout")
+    =g=
+    p32_PyPSA_BatteryDischargeRel(t,regi) * v32_load(t,regi)
 ;
 
 * TEMPORARY: Set btin to btout, in theory this shouldn't be necessary
 * when fixing the capacity factors of btin and btout to PyPSA values.
 * This only works when there is a bit of freedom to the capacity factors
 * as otherwise REMIND is overconstrained, leading to a small numerical infeasibility
+$ontext
 q32_batinEQbatout(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
-  vm_cap(t,regi,"btin","1")
-  =e=
-  vm_cap(t,regi,"btout","1") * pm_eta_conv(t,regi,"btout")
+    vm_cap(t,regi,"btin","1")
+    =e=
+    vm_cap(t,regi,"btout","1") * pm_eta_conv(t,regi,"btout")
 ;
+$offtext
 $endif
 
 ***------------------------------------------------------------
@@ -564,9 +561,9 @@ $endif
 *** Transmission losses are providede relative to the total load from PyPSA.
 *** They are added to the withdrawal side of the electricity balance equation (see above).
 q32_gridLosses(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
-  v32_gridLosses(t,regi)
-  =e=
-  p32_PyPSA_GridLossesRel(t,regi) * v32_load(t,regi)
+    v32_gridLosses(t,regi)
+    =e=
+    p32_PyPSA_GridLossesRel(t,regi) * v32_load(t,regi)
 ;
 
 
@@ -576,12 +573,14 @@ q32_gridLosses(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
 *** This is the equivalent to supply-side markups and can be regarded as demand-side markups.
 *** Currently this only includes electricity prices paid by electrolysis.
 *** vm_PyPSAMarkupDemand is used in 21_tax/on to subsidise or penalise technologies.
-q32_MarkUpDemand(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (sm_PyPSA_eq eq 1))..
-  vm_PyPSAMarkupDemand(t,regi,"elh2")
-  =e=
-  p32_PyPSA_MarkupDemandAvg(t,regi,"electrolysis") * sm_TWa_2_MWh / 1e12
+*** Put into separate equation here in order to enable anticipation later on.
+$ifthen "%cm_pypsa_markup%" == "on"
+q32_MarkUpDemand(t,regi,loadPy32)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
+    vm_PyPSAMarkupDemand(t,regi,loadPy32)
+    =e=
+    p32_PyPSA_MarkupDemandAvg(t,regi,loadPy32) * sm_TWa_2_MWh / 1e12
 ;
-
+$endif
 
 ***------------------------------------------------------------
 ***            PyPSA-Eur to REMIND: Electricity trade

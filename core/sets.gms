@@ -183,7 +183,6 @@ all_te          "all energy technologies, including from modules"
     btin            "PyPSA coupling: Battery charging (inverter + balance of system) [TW]"
     btout           "PyPSA coupling: Battery discharging (inverter + balance of system) [TW]"
     btstor          "PyPSA coupling: Stationary battery storage capacity [TWh, not TWa]"
-*    grid            "PyPSA coupling: Transmission grid capacity [TW*km]"
     h22ch4          "Methanation, H2 + 4 CO2 --> CH4 + 2 H20"
     MeOH            "Methanol production /liquid fuel, CO2 hydrogenation, CO2 + 3 H2 --> CH3OH + H20"
     tdels           "transmission and distribution for electricity to stationary users"
@@ -1230,11 +1229,10 @@ $ifthen.cm_subsec_model_steel "%cm_subsec_model_steel%" == "processes"
     idrcc           "Direct reduction CCS"
 $endif.cm_subsec_model_steel
 $ifthen.pypsa "%power%" == "PyPSA"
-        h2stor          "PyPSA coupling: Hydrogen underground storage [TWh, not TWa]"
-        btin            "PyPSA coupling: Battery charging [TW]"
-        btout           "PyPSA coupling: Battery discharging [TW]"
-        btstor          "PyPSA coupling: Stationary battery storage capacity [TWh, not TWa]"
-*        grid            "PyPSA coupling: Transmission grid capacity [TW*km]"
+    h2stor          "PyPSA coupling: Hydrogen underground storage [TWh, not TWa]"
+    btin            "PyPSA coupling: Battery charging [TW]"
+    btout           "PyPSA coupling: Battery discharging [TW]"
+    btstor          "PyPSA coupling: Stationary battery storage capacity [TWh, not TWa]"
 $endif.pypsa
 /
 teAdj(all_te)           "technologies with adjustment costs on capacity additions"
@@ -1310,11 +1308,10 @@ $ifthen.cm_subsec_model_steel "%cm_subsec_model_steel%" == "processes"
     idrcc           "Direct reduction CCS"
 $endif.cm_subsec_model_steel
 $ifthen.pypsa "%power%" == "PyPSA"
-        h2stor          "PyPSA coupling: Hydrogen underground storage [TWh, not TWa]"
-        btin            "PyPSA coupling: Battery charging [TW]"
-        btout           "PyPSA coupling: Battery discharging [TW]"
-        btstor          "PyPSA coupling: Stationary battery storage capacity [TWh, not TWa]"
-***        grid           "PyPSA coupling: Transmission grid capacity [TW*km]"
+    h2stor          "PyPSA coupling: Hydrogen underground storage [TWh, not TWa]"
+    btin            "PyPSA coupling: Battery charging [TW]"
+    btout           "PyPSA coupling: Battery discharging [TW]"
+    btstor          "PyPSA coupling: Stationary battery storage capacity [TWh, not TWa]"
 $endif.pypsa
 /
 
@@ -1558,7 +1555,6 @@ teNoTransform(all_te) "all technologies that do not transform energy but still h
 $ifthen.pypsa "%power%" == "PyPSA"
     h2stor          "PyPSA coupling: Hydrogen underground storage [TWh, not TWa]"
     btstor          "PyPSA coupling: Stationary battery storage capacity [TWh, not TWa]"
-*        grid            "PyPSA coupling: Transmission grid capacity [TW*km]"
 $endif.pypsa
 /
 teRegTechCosts(all_te) "all technologies for which we differantiate tech costs by region"
@@ -1580,7 +1576,7 @@ teRegTechCosts(all_te) "all technologies for which we differantiate tech costs b
 ***       wind
     windon
 $ifthen.pypsa "%power%" == "PyPSA"
-    h2stor          "PyPSA coupling: Hydrogen underground storage [TWh, not TWa]"
+*    h2stor          "PyPSA coupling: Hydrogen underground storage [TWh, not TWa]"
     btin            "PyPSA coupling: Battery charging [TW]"
     btout           "PyPSA coupling: Battery discharging [TW]"
     btstor          "PyPSA coupling: Stationary battery storage capacity [TWh, not TWa]"

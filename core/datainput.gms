@@ -228,32 +228,6 @@ $elseif.c_techAssumptScen "%c_techAssumptScen%" == "SSP5"
 
 $endif.c_techAssumptScen
 
-*AO* TEMPORARY: Include h2stor technology
-fm_dataglob("inco0","h2stor") = 0.2; !! $/kWh long-term = 200 $/MWh
-fm_dataglob("omf","h2stor") = 0.03;
-fm_dataglob("lifetime","h2stor") = 100;
-fm_dataglob("tech_stat","h2stor") = 4;
-
-*AO* TEMPORARY: Include btin technology
-fm_dataglob("inco0","btin") = 100;  !! $/kW long-term
-fm_dataglob("eta","btin") = 0.97;  !! 97% efficiency
-fm_dataglob("omf","btin") = 0.01;  !! 1% FOM
-fm_dataglob("lifetime","btin") = 20;  !! 20 years lifetime
-fm_dataglob("tech_stat","btin") = 4;
-
-*AO* TEMPORARY: Include btout technology
-fm_dataglob("inco0","btout") = 0;  !! CAPEX accounted in btin
-fm_dataglob("eta","btout") = 0.97;  !! 97% efficiency
-fm_dataglob("omf","btout") = 0;  !! FOM accounted in btin
-fm_dataglob("lifetime","btout") = 20;  !! 20 years lifetime
-fm_dataglob("tech_stat","btout") = 4;
-
-*AO* TEMPORARY: Include btstor technology
-fm_dataglob("inco0","btstor") = 50; !! $/kWh long-term
-fm_dataglob("omf","btstor") = 0.015;  !! 1.5% FOM
-fm_dataglob("lifetime","btstor") = 10;  !! 10 years lifetime
-fm_dataglob("tech_stat","btstor") = 4;
-
 ***---------------------------------------------------------------------------
 *** Other technological assumptions (VRE, CCS...)
 ***---------------------------------------------------------------------------
@@ -291,6 +265,12 @@ $if not "%cm_learnRate%" == "off"                 fm_dataglob("learn",te)$p_new_
 $if not "%cm_inco0RegiFactor%" == "off" parameter p_new_inco0RegiFactor(all_te) / %cm_inco0RegiFactor% /;
 $if not "%cm_inco0RegiFactor%" == "off"           p_inco0(ttot,regi,te)$(p_inco0(ttot,regi,te) and p_new_inco0RegiFactor(te)) = p_new_inco0RegiFactor(te) * p_inco0(ttot,regi,te);
 
+*AO* eternal temporary fix: pypsa battery charger initial costs at 200 $/kW
+p_inco0(ttot,all_regi,"btin")$(ttot.val ge 2015 and ttot.val le 2030) = 200;
+
+*AO* eternal temporary fix: pypsa battery storage initial costs at 150 $/kWh
+p_inco0(ttot,all_regi,"btstor")$(ttot.val ge 2015 and ttot.val le 2030) = 150;
+
 
 ***---------------------------------------------------------------------------
 *** Unit uniformisation
@@ -306,22 +286,13 @@ fm_dataglob("inco0", "oae_ng") = fm_dataglob("inco0", "oae_ng") / (cm_33_OAE_eff
 fm_dataglob("inco0", "oae_el") = fm_dataglob("inco0", "oae_el") / (cm_33_OAE_eff / sm_c_2_co2);
 
 *** convert inco0, floorcost and omv to REMIND units by applying a factor 0.001
-***   category          energy technology   ccs technology    process-based industry 
-***   input data unit   $/kW                $/(tC/a)          $/(t/a)
-***   REMIND unit       T$/TW               T$/(GtC/a)        T$/(Gt/a)
+***   category          energy technology   ccs technology    process-based industry   pypsa storage tech
+***   input data unit   $/kW                $/(tC/a)          $/(t/a)                  $/kWh
+***   REMIND unit       T$/TW               T$/(GtC/a)        T$/(Gt/a)                T$/TWh
 fm_dataglob("inco0",te)        = s_DpKW_2_TDpTW   * fm_dataglob("inco0",te);
 fm_dataglob("floorcost",te)    = s_DpKW_2_TDpTW   * fm_dataglob("floorcost",te);
 fm_dataglob("omv",te)          = s_DpKWa_2_TDpTWa * fm_dataglob("omv",te);
 p_inco0(ttot,regi,te)          = s_DpKW_2_TDpTW   * p_inco0(ttot,regi,te);
-
-*AO* TEMPORARY: Hydrogen underground storage initial costs at 500 $/MWh
-p_inco0(ttot,all_regi,"h2stor")$(ttot.val ge 2015 and ttot.val le 2030) = 0.5;
-
-*AO* TEMPORARY: Battery charger initial costs at 200 $/kW
-p_inco0(ttot,all_regi,"btin")$(ttot.val ge 2015 and ttot.val le 2030) = 200;
-
-*AO* TEMPORARY: Battery storage initial costs at 150 $/kWh
-p_inco0(ttot,all_regi,"btstor")$(ttot.val ge 2015 and ttot.val le 2030) = 150;
 
 ***---------------------------------------------------------------------------
 *** Data checks

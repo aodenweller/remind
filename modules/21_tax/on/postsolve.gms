@@ -63,7 +63,7 @@ $ifthen.markup "%cm_pypsa_markup%" == "on"
 p21_taxrevPyPSAMarkup0(ttot,regi) = sum(en2en(enty,enty2,te)$(tePy32(te)),
                                    - vm_PyPSAMarkup.l(ttot,regi,te) * ( vm_prodSe.l(ttot,regi,enty,enty2,te) - v32_storloss.l(ttot,regi,te) )
                                   );
-p21_taxrevPyPSAMarkupDemand0(ttot,regi) = vm_PyPSAMarkupDemand.l(ttot,regi,"elh2") * vm_demSe.l(ttot,regi,"seel","seh2","elh2");
+p21_taxrevPyPSAMarkupElectrolysis0(ttot,regi) = vm_PyPSAMarkupDemand.l(ttot,regi,"electrolysis") * vm_demSe.l(ttot,regi,"seel","seh2","elh2");
 $endif.markup
 $endif.pypsa
 
@@ -84,8 +84,12 @@ p21_taxrevFlex_iter(iteration+1,ttot,regi) = v21_taxrevFlex.l(ttot,regi);
 p21_taxrevImport_iter(iteration+1,ttot,regi,tradePe) = v21_taxrevImport.l(ttot,regi,tradePe);
 p21_taxrevChProdStartYear_iter(iteration+1,t,regi) = v21_taxrevChProdStartYear.l(t,regi);
 p21_taxrevSE_iter(iteration+1,t,regi) = v21_taxrevSE.l(t,regi);
+$ifthen.pypsa "%power%" == "PyPSA"
+$ifthen.markup "%cm_pypsa_markup%" == "on"
 p21_taxrevPyPSAMarkup_iter(iteration,ttot,all_regi) = v21_taxrevPyPSAMarkup.l(ttot,all_regi);
-p21_taxrevPyPSAMarkupDemand_iter(iteration,ttot,all_regi) = v21_taxrevPyPSAMarkupDemand.l(ttot,all_regi);
+p21_taxrevPyPSAMarkupElectrolysis_iter(iteration,ttot,all_regi) = v21_taxrevPyPSAMarkupElectrolysis.l(ttot,all_regi);
+$endif.markup
+$endif.pypsa
 
 *** Save gross emissions of current iteration
 p21_grossEmissions(iteration,t,regi) = vm_emiAll.l(t,regi,"co2") + vm_emiCdrAll.l(t,regi);
