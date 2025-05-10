@@ -6353,3 +6353,49 @@ pGenComp <- ggplot() +
 ggsave("gencomp_year_new.png", width = 30, height = 14, units = "cm", dpi = 300, bg = "white")
 }
 ```
+
+```{r mv demand presentation, eval = FALSE}
+
+dataMVdemand <- readPyPSAcsv(
+  paths = file.path(pyReportingDirs, "market_values_demand.csv")) %>%
+  rename(carrier = general_carrier) %>%
+  filter(iteration == 20)
+
+dataMVdemandcutoff <- readPyPSAcsv(
+  paths = file.path(pyReportingDirs, "market_values_demand_cutoff.csv")) %>%
+  rename(carrier = general_carrier) %>%
+  filter(iteration == 20)
+
+dataLoadPrice <- readPyPSAcsv(
+  paths = file.path(pyReportingDirs, "load_prices.csv")) %>%
+  rename(carrier = general_carrier) %>%
+  filter(carrier == "AC") %>%
+  mutate(carrier = "load") %>%
+  filter(iteration == 20)
+
+dataLoadPricecutoff <- readPyPSAcsv(
+  paths = file.path(pyReportingDirs, "load_prices_cutoff.csv")) %>%
+  rename(carrier = general_carrier) %>%
+  filter(carrier == "AC") %>%
+  mutate(carrier = "load") %>%
+  filter(iteration == 20)
+
+pMVdemand <- ggplot() +
+  geom_line(data = dataMVdemand, aes(x = year, y = value, color = carrier, linetype = "Not cut off")) +
+  geom_line(data = dataMVdemandcutoff, aes(x = year, y = value, color = carrier, linetype = "Cut off")) +
+  scale_color_discrete(name = "Demand") +
+  new_scale_color() +
+  geom_line(data = dataLoadPrice, aes(x = year, y = value, color = "Total load", linetype = "Not cut off")) +
+  geom_line(data = dataLoadPricecutoff, aes(x = year, y = value, color = "Total load", linetype = "Cut off")) +
+  scale_color_manual(name = NULL,
+                     values = c("Total load" = "black")) +
+  scale_linetype_manual(name = "Peak prices",
+                        values = c("Not cut off" = "solid", "Cut off" = "dashed")) +
+  labs(x = "Year", y = "Electricity price ($/MWh)") +
+  ggtitle("End-use electricity prices w/ flexible EVs") +
+  scale_y_continuous(limits = c(0, 85))
+
+ggsave("mv_demand_ev_dsm.png", width = 16, height = 10, units = "cm", dpi = 300, bg = "white")
+
+
+```

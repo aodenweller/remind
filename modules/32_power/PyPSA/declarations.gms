@@ -75,7 +75,7 @@ v32_flexPriceShareMin(ttot,all_regi,all_te)         "possible minimum of share o
 ***                  Declarations for PyPSA
 ***------------------------------------------------------------
 
-*** We categorise declarationf into the following categories:
+*** Declarations are categorised as follows:
 *** (1) PyPSA export: Parameters that are written to REMIND2PyPSAEUR.gdx in postsolve.gms
 *** (2) PyPSA import: Parameters that are read from PyPSAEUR2REMIND.gdx in postsolve.gms (import calc parameters are derived from these)
 *** (3) PyPSA coupling: Parameters/Variables/Equations that are used within the coupling, mostly in equations.gms
@@ -84,7 +84,8 @@ parameters
     !! Parameters for exporting data to PyPSA-Eur
     p32_load(ttot,all_regi)                                         "PyPSA export: Total electricity load for FE electricity [TWa]"
     p32_load_EVs(ttot,all_regi)                                     "PyPSA export: Electricity load for EVs, corrected to corresponding SE electricity load [TWa]"
-    p32_load_heating(ttot,all_regi)                                 "PyPSA export: Electricity load for buildings heating, corrected to corresponding SE electricity load [TWa]"
+    p32_load_heatpump(ttot,all_regi)                                "PyPSA export: Electricity load for heat pumps in buildings, corrected to corresponding SE electricity load [TWa]"
+    p32_load_resistive(ttot,all_regi)                               "PyPSA export: Electricity load for resistive heating in buildings, corrected to corresponding SE electricity load [TWa]"
     p32_ElecH2Demand(ttot,all_regi)                                 "PyPSA export: Electrolytic hydrogen demand outside the power sector [TWa]"
     p32_cap(ttot,all_regi,all_te)                                   "PyPSA export: Pre-investment capacities [TW for generation/link, TWh for storage]"
     p32_cap_iter(iteration,ttot,all_regi,all_te)                    "PyPSA export: Pre-investment capacities in iterations [TW for generation/link, TWh for storage]"

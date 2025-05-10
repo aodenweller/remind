@@ -52,7 +52,7 @@ If (cm_startyear = 2030, tPy32("2025") = no);
 *** Sets to import PyPSA data
 sets
     loadPy32                    "Loads for which specific electricity prices / demand-side markups are reported in PyPSA"
-        /"electrolysis"/
+        /"electrolysis", "EVs"/
 ;
 
 *** Make alises for use in equations

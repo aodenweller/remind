@@ -69,8 +69,8 @@ else  !! Use full capacities
 *** Track pre-investment capacities over iterations
 p32_cap_iter(iteration,t,regi,te) = p32_cap(t,regi,te);
 
-*** Special treatment for hydro: Don't use pre-investment capacity, but post-investment capacity instead
-*** Also pass hydro generation to PyPSA, this is used to force PyPSA to REMIND's capacity factor
+*** Special treatment for hydro: Pass full capacity and generation in separate variables
+*** This is used to force PyPSA onto REMIND's capacity factor by adjusting the inflow time series in PyPSA
 p32_hydroCap(t,regi)$(tPy32(t) AND regPy32(regi)) = vm_cap.l(t,regi,"hydro","1");
 p32_hydroGen(t,regi)$(tPy32(t) AND regPy32(regi)) = v32_pe2seelTe.l(t,regi,"hydro") * p32_hydroCorrectionFactor(t,regi);
 
@@ -92,11 +92,22 @@ p32_load_EVs(t,regi)$(tPy32(t) AND regPy32(regi)) =
     / pm_eta_conv(t,regi,"tdelt")
 ;
 
-*** Calculate electricity load of buildings heating
+*** Calculate electricity load for heat pumps
 *** Take pm_eta_conv (transmission & distribution losses) into account
 *** in order to yield the corresponding electricity load on the SE level
-p32_load_heating(t,regi)$(tPy32(t) AND regPy32(regi)) = 
-    sum(in$(sameas(in, "feelhpb") or sameas(in, "feelrhb")),
+p32_load_heatpump(t,regi)$(tPy32(t) AND regPy32(regi)) = 
+    sum(in$(sameas(in, "feelhpb")),
+            vm_cesIO.l(t,regi,in)
+            + pm_cesdata(t,regi,in,"offset_quantity")
+        )
+    / pm_eta_conv(t,regi,"tdels")
+;
+
+*** Calculate electricity load for resistive heating
+*** Take pm_eta_conv (transmission & distribution losses) into account
+*** in order to yield the corresponding electricity load on the SE level
+p32_load_resistive(t,regi)$(tPy32(t) AND regPy32(regi)) = 
+    sum(in$(sameas(in, "feelrhb")),
             vm_cesIO.l(t,regi,in)
             + pm_cesdata(t,regi,in,"offset_quantity")
         )
@@ -212,8 +223,10 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startI
         p32_load,
         !! EV load
         p32_load_EVs,
-        !! Heating load
-        p32_load_heating,
+        !! Heat pump load
+        p32_load_heatpump,
+        !! Resistive heating load
+        p32_load_resistive,
         !! Additional electrolytic hydrogen demand (from outside power sector)
         p32_ElecH2Demand,
         !! Capital cost components
@@ -244,7 +257,7 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startI
     !! (2) Create PyPSA config yaml file using REMIND2PyPSAEUR_config.gdx (first snakemake command)
     !! (3) Run PyPSA, including all data pre- and postprocessing, using the the yaml file (second snakemake command)
     !! (3) Copy PyPSAEUR2REMIND.gdx to REMIND scenario output folder
-    !! The PyPSA directory and the current iteration are passed as arguments to the shell script
+    !! The PyPSA directory, conda environment, snakemake file name, and the current iteration are passed as arguments
     Put_utility logfile, "Exec" /
     "./RunPyPSA-Eur.sh %c32_pypsa_dir% %c32_pypsa_conda_dir% %c32_pypsa_snakefile% " iteration.val:0:0;
 

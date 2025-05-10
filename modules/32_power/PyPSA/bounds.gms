@@ -7,6 +7,28 @@
 *** SOF ./modules/32_power/PyPSA/bounds.gms
 
 ***------------------------------------------------------------
+***                  PyPSA-Eur coupling (data import))
+***------------------------------------------------------------
+
+* Read in values after first PyPSA run in previous iteration
+if ((sm_PyPSA_eq eq 1),
+
+* Capacity factors: Overwrite pm_cf for dispatchable technologies
+* This is probably redundant as vm_capfac is not fixed to pm_cf any longer, but free
+* TODO: Check capacity factor reporting, maybe set pm_cf = vm_capfac.l in postsolve for reporting
+$ifthen "%c32_pypsa_capfac%" == "on"
+  pm_cf(tPy32,regPy32,tePyDisp32) = p32_PyPSA_CFAvg(tPy32,regPy32,tePyDisp32);
+$endif
+  
+  !! Set v32_storloss to zero for all technologies
+  v32_storloss.fx(tPy32,regPy32,tePy32) = 0;
+  v32_storloss.fx(tPy32,regPy32,teVRE) = 0;
+
+  p32_hydroCorrectionFactor(tPy32,regPy32)$(p32_PyPSA_CF(tPy32,regPy32,"hydro") gt sm_eps) = p32_PyPSA_AF(tPy32,regPy32,"hydro") / p32_PyPSA_CF(tPy32,regPy32,"hydro");
+  
+);
+
+***------------------------------------------------------------
 ***                  Bounds copied from IntC
 ***------------------------------------------------------------
 
@@ -81,11 +103,6 @@ v32_shPe2seel.up(tPy32,regPy32,tePy32) = 1;
 
 *** Set bounds if PyPSA-Eur coupling is active
 if ((sm_PyPSA_eq eq 1),
-    !! Set v32_storloss to zero for all technologies
-    v32_storloss.fx(tPy32,regPy32,tePy32) = 0;
-    !! Calculate hydro correction factor
-    p32_hydroCorrectionFactor(tPy32,regPy32)$(p32_PyPSA_CF(tPy32,regPy32,"hydro") gt sm_eps) = 
-        p32_PyPSA_AF(tPy32,regPy32,"hydro") / p32_PyPSA_CF(tPy32,regPy32,"hydro");
     !! TEMPORARY FIX to make sure the load is in a reasonable range
     v32_load.lo(tPy32,"DEU") = 400  / 8760;  !! 400 TWn/a min
     v32_load.up(tPy32,"DEU") = 1500 / 8760;  !! 1500 TWh/a max
