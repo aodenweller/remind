@@ -28,10 +28,12 @@ p21_taxrevImport0(ttot,all_regi,all_enty,tax_import_type_21)        "reference l
 p21_taxrevChProdStartYear0(ttot,all_regi)                           "reference level value of tax to limit changes compared to reference run in cm_startyear"
 p21_taxrevSE0(ttot,all_regi)                                        "reference level value of tax on SE electricity demand"
 $ifthen.pypsa "%power%" == "PyPSA"
-$ifthen.markup "%cm_pypsa_markup%" == "on"
+$ifthen.markup_supply "%cm_pypsa_markup_supply%" == "on"
 p21_taxrevPyPSAMarkup0(ttot,all_regi)                               "reference level value of electricity technology markups from PyPSA"
-p21_taxrevPyPSAMarkupElectrolysis0(ttot,all_regi)                   "reference level value of electricity demand markups from PyPSA"
-$endif.markup
+$endif.markup_supply
+$ifthen.markup_demand "%cm_pypsa_markup_demand%" == "on"
+p21_taxrevPyPSAMarkupDemand0(ttot,all_regi,loadPy32)                "reference level value of electricity demand markups from PyPSA"
+$endif.markup_demand
 $endif.pypsa
 
 p21_taxrevGHG_iter(iteration,ttot,all_regi)                         "track reference level value of GHG emission tax revenue over iterations"
@@ -50,10 +52,12 @@ p21_taxrevImport_iter(iteration,ttot,all_regi,all_enty)             "track refer
 p21_taxrevChProdStartYear_iter(iteration,ttot,all_regi)             "track reference level value of tax to limit changes compared to reference run in cm_startyear over iterations"
 p21_taxrevSE_iter(iteration,ttot,all_regi)                          "track reference level value of tax on SE electricity demand over iterations"
 $ifthen.pypsa "%power%" == "PyPSA"
-$ifthen.markup "%cm_pypsa_markup%" == "on"
+$ifthen.markup_supply "%cm_pypsa_markup_supply%" == "on"
 p21_taxrevPyPSAMarkup_iter(iteration,ttot,all_regi)                 "track reference level value electricity technology markups from PyPSA"
-p21_taxrevPyPSAMarkupElectrolysis_iter(iteration,ttot,all_regi)     "track reference level value of electricity demand markups from PyPSA"
-$endif.markup
+$endif.markup_supply
+$ifthen.markup_demand "%cm_pypsa_markup_demand%" == "on"
+p21_taxrevPyPSAMarkupDemand_iter(iteration,ttot,all_regi,loadPy32)  "track reference level value of electricity demand markups from PyPSA"
+$endif.markup_demand
 $endif.pypsa
 
 p21_deltarev(iteration,all_regi)                                    "convergence criteria for iteration on tax revenue recycling"
@@ -141,10 +145,12 @@ v21_taxrevImport(ttot,all_regi,all_enty)                            "net change 
 v21_taxrevChProdStartYear(ttot,all_regi)                            "tax to limit changes compared to reference run in cm_startyear"
 v21_taxrevSE(ttot,all_regi)                                         "tax on SE electricity demand, used for taxes on electrolysis"
 $ifthen.pypsa "%power%" == "PyPSA"
-$ifthen.markup "%cm_pypsa_markup%" == "on"
+$ifthen.markup_supply "%cm_pypsa_markup_supply%" == "on"
 v21_taxrevPyPSAMarkup(ttot,all_regi)                                "Tax revenue of electricity generation markups from PyPSA-Eur"
-v21_taxrevPyPSAMarkupElectrolysis(ttot,all_regi)                    "Tax revenue of electrolysis markup from PyPSA-Eur"
-$endif.markup
+$endif.markup_supply
+$ifthen.markup_demand "%cm_pypsa_markup_demand%" == "on"
+v21_taxrevPyPSAMarkupDemand(ttot,all_regi,loadPy32)                 "Tax revenue of electrolysis markup from PyPSA-Eur"
+$endif.markup_demand
 $endif.pypsa
 ;
 
@@ -183,10 +189,14 @@ q21_taxrevChProdStartYear(ttot,all_regi)                            "calculation
 q21_taxrevSE(ttot,all_regi)                                         "calculation of tax on SE electricity demand, used for taxes on electrolysis"
 q21_SeTaxRate(ttot,all_regi,all_te)                                 "calculation of SE tax rate, used for taxes on electrolysis"
 $ifthen.pypsa "%power%" == "PyPSA"
-$ifthen.markup "%cm_pypsa_markup%" == "on"
+$ifthen.markup_supply "%cm_pypsa_markup_supply%" == "on"
 q21_taxrevPyPSAMarkup(ttot,all_regi)                                "calculation of electricity technology markups from PyPSA-Eur"
+$endif.markup_supply
+$ifthen.markup_demand "%cm_pypsa_markup_demand%" == "on"
 q21_taxrevPyPSAMarkupElectrolysis(ttot,all_regi)                    "calculation of electrolysis markup from PyPSA-Eur"
-$endif.markup
+q21_taxrevPyPSAMarkupHP(ttot,all_regi)                              "calculation of heat pump markup from PyPSA-Eur"
+q21_taxrevPyPSAMarkupResistive(ttot,all_regi)                       "calculation of resistive heating markup from PyPSA-Eur"
+$endif.markup_demand
 $endif.pypsa
 ;
 

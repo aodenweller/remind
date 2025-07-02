@@ -374,6 +374,24 @@ q32_loadMin(t,regi,enty2)$(tPy32(t) and regPy32(regi) and sameas(enty2,"seel")).
 ;
 
 
+*** TODO: Turn all loads into variables to which the tax is then applied
+*** Calculate sectoral electricity demand passed to PyPSA
+$ontext
+q32_load_EVs(t,regi,loadPy32)$(tPy32(t) and regPy32(regi) and sameas(loadPy32, "EVs"))..
+    v32_load_sector(t,regi,"EVs")
+    =e=
+      sum(emiMkt, vm_demFeSector.l(t,regi,"seel","feelt","trans",emiMkt))
+    / pm_eta_conv(t,regi,"tdelt")
+;
+
+q32_load_heating(t,regi,loadPy32)$(tPy32(t) and regPy32(regi) and sameas(loadPy32, "heating"))..
+    v32_load_sector(t,regi,"heating")
+    =e=
+      sum(emiMkt, vm_demFeSector.l(t,regi,"seel","feelt","heat",emiMkt))
+    / pm_eta_conv(t,regi,"tdelt")
+;
+$offtext
+
 ***------------------------------------------------------------
 ***            REMIND to PyPSA-Eur: Helper equations
 ***------------------------------------------------------------
@@ -446,7 +464,7 @@ $endif.c32_pypsa_capfac
 *** As an example, this means that:
 *** (1) For peaker technologies (high value factor): When the share increases, market values decrease to a large extent.
 *** (2) For VRE technologies (low value factor): When the share increases, market values decrease to a smaller extent.
-$ifthen.cm_pypsa_markup "%cm_pypsa_markup%" == "on"
+$ifthen.markup_supply "%cm_pypsa_markup_supply%" == "on"
 q32_MarkUp(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (sm_PyPSA_eq eq 1))..
 	vm_PyPSAMarkup(t,regi,te)
 	=e=
@@ -461,7 +479,7 @@ $elseif.c32_pypsa_anticipation "%c32_pypsa_anticipation%" == "diffQuot"
 $endif.c32_pypsa_anticipation
   * sm_TWa_2_MWh / 1e12
 ;
-$endif.cm_pypsa_markup
+$endif.markup_supply
 
 ***------------------------------------------------------------
 ***            PyPSA-Eur to REMIND: Peak residual load
@@ -574,13 +592,13 @@ q32_gridLosses(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
 *** Currently this only includes electricity prices paid by electrolysis.
 *** vm_PyPSAMarkupDemand is used in 21_tax/on to subsidise or penalise technologies.
 *** Put into separate equation here in order to enable anticipation later on.
-$ifthen "%cm_pypsa_markup%" == "on"
+$ifthen.markup_demand "%cm_pypsa_markup_demand%" == "on"
 q32_MarkUpDemand(t,regi,loadPy32)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
     vm_PyPSAMarkupDemand(t,regi,loadPy32)
     =e=
     p32_PyPSA_MarkupDemandAvg(t,regi,loadPy32) * sm_TWa_2_MWh / 1e12
 ;
-$endif
+$endif.markup_demand
 
 ***------------------------------------------------------------
 ***            PyPSA-Eur to REMIND: Electricity trade

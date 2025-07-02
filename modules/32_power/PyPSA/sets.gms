@@ -51,8 +51,10 @@ If (cm_startyear = 2030, tPy32("2025") = no);
 
 *** Sets to import PyPSA data
 sets
-    loadPy32                    "Loads for which specific electricity prices / demand-side markups are reported in PyPSA"
-        /"electrolysis", "EVs"/
+    loadPy32                    "Sectoral electricity loads passed to PyPSA for which specific electricity prices are calculated"
+        !! Hydrogen demand from electrolysers is passed to PyPSA separately in p32_ElecH2Demand, but "electrolysis" is included here because of specific prices
+        !! "AC" is the non-sector specific load (i.e. the residual of the buildings sector and the industry sector)
+        /"electrolysis", "EVs", "heatpump", "resistive", "AC"/
 ;
 
 *** Make alises for use in equations

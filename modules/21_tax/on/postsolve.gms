@@ -59,12 +59,30 @@ p21_taxrevSE0(t,regi) =     sum(se2se(enty,enty2,te)$(teSeTax(te)),
                                   * vm_demSe.l(t,regi,enty,enty2,te));
     
 $ifthen.pypsa "%power%" == "PyPSA"
-$ifthen.markup "%cm_pypsa_markup%" == "on"
+$ifthen.markup_supply "%cm_pypsa_markup_supply%" == "on"
 p21_taxrevPyPSAMarkup0(ttot,regi) = sum(en2en(enty,enty2,te)$(tePy32(te)),
                                    - vm_PyPSAMarkup.l(ttot,regi,te) * ( vm_prodSe.l(ttot,regi,enty,enty2,te) - v32_storloss.l(ttot,regi,te) )
                                   );
-p21_taxrevPyPSAMarkupElectrolysis0(ttot,regi) = vm_PyPSAMarkupDemand.l(ttot,regi,"electrolysis") * vm_demSe.l(ttot,regi,"seel","seh2","elh2");
-$endif.markup
+$endif.markup_supply
+$ifthen.markup_demand "%cm_pypsa_markup_demand%" == "on"
+p21_taxrevPyPSAMarkupDemand0(ttot,regi,"electrolysis") = vm_PyPSAMarkupDemand.l(ttot,regi,"electrolysis") * vm_demSe.l(ttot,regi,"seel","seh2","elh2");
+p21_taxrevPyPSAMarkupDemand0(ttot,regi,"heatpump") = 
+    (   vm_PyPSAMarkupDemand.l(ttot,regi,"heatpump")
+      * sum(in$(sameas(in, "feelhpb")),
+            vm_cesIO.l(ttot,regi,in)
+          + pm_cesdata(ttot,regi,in,"offset_quantity")
+           )
+      / pm_eta_conv(ttot,regi,"tdels")
+    );
+p21_taxrevPyPSAMarkupDemand0(ttot,regi,"resistive") = 
+    (   vm_PyPSAMarkupDemand.l(ttot,regi,"resistive")
+      * sum(in$(sameas(in, "feelrhb")),
+            vm_cesIO.l(ttot,regi,in)
+          + pm_cesdata(ttot,regi,in,"offset_quantity")
+           )
+      / pm_eta_conv(ttot,regi,"tdels")
+    );
+$endif.markup_demand
 $endif.pypsa
 
 *** Save reference level of tax revenues for each iteration
@@ -85,10 +103,12 @@ p21_taxrevImport_iter(iteration+1,ttot,regi,tradePe) = v21_taxrevImport.l(ttot,r
 p21_taxrevChProdStartYear_iter(iteration+1,t,regi) = v21_taxrevChProdStartYear.l(t,regi);
 p21_taxrevSE_iter(iteration+1,t,regi) = v21_taxrevSE.l(t,regi);
 $ifthen.pypsa "%power%" == "PyPSA"
-$ifthen.markup "%cm_pypsa_markup%" == "on"
+$ifthen.markup_supply "%cm_pypsa_markup_supply%" == "on"
 p21_taxrevPyPSAMarkup_iter(iteration,ttot,all_regi) = v21_taxrevPyPSAMarkup.l(ttot,all_regi);
-p21_taxrevPyPSAMarkupElectrolysis_iter(iteration,ttot,all_regi) = v21_taxrevPyPSAMarkupElectrolysis.l(ttot,all_regi);
-$endif.markup
+$endif.markup_supply
+$ifthen.markup_demand "%cm_pypsa_markup_demand%" == "on"
+p21_taxrevPyPSAMarkupDemand_iter(iteration,ttot,all_regi,loadPy32) = v21_taxrevPyPSAMarkupDemand.l(ttot,all_regi,loadPy32);
+$endif.markup_demand
 $endif.pypsa
 
 *** Save gross emissions of current iteration

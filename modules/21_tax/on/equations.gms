@@ -43,6 +43,14 @@ q21_taxrevReal(t,regi)$(t.val ge max(2010,cm_startyear))..
   + v21_taxrevSE(t,regi)
   + v21_taxrevFE(t,regi)
   + sum(tradePe, v21_taxrevImport(t,regi,tradePe)) 
+$ifthen.pypsa "%power%" == "PyPSA"
+$ifthen.markup_supply "%cm_pypsa_markup_supply%" == "on"
+  + v21_taxrevPyPSAMarkup(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))
+$endif.markup_supply
+$ifthen.markup_demand "%cm_pypsa_markup_demand%" == "on"
+  + sum(loadPy32, v21_taxrevPyPSAMarkupDemand(t,regi,loadPy32))$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))
+$endif.markup_demand
+$endif.pypsa
 ;
 
 *'  2. Net revenue from pseudo taxes and subsidies, v21_taxrevPseudo, that do not model an actual monetary transaction (e.g. implicit taxes to achieve quantity targets)
@@ -67,12 +75,6 @@ $endIf.cm_implicitPriceTarget
 $ifthen.cm_implicitPePriceTarget not "%cm_implicitPePriceTarget%" == "off"
   + sum(entyPe,vm_taxrevimplicitPePriceTax(t,regi,entyPe))
 $endIf.cm_implicitPePriceTarget
-$ifthen.pypsa "%power%" == "PyPSA"
-$ifthen.markup "%cm_pypsa_markup%" == "on"
-  + v21_taxrevPyPSAMarkup(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))
-  + v21_taxrevPyPSAMarkupElectrolysis(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))
-$endif.markup
-$endif.pypsa
 ;
 
 ***---------------------------------------------------------------------------
@@ -415,7 +417,7 @@ $endif.importtaxrc
 ***---------------------------------------------------------------------------
 *** vm_PyPSAMarkup is the markup/markdown for each generation technology
 $ifthen.pypsa "%power%" == "PyPSA"
-$ifthen.markup "%cm_pypsa_markup%" == "on"
+$ifthen.markup_supply "%cm_pypsa_markup_supply%" == "on"
 q21_taxrevPyPSAMarkup(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
   v21_taxrevPyPSAMarkup(t,regi)
   =e=
@@ -424,25 +426,47 @@ q21_taxrevPyPSAMarkup(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1)
         )
   - p21_taxrevPyPSAMarkup0(t,regi) 
 ;
+$endif.markup_supply
 
-*** Markup for demand side technology electrolysis
+*** Markup for demand-side technology electrolysis
+$ifthen.markup_demand "%cm_pypsa_markup_demand%" == "on"
 q21_taxrevPyPSAMarkupElectrolysis(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
-  v21_taxrevPyPSAMarkupElectrolysis(t,regi)
+  v21_taxrevPyPSAMarkupDemand(t,regi,"electrolysis")
   =e=
+  !! TODO: Change to only include additional electrolytic hydrogen production (not for storage)
   ( vm_PyPSAMarkupDemand(t,regi,"electrolysis") * vm_demSe(t,regi,"seel","seh2","elh2") )
-  - p21_taxrevPyPSAMarkupElectrolysis0(t,regi)
+  - p21_taxrevPyPSAMarkupDemand0(t,regi,"electrolysis")
 ;
 
-$ontext
-*** Markup for demand side technology EVs (work in progress)
-q21_taxrevPyPSAMarkupEVs(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
-  v21_taxrevPyPSAMarkupEVs(t,regi)
-  =e=
-  ( vm_PyPSAMarkupDemand(t,regi,"EVs") * sum(emiMkt, vm_demFeSector.l(t,regi,"seel","feelt","trans",emiMkt)) / pm_eta_conv(t,regi,"tdelt") )
-  - p21_taxrevPyPSAMarkupEVs0(t,regi)
+*** Markup for demand-side technology heat pumps
+q21_taxrevPyPSAMarkupHP(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
+    v21_taxrevPyPSAMarkupDemand(t,regi,"heatpump")
+    =e=
+    (   vm_PyPSAMarkupDemand(t,regi,"heatpump")
+      * sum(in$(sameas(in, "feelhpb")),
+            vm_cesIO(t,regi,in)
+          + pm_cesdata(t,regi,in,"offset_quantity")
+           )
+      / pm_eta_conv(t,regi,"tdels")
+    )
+    - p21_taxrevPyPSAMarkupDemand0(t,regi,"heatpump")
 ;
-$offtext
-$endif.markup
+
+*** Markup for demand-side technology resistive heating
+q21_taxrevPyPSAMarkupResistive(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
+    v21_taxrevPyPSAMarkupDemand(t,regi,"resistive")
+    =e=
+    (   vm_PyPSAMarkupDemand(t,regi,"resistive")
+      * sum(in$(sameas(in, "feelrhb")),
+            vm_cesIO(t,regi,in)
+          + pm_cesdata(t,regi,in,"offset_quantity")
+           )
+      / pm_eta_conv(t,regi,"tdels")
+    )
+    - p21_taxrevPyPSAMarkupDemand0(t,regi,"resistive")
+;
+
+$endif.markup_demand
 $endif.pypsa
 
 *' @stop

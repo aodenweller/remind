@@ -74,8 +74,40 @@ p32_cap_iter(iteration,t,regi,te) = p32_cap(t,regi,te);
 p32_hydroCap(t,regi)$(tPy32(t) AND regPy32(regi)) = vm_cap.l(t,regi,"hydro","1");
 p32_hydroGen(t,regi)$(tPy32(t) AND regPy32(regi)) = v32_pe2seelTe.l(t,regi,"hydro") * p32_hydroCorrectionFactor(t,regi);
 
-*** Get electricity load
+*** Get total electricity load
 p32_load(t,regi)$(tPy32(t) and regPy32(regi)) = v32_load.l(t,regi);
+
+*** Get sectoral electricity loads
+*** Take pm_eta_conv (transmission & distribution losses) into account
+*** in order to yield the corresponding electricity load on the SE level
+*** Electricity demand for EVs
+p32_load_sector(t,regi,"EVs")$(tPy32(t) AND regPy32(regi)) = 
+    sum(emiMkt, vm_demFeSector.l(t,regi,"seel","feelt","trans",emiMkt))
+    / pm_eta_conv(t,regi,"tdelt")
+;
+*** Electricity demand for heat pumps
+p32_load_sector(t,regi,"heatpump")$(tPy32(t) AND regPy32(regi)) = 
+    sum(in$(sameas(in, "feelhpb")),
+            vm_cesIO.l(t,regi,in)
+            + pm_cesdata(t,regi,in,"offset_quantity")
+        )
+    / pm_eta_conv(t,regi,"tdels")
+;
+*** Electricity demand for resistive heating
+p32_load_sector(t,regi,"resistive")$(tPy32(t) AND regPy32(regi)) = 
+    sum(in$(sameas(in, "feelrhb")),
+            vm_cesIO.l(t,regi,in)
+            + pm_cesdata(t,regi,in,"offset_quantity")
+        )
+    / pm_eta_conv(t,regi,"tdels")
+;
+*** Electricity demand for rest (other sectors)
+p32_load_sector(t,regi,"AC")$(tPy32(t) AND regPy32(regi)) = 
+        p32_load(t,regi)
+    -   p32_load_sector(t,regi,"EVs")
+    -   p32_load_sector(t,regi,"heatpump")
+    -   p32_load_sector(t,regi,"resistive")
+;
 
 *** Additional electrolytic hydrogen demand that is not used for storage. This is the difference between:
 *** (1) vm_prodSe.l(t,regi,"seel","seh2","elh2") is the production of hydrogen from electrolysis (TWa hydrogen)
@@ -83,36 +115,6 @@ p32_load(t,regi)$(tPy32(t) and regPy32(regi)) = v32_load.l(t,regi);
 *** Note that electrolyser efficiency is taken into account in PyPSA
 p32_ElecH2Demand(t,regi)$(tPy32(t) AND regPy32(regi)) =
     max(1E-8, vm_prodSe.l(t,regi,"seel","seh2","elh2") - vm_demSe.l(t,regi,"seh2","seel","h2turb")) + EPS;
-
-*** Calculate electricity load of electric vehicles
-*** Take pm_eta_conv (transmission & distribution losses) into account
-*** in order to yield the corresponding electricity load on the SE level
-p32_load_EVs(t,regi)$(tPy32(t) AND regPy32(regi)) = 
-    sum(emiMkt, vm_demFeSector.l(t,regi,"seel","feelt","trans",emiMkt))
-    / pm_eta_conv(t,regi,"tdelt")
-;
-
-*** Calculate electricity load for heat pumps
-*** Take pm_eta_conv (transmission & distribution losses) into account
-*** in order to yield the corresponding electricity load on the SE level
-p32_load_heatpump(t,regi)$(tPy32(t) AND regPy32(regi)) = 
-    sum(in$(sameas(in, "feelhpb")),
-            vm_cesIO.l(t,regi,in)
-            + pm_cesdata(t,regi,in,"offset_quantity")
-        )
-    / pm_eta_conv(t,regi,"tdels")
-;
-
-*** Calculate electricity load for resistive heating
-*** Take pm_eta_conv (transmission & distribution losses) into account
-*** in order to yield the corresponding electricity load on the SE level
-p32_load_resistive(t,regi)$(tPy32(t) AND regPy32(regi)) = 
-    sum(in$(sameas(in, "feelrhb")),
-            vm_cesIO.l(t,regi,in)
-            + pm_cesdata(t,regi,in,"offset_quantity")
-        )
-    / pm_eta_conv(t,regi,"tdels")
-;
 
 ***------------------------------------------------------------
 ***                  PyPSA-Eur coupling
@@ -212,21 +214,20 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startI
         c32_pypsa_cfg_rcl_stores,  !! Enable RCL constraint for stores
         c32_pypsa_cfg_rcl_cost,  !! Cost of RCL components
         c32_pypsa_cfg_perturb,  !! Automatically set if c32_pypsa_anticipation=="diffQuot"
-        c32_pypsa_cfg_EVs  !! Enable/disable EVs
+        c32_pypsa_cfg_EVs,  !! Enable/disable EVs
+        c32_pypsa_cfg_heating  !! Enable/disable heating
     ;
+
     !! Export REMIND data for PyPSA (REMIND2PyPSAEUR.gdx)
+    !! This includes various demands, costs and parameters
     Execute_Unload "REMIND2PyPSAEUR.gdx",
         !! -- REMIND to PyPSA-Eur --
         !! Coupled time steps, regions and technologies
         tPy32, regPy32, tePy32,
-        !! Electricity load
+        !! Total electricity load
         p32_load,
-        !! EV load
-        p32_load_EVs,
-        !! Heat pump load
-        p32_load_heatpump,
-        !! Resistive heating load
-        p32_load_resistive,
+        !! Sectoral electricity load
+        p32_load_sector,
         !! Additional electrolytic hydrogen demand (from outside power sector)
         p32_ElecH2Demand,
         !! Capital cost components
@@ -253,11 +254,11 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startI
 
     !! Run PyPSA-Eur
     !! This executes a shell script (copied from scripts/iterative) and starts the full coupling workflow in snakemake
+    !! The PyPSA directory, conda environment, snakemake file name, and the current iteration are passed as arguments
     !! (1) Copy REMIND2PyPSAEUR_config.gdx and REMIND2PyPSAEUR.gdx to PyPSA-Eur resources directory
     !! (2) Create PyPSA config yaml file using REMIND2PyPSAEUR_config.gdx (first snakemake command)
     !! (3) Run PyPSA, including all data pre- and postprocessing, using the the yaml file (second snakemake command)
-    !! (3) Copy PyPSAEUR2REMIND.gdx to REMIND scenario output folder
-    !! The PyPSA directory, conda environment, snakemake file name, and the current iteration are passed as arguments
+    !! (4) Copy PyPSAEUR2REMIND.gdx to REMIND scenario output folder
     Put_utility logfile, "Exec" /
     "./RunPyPSA-Eur.sh %c32_pypsa_dir% %c32_pypsa_conda_dir% %c32_pypsa_snakefile% " iteration.val:0:0;
 
@@ -267,6 +268,7 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startI
 
     !! Import PyPSA data for REMIND (PyPSAEUR2REMIND.gdx)
     !! The PyPSAEUR2REMIND.gdx is created by export_to_REMIND in PyPSA-Eur
+    !! TODO: Give parameters the same name in PyPSA-Eur such that one line suffices
     Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_CF=capacity_factors;
     Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_MarkupSupply=markups_supply;
     Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_PeakResLoadRel=peak_residual_loads;

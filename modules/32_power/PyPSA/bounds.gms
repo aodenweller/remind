@@ -161,7 +161,7 @@ if ((sm_PyPSA_eq eq 1),
 $endif
 
 *** Set starting values for vm_PyPSAMarkup
-$ifthen "%cm_pypsa_markup%" == "on"
+$ifthen "%cm_pypsa_markup_supply%" == "on"
 if ((sm_PyPSA_eq eq 1),
     vm_PyPSAMarkup.l(tPy32,regPy32,tePy32) = p32_PyPSA_MarkupSupplyAvg(tPy32,regPy32,tePy32) * sm_TWa_2_MWh / 1e12;
 );

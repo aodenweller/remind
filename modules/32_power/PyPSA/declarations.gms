@@ -82,10 +82,8 @@ v32_flexPriceShareMin(ttot,all_regi,all_te)         "possible minimum of share o
 *** (4) PyPSA reporting: Parameters that are calculated for reporting and plotting
 parameters
     !! Parameters for exporting data to PyPSA-Eur
-    p32_load(ttot,all_regi)                                         "PyPSA export: Total electricity load for FE electricity [TWa]"
-    p32_load_EVs(ttot,all_regi)                                     "PyPSA export: Electricity load for EVs, corrected to corresponding SE electricity load [TWa]"
-    p32_load_heatpump(ttot,all_regi)                                "PyPSA export: Electricity load for heat pumps in buildings, corrected to corresponding SE electricity load [TWa]"
-    p32_load_resistive(ttot,all_regi)                               "PyPSA export: Electricity load for resistive heating in buildings, corrected to corresponding SE electricity load [TWa]"
+    p32_load(ttot,all_regi)                                         "PyPSA export: Total SE electricity load used for FE [TWa]"
+    p32_load_sector(ttot,all_regi,loadPy32)                         "PyPSA export: Sectoral electricity loads, sum of which is equal to p23_load [TWa]"
     p32_ElecH2Demand(ttot,all_regi)                                 "PyPSA export: Electrolytic hydrogen demand outside the power sector [TWa]"
     p32_cap(ttot,all_regi,all_te)                                   "PyPSA export: Pre-investment capacities [TW for generation/link, TWh for storage]"
     p32_cap_iter(iteration,ttot,all_regi,all_te)                    "PyPSA export: Pre-investment capacities in iterations [TW for generation/link, TWh for storage]"
@@ -155,12 +153,18 @@ $endif
 ;
 
 *** Variables for the PyPSA coupling
-$ifthen "%cm_pypsa_markup%" == "on"
+$ifthen.pypsa "%power%" == "PyPSA"
+$ifthen.markup_supply "%cm_pypsa_markup_supply%" == "on"
 variables
     vm_PyPSAMarkup(ttot,all_regi,all_te)                            "PyPSA coupling: Markups for electricity generation technologies [T$/TWa]"
+;
+$endif.markup_supply
+$ifthen.markup_demand "%cm_pypsa_markup_demand%" == "on"
+variables
     vm_PyPSAMarkupDemand(ttot,all_regi,loadPy32)                    "PyPSA coupling: Markups for electricity consumption technologies [T$/TWa]"
 ;
-$endif
+$endif.markup_demand
+$endif.pypsa
 
 *** Equations for the PyPSA coupling
 equations
@@ -172,10 +176,13 @@ equations
 $ifthen "%c32_pypsa_capfac%" == "on"
     q32_capFac(ttot,all_regi,all_te)                                "PyPSA coupling: Anticipation factor equation for capacity factors"
 $endif
-$ifthen "%cm_pypsa_markup%" == "on"
+$ifthen "%cm_pypsa_markup_supply%" == "on"
     q32_MarkUp(ttot,all_regi,all_te)                                "PyPSA coupling: Anticipation factor equation to calculate technology-specific markups"
+$endif
+$ifthen "%cm_pypsa_markup_demand%" == "on"
     q32_MarkUpDemand(ttot,all_regi,loadPy32)                        "PyPSA coupling: Equation for markup demand"
 $endif
+
 $ifthen "%c32_pypsa_peakcap%" == "on"
     q32_PeakResCap(ttot,all_regi)                                   "PyPSA coupling: Anticipation factor equation for peak residual load"
 $endif

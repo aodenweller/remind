@@ -1285,9 +1285,15 @@ c32_pypsa_cfg_rcl_cost = 0;  !! def = 0 !! regexp = is.numeric
 parameter
     c32_pypsa_cfg_EVs                "PyPSA config: Activate EVs (electric vehicles)"
 ;
-c32_pypsa_cfg_EVs = 0;  !! def = 1 !! regexp = [0-2]
+c32_pypsa_cfg_EVs = 0;  !! def = 0 !! regexp = [0-2]
 *' PyPSA config: Electric vehicles
-*' 0 = off, 1 = on w/o demand-side management (w/o flexibility), 2 = on w/ demand-side management (w/ flexibility)
+*' 0 = off, 1 = on w/o demand-side management (w/o flexibility), 2 = on w/ flexibility (configured in PyPSA)
+parameter
+    c32_pypsa_cfg_heating             "PyPSA config: Activate heating technologies"
+;
+c32_pypsa_cfg_heating = 0;  !! def = 0 !! regexp = [0-1]
+*' PyPSA config: Heating technologies
+*' 0 = off, 1 = on, TODO: 2 = on w/ flexibility (configured in PyPSA)
 
 ***-----------------------------------------------------------------------------
 *' ####                     FLAGS
@@ -1966,9 +1972,13 @@ $setglobal c32_pypsa_multiregion off !! def = off !! regexp = off|on
 *** c32_pypsa_capfac
 *** Switch to enable capacity factor import from PyPSA-Eur
 $setglobal c32_pypsa_capfac on !! def = on !! regexp = off|on
-*** cm_pypsa_markup
-*** Switch to enable markups/markdowns from PyPSA-Eur via tax module
-$setglobal cm_pypsa_markup on !! def = on !! regexp = off|on
+*** cm_pypsa_markup_supply
+*** Switch to enable supply-side markups/markdowns from PyPSA-Eur via tax module
+$setglobal cm_pypsa_markup_supply on !! def = on !! regexp = off|on
+*** cm_pypsa_markup_demand
+*** Switch to enable demand-side markups/markdowns from PyPSA-Eur via tax module
+*** This includes the demand-side markups for electrolysis, EVs, heat pumps, resistive heating and general load
+$setglobal cm_pypsa_markup_demand off !! def = off !! regexp = off|on
 *** c32_pypsa_peakcap
 *** Switch to enable peak capacity constraint
 $setglobal c32_pypsa_peakcap on !! def = on !! regexp = off|on
