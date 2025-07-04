@@ -2,8 +2,8 @@
 scenario="$(basename "$(pwd)")"
 directory="${1}"
 conda_env="${2}"
-snakefile="${3}"
-iteration="${4}"
+iteration="${3}"
+snakefile="Snakefile_REMIND"
 # Define PIK HPC profile and conda environment
 # TODO: Move somewhere else
 hpc_profile="${directory}/pik_hpc_profile"

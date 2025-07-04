@@ -260,7 +260,7 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startI
     !! (3) Run PyPSA, including all data pre- and postprocessing, using the the yaml file (second snakemake command)
     !! (4) Copy PyPSAEUR2REMIND.gdx to REMIND scenario output folder
     Put_utility logfile, "Exec" /
-    "./RunPyPSA-Eur.sh %c32_pypsa_dir% %c32_pypsa_conda_dir% %c32_pypsa_snakefile% " iteration.val:0:0;
+    "./RunPyPSA-Eur.sh %c32_pypsa_dir% %c32_pypsa_conda_dir% " iteration.val:0:0;
 
     !! Reset round format and number of decimals
     logfile.nr = sm_tmp;

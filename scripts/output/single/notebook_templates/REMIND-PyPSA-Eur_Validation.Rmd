@@ -5702,6 +5702,12 @@ plt.close(fig);
 
 ```
 
+### State of charge (hydrogen)
+
+### State of charge (battery)
+
+### State of charge (EV battery flexibility)
+
 ### System costs
 
 ```{python system costs, echo=FALSE, warning = FALSE, message = FALSE}
