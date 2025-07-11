@@ -71,50 +71,9 @@ p32_cap_iter(iteration,t,regi,te) = p32_cap(t,regi,te);
 
 *** Special treatment for hydro: Pass full capacity and generation in separate variables
 *** This is used to force PyPSA onto REMIND's capacity factor by adjusting the inflow time series in PyPSA
+*** TODO: Rename p32_hydroGen as very confusing
 p32_hydroCap(t,regi)$(tPy32(t) AND regPy32(regi)) = vm_cap.l(t,regi,"hydro","1");
 p32_hydroGen(t,regi)$(tPy32(t) AND regPy32(regi)) = v32_pe2seelTe.l(t,regi,"hydro") * p32_hydroCorrectionFactor(t,regi);
-
-*** Get total electricity load
-p32_load(t,regi)$(tPy32(t) and regPy32(regi)) = v32_load.l(t,regi);
-
-*** Get sectoral electricity loads
-*** Take pm_eta_conv (transmission & distribution losses) into account
-*** in order to yield the corresponding electricity load on the SE level
-*** Electricity demand for EVs
-p32_load_sector(t,regi,"EVs")$(tPy32(t) AND regPy32(regi)) = 
-    sum(emiMkt, vm_demFeSector.l(t,regi,"seel","feelt","trans",emiMkt))
-    / pm_eta_conv(t,regi,"tdelt")
-;
-*** Electricity demand for heat pumps
-p32_load_sector(t,regi,"heatpump")$(tPy32(t) AND regPy32(regi)) = 
-    sum(in$(sameas(in, "feelhpb")),
-            vm_cesIO.l(t,regi,in)
-            + pm_cesdata(t,regi,in,"offset_quantity")
-        )
-    / pm_eta_conv(t,regi,"tdels")
-;
-*** Electricity demand for resistive heating
-p32_load_sector(t,regi,"resistive")$(tPy32(t) AND regPy32(regi)) = 
-    sum(in$(sameas(in, "feelrhb")),
-            vm_cesIO.l(t,regi,in)
-            + pm_cesdata(t,regi,in,"offset_quantity")
-        )
-    / pm_eta_conv(t,regi,"tdels")
-;
-*** Electricity demand for rest (other sectors)
-p32_load_sector(t,regi,"AC")$(tPy32(t) AND regPy32(regi)) = 
-        p32_load(t,regi)
-    -   p32_load_sector(t,regi,"EVs")
-    -   p32_load_sector(t,regi,"heatpump")
-    -   p32_load_sector(t,regi,"resistive")
-;
-
-*** Additional electrolytic hydrogen demand that is not used for storage. This is the difference between:
-*** (1) vm_prodSe.l(t,regi,"seel","seh2","elh2") is the production of hydrogen from electrolysis (TWa hydrogen)
-*** (2) vm_demSe.l(t,regi,"seh2","seel","h2turb") is the demand of hydrogen for electricity production (TWa hydrogen)
-*** Note that electrolyser efficiency is taken into account in PyPSA
-p32_ElecH2Demand(t,regi)$(tPy32(t) AND regPy32(regi)) =
-    max(1E-8, vm_prodSe.l(t,regi,"seel","seh2","elh2") - vm_demSe.l(t,regi,"seh2","seel","h2turb")) + EPS;
 
 ***------------------------------------------------------------
 ***                  PyPSA-Eur coupling
@@ -207,15 +166,15 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startI
     !! See main.gms for the definition of the switches
     option epsToZero=on;
     Execute_Unload "REMIND2PyPSAEUR_config.gdx"
-        c32_pypsa_cfg_nodes,  !! Number of nodes
-        c32_pypsa_cfg_hourly_res,  !! Hourly resolution
-        c32_pypsa_cfg_rcl_generators,  !! Enable RCL constraint for generators
-        c32_pypsa_cfg_rcl_links,  !! Enable RCL constraint for links
-        c32_pypsa_cfg_rcl_stores,  !! Enable RCL constraint for stores
-        c32_pypsa_cfg_rcl_cost,  !! Cost of RCL components
+        c32_pypsa_cfg_nodes,
+        c32_pypsa_cfg_hourly_res,
+        c32_pypsa_cfg_rcl_generators,
+        c32_pypsa_cfg_rcl_links,
+        c32_pypsa_cfg_rcl_stores,
+        c32_pypsa_cfg_rcl_cost,
         c32_pypsa_cfg_perturb,  !! Automatically set if c32_pypsa_anticipation=="diffQuot"
-        c32_pypsa_cfg_EVs,  !! Enable/disable EVs
-        c32_pypsa_cfg_heating  !! Enable/disable heating
+        c32_pypsa_cfg_EVs,
+        c32_pypsa_cfg_heating
     ;
 
     !! Export REMIND data for PyPSA (REMIND2PyPSAEUR.gdx)
@@ -224,12 +183,8 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startI
         !! -- REMIND to PyPSA-Eur --
         !! Coupled time steps, regions and technologies
         tPy32, regPy32, tePy32,
-        !! Total electricity load
-        p32_load,
         !! Sectoral electricity load
-        p32_load_sector,
-        !! Additional electrolytic hydrogen demand (from outside power sector)
-        p32_ElecH2Demand,
+        v32_load_sector,
         !! Capital cost components
         p32_capCostwAdjCost, pm_data, p32_discountRate,
         !! Marginal cost components
@@ -239,10 +194,7 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startI
         !! Pre-installed capacities
         p32_capAvg,
         !! Hydro capacities and generation (special treatment in PyPSA)
-        p32_hydroCap, p32_hydroGen,
-        !! -- PyPSA-Eur to REMIND -- 
-        !! Generation shares in REMIND to downscale generation shares in PyPSA
-        v32_shPe2seel
+        p32_hydroCap, p32_hydroGen
     ;
     option epsToZero=off;
 
@@ -268,21 +220,31 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startI
 
     !! Import PyPSA data for REMIND (PyPSAEUR2REMIND.gdx)
     !! The PyPSAEUR2REMIND.gdx is created by export_to_REMIND in PyPSA-Eur
-    !! TODO: Give parameters the same name in PyPSA-Eur such that one line suffices
-    Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_CF=capacity_factors;
-    Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_MarkupSupply=markups_supply;
-    Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_PeakResLoadRel=peak_residual_loads;
-    Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_MarkupDemand=markups_demand;
-    Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_shPe2seel=generation_shares;
-    Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_OptCap=optimal_capacities;
-    Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_Potential=potentials;
-    Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_H2TurbRel=hydrogen_storage_generation;
-    Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_BatteryDischargeRel=battery_storage_generation;
-    Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_GridLossesRel=grid_losses;
-    Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_AF=availability_factors;
+    Execute_Loadpoint "PyPSAEUR2REMIND.gdx",
+        !! Capacity factors of generation technologies
+        p32_PyPSA_CF,
+        !! Markups on the supply-side (market value minus avg price)
+        p32_PyPSA_MarkupSupply,
+        !! Markups on the demand-side (sectoral price minus avg price)
+        p32_PyPSA_MarkupDemand,
+        !! Relative residual load relative to load
+        p32_PyPSA_PeakResLoadRel,
+        !! Optimal capacities (for btstor and h2stor)
+        p32_PyPSA_OptCap,
+        !! Potentials
+        p32_PyPSA_Potential
+        !! Hydrogen turbine generation relative to load
+        p32_PyPSA_H2TurbRel,
+        !! Battery discharge relative to load
+        p32_PyPSA_BatteryDischargeRel,
+        !! Grid losses relative to load
+        p32_PyPSA_GridLossesRel,
+        !! Generation share from PE carriers (for anticipation)
+        p32_PyPSA_shPe2seel,
+        !! Availability factors (for harmonising hydro)
+        p32_PyPSA_AF;
 $ifthen "%c32_pypsa_anticipation%" == "diffQuot"
-    Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_DQ_CF=difference_quotient_capacity_factors;
-    Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_DQ_MarkupSupply=difference_quotient_markups_supply;
+    Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_DQ_CF, p32_PyPSA_DQ_MarkupSupply;
 $endif
 
     !! Track capacity factors in iterations

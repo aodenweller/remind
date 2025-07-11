@@ -348,6 +348,8 @@ q32_load(t,regi,enty2)$(tPy32(t) and regPy32(regi) and sameas(enty2,"seel"))..
   =e=
   !! Demand for electricity from final energy sectors
     sum(se2fe(enty2,enty3,te), vm_demSe(t,regi,enty2,enty3,te) )
+  !! Add additional electricity load from electrolytic hydrogen production
+  + v32_load_sector(t,regi,"electrolysis")
   !! Add electricity demand for fuel extraction
   + sum(pe2rlf(enty3,rlf2), (pm_fuExtrOwnCons(regi, enty2, enty3) * vm_fuExtr(t,regi,enty3,rlf2))$(pm_fuExtrOwnCons(regi, enty2, enty3) gt 0))$(t.val > 2005) !! do not use in 2005 because this demand is not contained in 05_initialCap
   !! Subtract electricity supply due to co-production of secondary energy
@@ -374,23 +376,71 @@ q32_loadMin(t,regi,enty2)$(tPy32(t) and regPy32(regi) and sameas(enty2,"seel")).
 ;
 
 
-*** TODO: Turn all loads into variables to which the tax is then applied
-*** Calculate sectoral electricity demand passed to PyPSA
-$ontext
-q32_load_EVs(t,regi,loadPy32)$(tPy32(t) and regPy32(regi) and sameas(loadPy32, "EVs"))..
-    v32_load_sector(t,regi,"EVs")
+*** Calculate sectoral electricity loads for EVs, heat pumps, resistive heating, and rest
+*** Take pm_eta_conv (transmission & distribution losses) into account
+*** in order to yield the corresponding electricity load on the SE level
+q32_load_EV_pass(t,regi)$(tPy32(t) and regPy32(regi))..
+    v32_load_sector(t,regi,"EV_pass")
     =e=
-      sum(emiMkt, vm_demFeSector.l(t,regi,"seel","feelt","trans",emiMkt))
+    vm_demFeForEs(t,regi,"feelt","eselt_pass_sm","te_eselt_pass_sm")
     / pm_eta_conv(t,regi,"tdelt")
 ;
 
-q32_load_heating(t,regi,loadPy32)$(tPy32(t) and regPy32(regi) and sameas(loadPy32, "heating"))..
-    v32_load_sector(t,regi,"heating")
+q32_load_EV_freight(t,regi)$(tPy32(t) and regPy32(regi))..
+    v32_load_sector(t,regi,"EV_freight")
     =e=
-      sum(emiMkt, vm_demFeSector.l(t,regi,"seel","feelt","heat",emiMkt))
+    vm_demFeForEs(t,regi,"feelt","eselt_frgt_sm","te_eselt_frgt_sm")
     / pm_eta_conv(t,regi,"tdelt")
 ;
-$offtext
+
+q32_load_heatpump(t,regi)$(tPy32(t) and regPy32(regi))..
+    v32_load_sector(t,regi,"heatpump")
+    =e=
+    sum(in$(sameas(in, "feelhpb")),
+            vm_cesIO(t,regi,in)
+            + pm_cesdata(t,regi,in,"offset_quantity")
+        )
+    / pm_eta_conv(t,regi,"tdels")
+;
+
+q32_load_resistive(t,regi)$(tPy32(t) and regPy32(regi))..
+    v32_load_sector(t,regi,"resistive")
+    =e=
+    sum(in$(sameas(in, "feelrhb")),
+            vm_cesIO(t,regi,in)
+            + pm_cesdata(t,regi,in,"offset_quantity")
+        )
+    / pm_eta_conv(t,regi,"tdels")
+;
+
+*** Additional electricity load (TWa_elec) for electrolytic hydrogen
+q32_load_electrolysis(t,regi)$(tPy32(t) and regPy32(regi))..
+    v32_load_sector(t,regi,"electrolysis")
+    =e=
+    !! The bracket contains additional hydrogen load (TWa_H2),
+    !! i.e. hydrogen production from electrolysis minus
+    !! hydrogen demand for re-electrification in hydrogen turbines
+    ( vm_prodSe(t,regi,"seel","seh2","elh2")
+    - vm_demSe(t,regi,"seh2","seel","h2turb") )
+    !! Divide by efficiency to get add. electricity load (TWa_elec)
+    / pm_eta_conv(t,regi,"elh2")
+;
+
+*** Make sure the sum of v32_load_sector corresponds to v32_load
+*** This defines the residual load v32_sectoral_load(t,regi,"AC")
+q32_load_residual(t,regi)$(tPy32(t) and regPy32(regi))..
+    v32_load(t,regi)
+    =e=
+    sum(loadPy32, v32_load_sector(t,regi,loadPy32))
+;
+
+*** Helper equation to constrain the load share of each sector
+*** Generous and non-binding bounds are defined in 32_power/bounds.gms
+q32_loadshare(t,regi,loadPy32)$(tPy32(t) and regPy32(regi))..
+    v32_load(t,regi) * v32_share_sector(t,regi,loadPy32)
+    =e=
+    v32_load_sector(t,regi,loadPy32)
+;
 
 ***------------------------------------------------------------
 ***            REMIND to PyPSA-Eur: Helper equations
@@ -416,14 +466,6 @@ q32_shPe2seel(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te))..
     =e=
     v32_pe2seelTe(t,regi,te)
 ;
-
-$ontext
-q32_capDiff(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te) and (sm_PyPSA_eq eq 1))..
-    v32_capDiff(t,regi,te)
-    =e=
-    vm_cap(t,regi,te,"1") - 1E-6*p32_PyPSA_OptCap(t,regi,te)
-;
-$offtext
 
 ***------------------------------------------------------------
 ***            PyPSA-Eur to REMIND: Capacity factors
@@ -493,7 +535,7 @@ $ifthen.c32_pypsa_peakcap "%c32_pypsa_peakcap%" == "on"
 q32_PeakResCap(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
     sum(tePyDisp32, vm_cap(t,regi,tePyDisp32, "1"))
     =g=
-    p32_PyPSA_PeakResLoadRel(t,regi) * v32_load(t,regi)
+    p32_PyPSA_PeakResLoadRel(t,regi) * ( v32_load(t,regi) - v32_load_sector(t,regi,"electrolysis") )
 $ontext
 $ifthen "%c32_pypsa_anticipation%" == "on"
     * ( 1 - 0.2 * ( sum(tePyVRE32, v32_shPe2seel(t,regi,tePyVRE32) - p32_PyPSA_shPe2seel(t,regi,tePyVRE32)) ) )
@@ -510,7 +552,6 @@ $endif.c32_pypsa_peakcap
 *** The implementation of hydrogen storage is based on two equations:
 *** 1. Equation that sets the required production of hydrogen turbines relative to the load (from PyPSA).
 *** 2. Equation that requires all hydrogen consumed by turbines to be produced by electrolysers.
-***    This then also implies that the additional hydrogen demand (p32_ElecH2Demand) is positive.
 *** Jointly, these two equations ensure that hydrogen storage is harmonised, while giving REMIND
 *** freedom to decide on the production of electrolytic hydrogen for other end-uses.
 *** Note: Capacity factors of elh2 and h2turb are fixed to PyPSA values in bounds.gms.
@@ -557,7 +598,7 @@ $ifthen "%c32_pypsa_btstor%" == "on"
 q32_battery(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
     vm_prodSe(t,regi,"seelstor","seel","btout")
     =g=
-    p32_PyPSA_BatteryDischargeRel(t,regi) * v32_load(t,regi)
+    p32_PyPSA_BatteryDischargeRel(t,regi) * ( v32_load(t,regi) - v32_load_sector(t,regi,"electrolysis") ) 
 ;
 
 * TEMPORARY: Set btin to btout, in theory this shouldn't be necessary
@@ -581,22 +622,22 @@ $endif
 q32_gridLosses(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
     v32_gridLosses(t,regi)
     =e=
-    p32_PyPSA_GridLossesRel(t,regi) * v32_load(t,regi)
+    p32_PyPSA_GridLossesRel(t,regi) * ( v32_load(t,regi) - v32_load_sector(t,regi,"electrolysis") )
 ;
 
 
 ***------------------------------------------------------------
-***            PyPSA-Eur to REMIND: Markups (demand side)
+***            PyPSA-Eur to REMIND: Sectoral electricity prices
 ***------------------------------------------------------------
 *** This is the equivalent to supply-side markups and can be regarded as demand-side markups.
 *** Currently this only includes electricity prices paid by electrolysis.
 *** vm_PyPSAMarkupDemand is used in 21_tax/on to subsidise or penalise technologies.
 *** Put into separate equation here in order to enable anticipation later on.
 $ifthen.markup_demand "%cm_pypsa_markup_demand%" == "on"
-q32_MarkUpDemand(t,regi,loadPy32)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
-    vm_PyPSAMarkupDemand(t,regi,loadPy32)
+q32_MarkUpDemand(t,regi,loadPyMV32)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
+    vm_PyPSAMarkupDemand(t,regi,loadPyMV32)
     =e=
-    p32_PyPSA_MarkupDemandAvg(t,regi,loadPy32) * sm_TWa_2_MWh / 1e12
+    p32_PyPSA_MarkupDemandAvg(t,regi,loadPyMV32) * sm_TWa_2_MWh / 1e12
 ;
 $endif.markup_demand
 

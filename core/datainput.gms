@@ -265,11 +265,11 @@ $if not "%cm_learnRate%" == "off"                 fm_dataglob("learn",te)$p_new_
 $if not "%cm_inco0RegiFactor%" == "off" parameter p_new_inco0RegiFactor(all_te) / %cm_inco0RegiFactor% /;
 $if not "%cm_inco0RegiFactor%" == "off"           p_inco0(ttot,regi,te)$(p_inco0(ttot,regi,te) and p_new_inco0RegiFactor(te)) = p_new_inco0RegiFactor(te) * p_inco0(ttot,regi,te);
 
-*AO* eternal temporary fix: pypsa battery charger initial costs at 200 $/kW
-p_inco0(ttot,all_regi,"btin")$(ttot.val ge 2015 and ttot.val le 2030) = 200;
+*AO* eternal temporary fix: pypsa battery charger initial costs at 250 $/kW
+p_inco0(ttot,all_regi,"btin")$(ttot.val ge 2015 and ttot.val le 2030) = 250;
 
-*AO* eternal temporary fix: pypsa battery storage initial costs at 150 $/kWh
-p_inco0(ttot,all_regi,"btstor")$(ttot.val ge 2015 and ttot.val le 2030) = 150;
+*AO* eternal temporary fix: pypsa battery storage initial costs at 200 $/kWh
+p_inco0(ttot,all_regi,"btstor")$(ttot.val ge 2015 and ttot.val le 2030) = 200;
 
 
 ***---------------------------------------------------------------------------

@@ -32,7 +32,7 @@ $ifthen.markup_supply "%cm_pypsa_markup_supply%" == "on"
 p21_taxrevPyPSAMarkup0(ttot,all_regi)                               "reference level value of electricity technology markups from PyPSA"
 $endif.markup_supply
 $ifthen.markup_demand "%cm_pypsa_markup_demand%" == "on"
-p21_taxrevPyPSAMarkupDemand0(ttot,all_regi,loadPy32)                "reference level value of electricity demand markups from PyPSA"
+p21_taxrevPyPSAMarkupDemand0(ttot,all_regi,loadPyMV32)                "reference level value of electricity demand markups from PyPSA"
 $endif.markup_demand
 $endif.pypsa
 
@@ -56,7 +56,7 @@ $ifthen.markup_supply "%cm_pypsa_markup_supply%" == "on"
 p21_taxrevPyPSAMarkup_iter(iteration,ttot,all_regi)                 "track reference level value electricity technology markups from PyPSA"
 $endif.markup_supply
 $ifthen.markup_demand "%cm_pypsa_markup_demand%" == "on"
-p21_taxrevPyPSAMarkupDemand_iter(iteration,ttot,all_regi,loadPy32)  "track reference level value of electricity demand markups from PyPSA"
+p21_taxrevPyPSAMarkupDemand_iter(iteration,ttot,all_regi,loadPyMV32)  "track reference level value of electricity demand markups from PyPSA"
 $endif.markup_demand
 $endif.pypsa
 
@@ -149,7 +149,7 @@ $ifthen.markup_supply "%cm_pypsa_markup_supply%" == "on"
 v21_taxrevPyPSAMarkup(ttot,all_regi)                                "Tax revenue of electricity generation markups from PyPSA-Eur"
 $endif.markup_supply
 $ifthen.markup_demand "%cm_pypsa_markup_demand%" == "on"
-v21_taxrevPyPSAMarkupDemand(ttot,all_regi,loadPy32)                 "Tax revenue of electrolysis markup from PyPSA-Eur"
+v21_taxrevPyPSAMarkupDemand(ttot,all_regi,loadPyMV32)                 "Tax revenue of electrolysis markup from PyPSA-Eur"
 $endif.markup_demand
 $endif.pypsa
 ;
@@ -193,9 +193,7 @@ $ifthen.markup_supply "%cm_pypsa_markup_supply%" == "on"
 q21_taxrevPyPSAMarkup(ttot,all_regi)                                "calculation of electricity technology markups from PyPSA-Eur"
 $endif.markup_supply
 $ifthen.markup_demand "%cm_pypsa_markup_demand%" == "on"
-q21_taxrevPyPSAMarkupElectrolysis(ttot,all_regi)                    "calculation of electrolysis markup from PyPSA-Eur"
-q21_taxrevPyPSAMarkupHP(ttot,all_regi)                              "calculation of heat pump markup from PyPSA-Eur"
-q21_taxrevPyPSAMarkupResistive(ttot,all_regi)                       "calculation of resistive heating markup from PyPSA-Eur"
+q21_taxrevPyPSAMarkupDemand(ttot,all_regi,loadPyMV32)         "calculation of electricity demand markups from PyPSA-Eur"
 $endif.markup_demand
 $endif.pypsa
 ;

@@ -176,7 +176,7 @@ $ifthen.pypsa "%power%" == "PyPSA"
 *** PyPSA specific power technologies
 +                   btin       btout      btstor      h2stor
 tech_stat
-inco0                100           0          50        0.50
+inco0                 50           0          50        0.50
 omf                 0.01           0       0.015        0.03
 eta                 0.97        0.97
 lifetime              20          20          10         100

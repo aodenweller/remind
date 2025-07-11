@@ -8,12 +8,4 @@
 *cb no taxes in 2005, fix budget equation term to zero
 vm_taxrev.fx("2005",regi) = 0;
 
-* Deactivate demand-side markup for EVs and AC (for now)
-* The electricity price paid by EVs is passed to EDGE-T directly
-* The electricity price paid by default load (AC) is not implemented for now
-$ifthen.markup_demand "%cm_pypsa_markup_demand%" == "on"
-v21_taxrevPyPSAMarkupDemand.fx(t,regi,"EVs")$(tPy32(t) and regPy32(regi)) = 0;
-v21_taxrevPyPSAMarkupDemand.fx(t,regi,"AC")$(tPy32(t) and regPy32(regi)) = 0;
-$endif.markup_demand
-
 *** EOF ./modules/21_tax/on/bounds.gms

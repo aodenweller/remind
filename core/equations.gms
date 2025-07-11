@@ -408,11 +408,15 @@ qm_fuel2pe(t,regi,peRicardian(enty))..
 *' Definition of resource constraints for renewable energy types:
 ***---------------------------------------------------------------------------
 *ml* assuming maxprod to be technical potential
-$IFTHEN.c32_pypsa_potentials "%c32_pypsa_potentials%" == "on"
+$ifthen.pypsa %power% == "PyPSA"
+$ifthen.pot "%c32_pypsa_potentials%" == "on"
 q_limitProd(t,regi,teRe2rlfDetail(teReNoBio(te),rlf))$( ( regPy32(regi) AND ( sm_PyPSA_eq eq 0 OR ( sm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) OR ( NOT tePyVRE32(te) OR sameas(te,"hydro") ) )..
-$ELSE.c32_pypsa_potentials
+$else.pot
 q_limitProd(t,regi,teRe2rlfDetail(teReNoBio(te),rlf))..
-$ENDIF.c32_pypsa_potentials
+$endif.pot
+$else.pypsa
+q_limitProd(t,regi,teRe2rlfDetail(teReNoBio(te),rlf))..
+$endif.pypsa
   pm_dataren(regi,"maxprod",rlf,te)
   =g=
   pm_dataren(regi,"nur",rlf,te) * vm_capFac(t,regi,te) * v_capDistr(t,regi,te,rlf);

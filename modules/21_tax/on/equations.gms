@@ -48,7 +48,7 @@ $ifthen.markup_supply "%cm_pypsa_markup_supply%" == "on"
   + v21_taxrevPyPSAMarkup(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))
 $endif.markup_supply
 $ifthen.markup_demand "%cm_pypsa_markup_demand%" == "on"
-  + sum(loadPy32, v21_taxrevPyPSAMarkupDemand(t,regi,loadPy32))$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))
+  + sum(loadPyMV32, v21_taxrevPyPSAMarkupDemand(t,regi,loadPyMV32))$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))
 $endif.markup_demand
 $endif.pypsa
 ;
@@ -415,57 +415,29 @@ $endif.importtaxrc
 ***---------------------------------------------------------------------------
 *'  Electricity technology markup from PyPSA-Eur
 ***---------------------------------------------------------------------------
-*** vm_PyPSAMarkup is the markup/markdown for each generation technology
+
+*** Supply-side markups for generation technologies
 $ifthen.pypsa "%power%" == "PyPSA"
 $ifthen.markup_supply "%cm_pypsa_markup_supply%" == "on"
 q21_taxrevPyPSAMarkup(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
   v21_taxrevPyPSAMarkup(t,regi)
   =e=
-    sum (en2en(enty,enty2,te)$(tePy32(te)),
+    sum(en2en(enty,enty2,te)$(tePy32(te)),
          - vm_PyPSAMarkup(t,regi,te) * ( vm_prodSe(t,regi,enty,enty2,te) - v32_storloss(t,regi,te) )
-        )
+    )
   - p21_taxrevPyPSAMarkup0(t,regi) 
 ;
 $endif.markup_supply
 
-*** Markup for demand-side technology electrolysis
+*** Demand-side markups for sectoral electricity loads
+*** Separate by loadPyMV32 to check convergence for each sectoral load separately
 $ifthen.markup_demand "%cm_pypsa_markup_demand%" == "on"
-q21_taxrevPyPSAMarkupElectrolysis(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
-  v21_taxrevPyPSAMarkupDemand(t,regi,"electrolysis")
+q21_taxrevPyPSAMarkupDemand(t,regi,loadPyMV32)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
+  v21_taxrevPyPSAMarkupDemand(t,regi,loadPyMV32)
   =e=
-  !! TODO: Change to only include additional electrolytic hydrogen production (not for storage)
-  ( vm_PyPSAMarkupDemand(t,regi,"electrolysis") * vm_demSe(t,regi,"seel","seh2","elh2") )
-  - p21_taxrevPyPSAMarkupDemand0(t,regi,"electrolysis")
+    ( vm_PyPSAMarkupDemand(t,regi,loadPyMV32) * v32_load_sector(t,regi,loadPyMV32) )
+  - p21_taxrevPyPSAMarkupDemand0(t,regi,loadPyMV32)
 ;
-
-*** Markup for demand-side technology heat pumps
-q21_taxrevPyPSAMarkupHP(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
-    v21_taxrevPyPSAMarkupDemand(t,regi,"heatpump")
-    =e=
-    (   vm_PyPSAMarkupDemand(t,regi,"heatpump")
-      * sum(in$(sameas(in, "feelhpb")),
-            vm_cesIO(t,regi,in)
-          + pm_cesdata(t,regi,in,"offset_quantity")
-           )
-      / pm_eta_conv(t,regi,"tdels")
-    )
-    - p21_taxrevPyPSAMarkupDemand0(t,regi,"heatpump")
-;
-
-*** Markup for demand-side technology resistive heating
-q21_taxrevPyPSAMarkupResistive(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
-    v21_taxrevPyPSAMarkupDemand(t,regi,"resistive")
-    =e=
-    (   vm_PyPSAMarkupDemand(t,regi,"resistive")
-      * sum(in$(sameas(in, "feelrhb")),
-            vm_cesIO(t,regi,in)
-          + pm_cesdata(t,regi,in,"offset_quantity")
-           )
-      / pm_eta_conv(t,regi,"tdels")
-    )
-    - p21_taxrevPyPSAMarkupDemand0(t,regi,"resistive")
-;
-
 $endif.markup_demand
 $endif.pypsa
 

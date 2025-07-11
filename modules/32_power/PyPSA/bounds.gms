@@ -101,6 +101,16 @@ vm_cap.fx(t,regi,"elh2VRE",rlf) = 0;
 v32_shPe2seel.lo(tPy32,regPy32,tePy32) = 0;
 v32_shPe2seel.up(tPy32,regPy32,tePy32) = 1;
 
+*** Restrict load share to generous upper bounds to help solver
+v32_share_sector.lo(tPy32,regPy32,loadPy32) = 0;
+v32_share_sector.up(tPy32,regPy32,"resistive") = 0.2;
+v32_share_sector.up(tPy32,regPy32,"heatpump") = 0.2;
+v32_share_sector.up(tPy32,regPy32,"electrolysis") = 0.3;
+v32_share_sector.up(tPy32,regPy32,"EV_pass") = 0.3;
+v32_share_sector.up(tPy32,regPy32,"EV_freight") = 0.2;
+v32_share_sector.lo(tPy32,regPy32,"AC") = 0.3;
+v32_share_sector.up(tPy32,regPy32,"AC") = 1;
+
 *** Set bounds if PyPSA-Eur coupling is active
 if ((sm_PyPSA_eq eq 1),
     !! TEMPORARY FIX to make sure the load is in a reasonable range
@@ -173,6 +183,13 @@ if ((sm_PyPSA_eq eq 1),
     !! Set upper bound for vm_cap for VRE technologies (other than hydro)
     vm_cap.up(t,regi,te,"1")$(tPy32(t) AND regPy32(regi) AND tePyVRE32(te) AND NOT sameas(te, "hydro")) =
         p32_PyPSA_Potential(t,regi,te) / 1E6;  !! MW to TW
+);
+$endif
+
+*** Set starting value for battery production to help the solver
+$ifthen "%c32_pypsa_btstor%" == "on"
+if ((sm_PyPSA_eq eq 1),
+    vm_prodSe.l(t,regi,"seelstor","seel","btout") = p32_PyPSA_BatteryDischargeRel(t,regi) * v32_load.l(t,regi);
 );
 $endif
 

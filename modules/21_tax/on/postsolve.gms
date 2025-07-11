@@ -65,23 +65,7 @@ p21_taxrevPyPSAMarkup0(ttot,regi) = sum(en2en(enty,enty2,te)$(tePy32(te)),
                                   );
 $endif.markup_supply
 $ifthen.markup_demand "%cm_pypsa_markup_demand%" == "on"
-p21_taxrevPyPSAMarkupDemand0(ttot,regi,"electrolysis") = vm_PyPSAMarkupDemand.l(ttot,regi,"electrolysis") * vm_demSe.l(ttot,regi,"seel","seh2","elh2");
-p21_taxrevPyPSAMarkupDemand0(ttot,regi,"heatpump") = 
-    (   vm_PyPSAMarkupDemand.l(ttot,regi,"heatpump")
-      * sum(in$(sameas(in, "feelhpb")),
-            vm_cesIO.l(ttot,regi,in)
-          + pm_cesdata(ttot,regi,in,"offset_quantity")
-           )
-      / pm_eta_conv(ttot,regi,"tdels")
-    );
-p21_taxrevPyPSAMarkupDemand0(ttot,regi,"resistive") = 
-    (   vm_PyPSAMarkupDemand.l(ttot,regi,"resistive")
-      * sum(in$(sameas(in, "feelrhb")),
-            vm_cesIO.l(ttot,regi,in)
-          + pm_cesdata(ttot,regi,in,"offset_quantity")
-           )
-      / pm_eta_conv(ttot,regi,"tdels")
-    );
+p21_taxrevPyPSAMarkupDemand0(ttot,regi,loadPyMV32) = vm_PyPSAMarkupDemand.l(ttot,regi,loadPyMV32) * v32_load_sector.l(ttot,regi,loadPyMV32);
 $endif.markup_demand
 $endif.pypsa
 
@@ -107,7 +91,7 @@ $ifthen.markup_supply "%cm_pypsa_markup_supply%" == "on"
 p21_taxrevPyPSAMarkup_iter(iteration,ttot,all_regi) = v21_taxrevPyPSAMarkup.l(ttot,all_regi);
 $endif.markup_supply
 $ifthen.markup_demand "%cm_pypsa_markup_demand%" == "on"
-p21_taxrevPyPSAMarkupDemand_iter(iteration,ttot,all_regi,loadPy32) = v21_taxrevPyPSAMarkupDemand.l(ttot,all_regi,loadPy32);
+p21_taxrevPyPSAMarkupDemand_iter(iteration,ttot,all_regi,loadPyMV32) = v21_taxrevPyPSAMarkupDemand.l(ttot,all_regi,loadPyMV32);
 $endif.markup_demand
 $endif.pypsa
 

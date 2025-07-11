@@ -150,13 +150,15 @@ v21_tau_SE_tax.l(t,regi,te)=0;
 
 *** initialise PyPSA electricity price markup/markdown
 $ifthen.pypsa "%power%" == "PyPSA"
+sm_PyPSA_eq=0;
 $ifthen.markup_supply "%cm_pypsa_markup_supply%" == "on"
 vm_PyPSAMarkup.l(t,regi,te) = 0;
-sm_PyPSA_eq = 0;  !! Could remove this or move to core/preloop.gms?
 v21_taxrevPyPSAMarkup.l(tPy32,regPy32) = 0;
 $endif.markup_supply
 $ifthen.markup_demand "%cm_pypsa_markup_demand%" == "on"
-vm_PyPSAMarkupDemand.l(tPy32,regPy32,loadPy32) = 0;
+vm_PyPSAMarkupDemand.l(tPy32,regPy32,loadPyMV32) = 0;
+v21_taxrevPyPSAMarkupDemand.l(tPy32,regPy32,loadPyMV32) = 0;
+v32_load_sector.l(tPy32,regPy32,loadPyMV32) = 0;
 $endif.markup_demand
 $endif.pypsa
 

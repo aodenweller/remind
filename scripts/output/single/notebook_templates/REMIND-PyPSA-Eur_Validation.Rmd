@@ -244,7 +244,8 @@ rm2genTech <- c(rm2genTech,
                   "btstor" = "battery_storage",
                   # Loads
                   "AC" = "load",
-                  "EVs" = "EVs",
+                  "EV_pass" = "ev_pass",
+                  "EV_freight" = "ev_freight",
                   "heatpump" = "heatpump",
                   "resistive" = "resistive",
                   "electrolysis" = "electrolysis"))
@@ -271,9 +272,12 @@ py2genTech <- c(py2genTech, c("H2 electrolysis" = "electrolysis",
                               "coal" = "all_coal",
                               # Loads
                               "AC" = "load",
-                              "BEV charger" = "EVs",
-                              "heat pump" = "heatpump",
-                              "resistive heating" = "resistive"))
+                              "BEV pass charger" = "ev_pass",
+                              "BEV freight charger" = "ev_freight",
+                              "EV_pass" = "ev_pass",
+                              "EV_freight" = "ev_freight",
+                              "heatpump" = "heatpump",
+                              "resistive" = "resistive"))
 
 # Create mapping from REMIND to PyPSA-Eur (for cost components)
 # TODO: Remove
@@ -326,7 +330,8 @@ colorsTech <- c(
   # Loads
   "resistive" = "#B86B1F",
   "heatpump" = "#F5835A",
-  "EVs" = "#E8E88A",
+  "ev_pass" = "#E8E88A",
+  "ev_freight" = "#68B774",
   "load" = "#4B5C67"
   )
 
@@ -357,7 +362,8 @@ namesTech <- c(
   # Sectoral loads
   "resistive" = "Resistive heating",
   "heatpump" = "Heat pump",
-  "EVs" = "Electric vehicles",
+  "ev_pass" = "EV Passenger",
+  "ev_freight" = "EV Freight",
   "load" = "Load"
   )
 
@@ -516,43 +522,12 @@ Values used by PyPSA-EUR are also retrieved to cross-check (displayed as points)
 # Read REMIND electricity load data
 dataLoadREMIND <- readREMINDgdx(
     paths = rm2pyFiles,
-    gdxVar = "p32_load_sector",
+    gdxVar = "v32_load_sector",
     columns = c("ttot" = "year", "all_regi" = "region", "loadPy32" = "sector", "value" = "value"),
     colFilter = list("year" = years, "region" = regions),
     restoreZeros = FALSE,
     recalcUnit = twa2twh) %>%
-  filter(iteration %in% pyIterations)
-
-# REMIND additional hydrogen load data
-dataH2DemandREMIND <- readREMINDgdx(
-    paths = rm2pyFiles,
-    gdxVar = "p32_ElecH2Demand",
-    columns = c("ttot" = "year", "all_regi" = "region", "value" = "value"),
-    colFilter = list("year" = years, "region" = regions),
-    restoreZeros = FALSE,
-    recalcUnit = twa2twh) %>%
   filter(iteration %in% pyIterations) %>%
-  mutate(sector = "electrolysis")
-
-# Also get electrolysis efficiency to calculate electricity demand for hydrogen
-dataEtaREMIND <- readREMINDgdx(
-    paths = rmFiles,
-    gdxVar = "pm_eta_conv",
-    columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "eta"),
-    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
-    restoreZeros = FALSE) %>%
-  filter(iteration %in% pyIterations,
-         technology == "elh2") %>%
-  select(-technology)
-
-dataElectrolysisLoadREMIND <- dataH2DemandREMIND %>%
-  left_join(dataEtaREMIND, by = c("year", "region", "iteration")) %>%
-  mutate(value = value / eta) %>%  # Convert hydrogen demand to electricity load
-  select(-eta) %>%
-  mutate(sector = "electrolysis")  # Rename sector to electrolysis
-
-dataLoadREMIND <- dataLoadREMIND %>%
-  bind_rows(dataElectrolysisLoadREMIND) %>%
   revalue.levels(sector = rm2genTech) %>%
   order.levels(sector = names(colorsTech))
 
@@ -564,7 +539,7 @@ dataLoadREMINDtot <- dataLoadREMIND %>%
 dataLoadPyPSA <- readPyPSAcsv(
     paths = file.path(pyReportingDirs, "energy_balance_ac.csv")) %>%
   filter(component %in% c("Load", "Link"),
-         general_carrier %in% c("AC", "BEV charger", "heat pump", "resistive heating")) %>%
+         general_carrier %in% c("AC", "BEV pass charger", "BEV freight charger", "heatpump", "resistive")) %>%
   mutate(value = -value / 1e6)  # Convert MWh to TWh
 
 dataLoadH2PyPSA <- readPyPSAcsv(
@@ -584,12 +559,13 @@ dataElectrolysisLoadPyPSA <- dataLoadH2PyPSA %>%
   left_join(dataEtaPyPSA, by = c("year", "iteration")) %>%
   mutate(value = value / eta) %>%  # Convert hydrogen demand to electricity load
   select(-eta) %>%
-  mutate(general_carrier = "electrolysis")  # Rename general_carrier to electrolysis
+  mutate(general_carrier = "electrolysis")
 
 dataLoadPyPSA <- dataLoadPyPSA %>%
   bind_rows(dataElectrolysisLoadPyPSA) %>%
   revalue.levels(general_carrier = py2genTech) %>%
-  order.levels(general_carrier = names(colorsTech))
+  order.levels(general_carrier = names(colorsTech)) %>%
+  rename(sector = general_carrier)
 
 dataLoadPyPSAtot <- dataLoadPyPSA %>%
   group_by(year, region, iteration) %>%
@@ -623,14 +599,14 @@ pTotIter <- ggplot() +
 
 print(pTotIter)
 
-# By sector (without electrolysis)
+# By sector
 pYear <- ggplot() + 
     geom_col(data = dataLoadREMIND, 
              aes(x = year, y = value, fill = sector), 
              position = position_stacknudge(x = -1),
              width = 1) +
     geom_col(data = dataLoadPyPSA,
-             aes(x = year, y = value, fill = general_carrier), 
+             aes(x = year, y = value, fill = sector), 
              position = position_stacknudge(x = 1),
              width = 1) +
     scale_fill_manual(name = "Sector", values = colorsTech, labels = namesTech) +
@@ -649,12 +625,12 @@ print(pYear)
 pIter <- ggplot() + 
     geom_col(data = dataLoadREMIND, 
              aes(x = iteration, y = value, fill = sector), 
-             position = position_stacknudge(x = -0.15),
-             width = 0.25) +
+             position = position_stacknudge(x = -1),
+             width = 0.5) +
     geom_col(data = dataLoadPyPSA,
-             aes(x = iteration, y = value, fill = general_carrier), 
-             position = position_stacknudge(x = 0.15),
-             width = 0.25) +
+             aes(x = iteration, y = value, fill = sector), 
+             position = position_stacknudge(x = 1),
+             width = 0.5) +
     scale_fill_manual(name = "Sector", values = colorsTech, labels = namesTech) +
     geom_line(data = dataLoadREMINDtot, 
               aes(x = iteration, y = value, linetype = "REMIND")) +
@@ -669,45 +645,43 @@ pIter <- ggplot() +
 
 print(pIter)
 
-```
-
-### Additional hydrogen load
-
-```{r additional hydrogen demand}
-
-# Read REMIND data
-dataH2DemandREMIND <- readREMINDgdx(
-    paths = rmFiles,
-    gdxVar = "p32_ElecH2Demand",
-    columns = c("ttot" = "year", "all_regi" = "region", "value" = "value"),
-    colFilter = list("year" = years, "region" = regions),
-    restoreZeros = FALSE,
-    recalcUnit = twa2twh) %>%
-  filter(iteration %in% pyIterations)
-
-# Read PyPSA-Eur data
-dataH2DemandPyPSA <- readPyPSAcsv(
-    paths = file.path(pyReportingDirs, "energy_balance_addH2.csv")) %>%
-  filter(component == "Load") %>%
-  mutate(value = -value / 1e6)  # Convert MWh to TWh
-
-pH2DemandYear <- ggplot() +
-  geom_line(data = dataH2DemandREMIND, aes(x = year, y = value, color = region)) +
-  geom_point(data = dataH2DemandPyPSA, aes(x = year, y = value, color = region)) +
-  labs(x = "Year", y = "Additional hydrogen demand (TWh)") +
-  ggtitle("Additional hydrogen demand over years") +
+# Sectoral load line charts
+pYear <- ggplot() +
+  geom_line(data = dataLoadREMIND,
+            aes(x = year, y = value, color = sector)) +
+  geom_point(data = dataLoadPyPSA,
+             aes(x = year, y = value, color = sector)) +
+  scale_color_manual(name = "Sector", values = colorsTech, labels = namesTech) +
+  labs(x = "Year", y = "Electricity load (TWh/a)") +
+  scale_y_continuous(limits = c(0, NA)) +
+  ggtitle("Electricity load by sector and year") +
   facet_wrap(~ iteration)
 
-print(pH2DemandYear)
+print(pYear)
 
-pH2DemandIter <- ggplot() +
-  geom_line(data = dataH2DemandREMIND, aes(x = iteration, y = value, color = region)) +
-  geom_point(data = dataH2DemandPyPSA, aes(x = iteration, y = value, color = region)) +
-  labs(x = "Iteration", y = "Additional hydrogen demand (TWh)") +
-  ggtitle("Additional hydrogen demand over iterations") +
+pIter <- ggplot() +
+  geom_line(data = dataLoadREMIND,
+            aes(x = iteration, y = value, color = sector)) +
+  geom_point(data = dataLoadPyPSA,
+             aes(x = iteration, y = value, color = sector)) +
+  scale_color_manual(name = "Sector", values = colorsTech, labels = namesTech) +
+  labs(x = "Iteration", y = "Electricity load (TWh/a)") +
+  scale_x_continuous(breaks = integer_breaks()) +
+  scale_y_continuous(limits = c(0, NA)) +
+  ggtitle("Electricity load by sector and iteration") +
   facet_wrap(~ year)
 
-print(pH2DemandIter)
+print(pIter)
+
+pYearTech <- pYear +
+  facet_grid(sector ~ iteration, scales = "free")
+
+print(pYearTech)
+
+pIterTech <- pIter +
+  facet_grid(sector ~ year, scales = "free")
+
+print(pIterTech)
 
 ```
 
@@ -1989,6 +1963,7 @@ dataCapFacAvgREMIND <- readREMINDgdx(
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = FALSE) %>%
   filter(!(technology %in% c("elh2", "h2turb"))) %>%
+  filter(!is.na(p32_PyPSA_CFAvg)) %>%
   # Increment iteration by 1 because this value is only available for the next iteration
   mutate(iteration = iteration + 1) %>%
   revalue.levels(technology = rm2genTech) %>%
@@ -2134,6 +2109,7 @@ dataMarkupAvgREMIND <- readREMINDgdx(
     columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_PyPSA_MarkupSupplyAvg"),
     colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = FALSE) %>%
+  filter(!is.na(p32_PyPSA_MarkupSupplyAvg)) %>%
   # Increment iteration by 1 because this value is only available for the next iteration
   mutate(iteration = iteration + 1) %>%
   revalue.levels(technology = rm2genTech) %>%
@@ -3788,12 +3764,11 @@ dataSupplyREMIND <- readREMINDgdx(
 # REMIND load
 dataLoadREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "p32_load_sector", 
-    columns = c("ttot" = "year", "all_regi" = "region", "loadPy32" = "sector", "value" = "value"),
+    gdxVar = "v32_load_sector", 
+    columns = c("ttot" = "year", "all_regi" = "region", "loadPy32" = "technology", "value" = "value"),
     colFilter = list("year" = years, "region" = regions),
     restoreZeros = FALSE,
     recalcUnit = twa2twh) %>%
-  rename(technology = sector) %>%
   revalue.levels(technology = rm2genTech) %>%
   select(year, region, technology, iteration, value)
 
@@ -3819,42 +3794,13 @@ dataElectrolysisREMIND <- readREMINDgdx(
   revalue.levels(technology = rm2genTech) %>%
   select(year, region, technology, iteration, value)
 
-# REMIND electricity demand for electrolysis used for electricity storage
-dataElectrolysisStorREMIND <- readREMINDgdx(
-    paths = rmFiles,
-    gdxVar = "vm_demSe",
-    columns = c("ttot" = "year", "all_regi" = "region", "all_enty" = "enty1", "all_enty1" = "enty2", "all_te" = "technology", "value" = "value"),
-    colFilter = list("year" = years, "region" = regions, "enty1" = "seh2", "enty2" = "seel", "technology" = "h2turb"),
-    restoreZeros = FALSE,
-    recalcUnit = twa2twh) %>%
-  revalue.levels(technology = rm2genTech) %>%
-  select(year, region, technology, iteration, value)
-
-# Need to divide dataElectrolysisStorREMIND by electrolysis efficiency
-dataEtaREMIND <- readREMINDgdx(
-    paths = rmFiles,
-    gdxVar = "pm_eta_conv",
-    columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "value"),
-    colFilter = list("year" = years, "region" = regions, "technology" = "elh2"),
-    restoreZeros = FALSE) %>%
-  rename(eta_elh2 = value) %>%
-  select(year, region, iteration, eta_elh2)
-
-# Divide by efficiency
-dataElectrolysisStorREMIND <- dataElectrolysisStorREMIND %>%
-  left_join(dataEtaREMIND) %>%
-  mutate(value = value / eta_elh2) %>%
-  mutate(technology = "electrolysis_stor") %>%
-  select(year, region, technology, iteration, value)
-
-# Subtract from total electricity demand for electrolysis to get
-# electricity demand for end-use sectors
-dataElectrolysisAddREMIND <- dataElectrolysisREMIND %>%
-  full_join(dataElectrolysisStorREMIND, by = c("year", "region", "iteration")) %>%
-  mutate(value = value.x - value.y) %>%
-  select(-value.y) %>%
-  mutate(technology = "electrolysis_add") %>%
-  select(year, region, technology, iteration, value)
+# Electrolysis used for storage
+dataElectrolysisStorREMIND <- dataLoadREMIND %>%
+  filter(technology == "electrolysis") %>%
+  full_join(dataElectrolysisREMIND, by=c("year", "region", "technology", "iteration")) %>%
+  mutate(value = value.y - value.x) %>%
+  select(-value.x, -value.y) %>%
+  mutate(technology = "electrolysis_stor")
 
 # REMIND battery charging
 dataBatteryChargeREMIND <- readREMINDgdx(
@@ -3869,9 +3815,9 @@ dataBatteryChargeREMIND <- readREMINDgdx(
 
 # Combine load with electrolysers to withdrawal
 dataWithdrawalREMIND <- bind_rows(dataLoadREMIND, dataElectrolysisStorREMIND) %>%
-  bind_rows(dataElectrolysisAddREMIND) %>%
   bind_rows(dataGridLossesREMIND) %>%
   bind_rows(dataBatteryChargeREMIND) %>%
+  mutate(technology = ifelse(technology == "electrolysis", "electrolysis_add", technology)) %>%
   mutate(value = -value)
 
 # PyPSA-Eur generation by technology
@@ -3898,7 +3844,8 @@ dataWithdrawalPyPSA <- dataBalancePyPSA %>%
 dataH2DemandPyPSA <- readPyPSAcsv(
   paths = file.path(pyReportingDirs, "energy_balance_addH2.csv")) %>%
   filter(component == "Load") %>%
-  mutate(value = -value / 1e6)
+  mutate(value = -value / 1e6) %>%
+  complete(year = years, iteration = pyIterations, fill = list(value = 0, region = "DEU"))
 
 # Divide by efficiency to get electricity demand for electrolysis
 # for additional hydrogen demand
@@ -3934,7 +3881,7 @@ dataWithdrawalPyPSA <- dataWithdrawalPyPSA %>%
   select(year, region, technology, iteration, value) %>%
   bind_rows(dataElectrolysisPyPSA)
 
-withdrawal <- c("line_losses", "battery_charger", "electrolysis_stor", "electrolysis_add", "resistive", "heatpump", "EVs", "load")
+withdrawal <- c("line_losses", "battery_charger", "electrolysis_stor", "electrolysis_add", "resistive", "heatpump", "ev_pass", "ev_freight", "load")
 
 if (isTRUE(cfg$gms$c32_pypsa_trade == "off")) {
   for (r in regList) {
@@ -5519,10 +5466,11 @@ with open(fp_config, 'r') as file:
 color_series = pd.Series(config['plotting']['tech_colors'])
 
 # Add colors for resistive heating
-color_series['resistive heating'] = "#B86B1F"  # Red for resistive heating
+color_series['resistive'] = "#B86B1F"  # Red for resistive heating
 color_series['Load'] = "#4B5C67"
-color_series['heat pump'] = "#F5835A"
-color_series["BEV charger"] = "#E8E88A"
+color_series['heatpump'] = "#F5835A"
+color_series["BEV pass charger"] = "#E8E88A"
+color_series["BEV freight charger"] = "#68B774"
 
 # Variables to store handles and labels for the legend
 handles, labels = None, None
@@ -5704,9 +5652,134 @@ plt.close(fig);
 
 ### State of charge (hydrogen)
 
+```{python state of charge}
+
+def plot_storage_soc(df, color_line, carrier, time_slice=None, bev_e_min=False, hp_e_max=False):
+    """
+    Plot state of charge for a given storage carrier across multiple years.
+
+    Parameters:
+        df (pd.DataFrame): DataFrame with 'year' and 'file_path' columns.
+        color_line (str): Color for the line representing the state of charge.
+        carrier (str): Name of the carrier (e.g. 'battery', 'hydrogen').
+        time_slice (slice or None): Optional datetime slice for zooming in.
+    """
+    n_rows, n_cols = 3, 5
+    fig, axs = plt.subplots(n_rows, n_cols, sharex=True)
+    axs = axs.flatten()
+
+    handles, labels = None, None
+    counter = 0
+
+    for _, row in df.iterrows():
+        # Load PyPSA network
+        n = pypsa.Network(row['file_path'])
+
+        # Skip if no objective (incomplete run)
+        if not hasattr(n, 'objective'):
+            continue
+
+        # Extract state of charge for the specified carrier
+        soc = n.stores_t.e.loc[:, n.stores.carrier == carrier].sum(axis=1)
+
+        # If EV battery, also plot e_min_pu * e_nom
+        if bev_e_min:
+            e_min_pu = n.stores_t.e_min_pu.loc[:, n.stores.carrier == carrier].mean(axis=1)
+            e_nom = n.stores.e_nom[n.stores.carrier == carrier].sum()
+            e_min = e_min_pu * e_nom
+
+        # If heat pump storage, also plot e_max_pu * e_nom
+        if hp_e_max:
+            e_max_pu = n.stores_t.e_max_pu.loc[:, n.stores.carrier == carrier].mean(axis=1)
+            e_nom = n.stores.e_nom[n.stores.carrier == "heatpump storage"].sum()
+            e_max = e_max_pu * e_nom
+
+        # Optionally apply a time slice (e.g. zoom to a specific week)
+        if time_slice:
+            soc = soc.loc[time_slice]
+            if bev_e_min:
+                e_min = e_min.loc[time_slice] if bev_e_min else None
+            if hp_e_max:
+                e_max = e_max.loc[time_slice] if hp_e_max else None
+
+        # Plot on the current subplot
+        ax = axs[counter]
+        soc.plot(ax=ax, color=color_line)
+
+        if bev_e_min:
+            e_min.plot(ax=ax, label="Minimum SOC", color = "red", linestyle='--')
+
+        if hp_e_max:
+            e_max.plot(ax=ax, label="Maximum SOC", color = "red", linestyle='--')
+
+        ax.set_title(f"Year: {row['year']}")
+        ax.set_xlabel('')
+        ax.set_ylabel('SOC [MWh]' if counter % n_cols == 0 else '')
+
+        if handles is None and labels is None:
+            handles, labels = ax.get_legend_handles_labels()
+
+        counter += 1
+
+    # Remove any unused axes
+    for i in range(counter, n_rows * n_cols):
+        fig.delaxes(axs[i])
+
+    # Final layout and display
+    fig.suptitle(f"State of Charge for {carrier}", fontsize=12, y=0.98)
+    plt.tight_layout(rect=[0, 0, 0.95, 0.95]);
+    plt.show();
+    plt.close(fig);
+
+plot_storage_soc(df, color_series["H2"], 'H2')
+
+```
+
 ### State of charge (battery)
 
-### State of charge (EV battery flexibility)
+```{python soc battery}
+
+plot_storage_soc(df, color_series["battery"], 'battery')
+plot_storage_soc(df, color_series["battery"], 'battery', time_slice=slice('2013-07-15', '2013-07-21'))
+
+```
+
+### State of charge (EV passenger batteries)
+
+```{python soc ev pass}
+
+plot_storage_soc(df, color_series["BEV pass charger"], 'EV pass battery', bev_e_min=False)
+plot_storage_soc(df, color_series["BEV pass charger"], 'EV pass battery', time_slice=slice('2013-07-15', '2013-07-21'), bev_e_min=True)
+
+```
+
+### State of charge (EV freight batteries)
+
+```{python soc ev freight}
+
+plot_storage_soc(df, color_series["BEV freight charger"], 'EV freight battery', bev_e_min=False)
+plot_storage_soc(df, color_series["BEV freight charger"], 'EV freight battery', time_slice=slice('2013-07-15', '2013-07-21'), bev_e_min=True)
+
+```
+
+
+### State of charge (heat pump storage)
+
+```{python soc hp}
+
+plot_storage_soc(df, color_series['heatpump'], 'heatpump storage', hp_e_max=True)
+plot_storage_soc(df, color_series['heatpump'], 'heatpump storage', time_slice=slice('2013-01-21', '2013-01-27'), hp_e_max=True)
+
+```
+
+### State of charge (resistive heating storage)
+
+```{python soc resistive}
+
+plot_storage_soc(df, color_series['resistive'], 'resistive storage')
+plot_storage_soc(df, color_series['resistive'], 'resistive storage', time_slice=slice('2013-01-21', '2013-01-27'))
+
+```
 
 ### System costs
 
@@ -5797,6 +5870,182 @@ plt.close(fig);
 #### Pumped hydro storage (PHS)
 
 # Other plots
+
+## Cost comparison: Investment
+
+```{r cost comparison generation}
+
+dataCapexREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "p32_capCostwAdjCost",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_capCostwAdjCost"),
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+    restoreZeros = FALSE,
+    recalcUnit = 1E-3*trUSDpTW2USDpMW) %>%
+  filter(iteration %in% pyIterations)
+
+# Weights for generation technologies
+dataWeightGenREMIND <- readREMINDgdx(
+  paths = rmFiles,
+  gdxVar = "p32_weightGen",
+  columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "weight"),
+  colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+  restoreZeros = FALSE)
+
+# Weights for storage technologies
+dataWeightStorREMIND <- readREMINDgdx(
+  paths = rmFiles,
+  gdxVar = "p32_weightStor",
+  columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "weight"),
+  colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+  restoreZeros = FALSE)
+
+# Concatenate weights
+dataWeightREMIND <- bind_rows(dataWeightGenREMIND, dataWeightStorREMIND) %>%
+  filter(iteration %in% pyIterations)
+
+# Calculated weighted average
+dataCapexWeightedREMIND <- dataCapexREMIND %>%
+  full_join(dataWeightREMIND, by = c("year", "region", "technology", "iteration")) %>%
+  revalue.levels(technology = rm2genTech) %>%
+  group_by(year, technology, iteration) %>%
+  mutate(weight = if_else(is.na(weight), 1, weight)) %>%
+  summarise(capex = sum(p32_capCostwAdjCost * weight) / sum(weight)) %>%
+  order.levels(technology = names(colorsTech)) %>%
+  filter(iteration %in% pyIterations)
+
+# Original costs in PyPSA-Eur
+costMap <- c(
+  "solar-utility" = "solar_pv",
+  "onwind" = "wind_onshore",
+  "offwind" = "wind_offshore",
+  "CCGT" = "CCGT",
+  "OCGT" = "OCGT",
+  "biomass" = "biomass",
+  "coal" = "all_coal",
+  "nuclear" = "nuclear",
+  "oil" = "oil",
+  NULL
+)
+
+cost_years <- c(2025, 2030, 2035, 2040, 2045, 2050)
+
+dataCapexPyPSA <- tibble()
+for (y in cost_years) {
+  # Read costs from PyPSA-Eur
+  temp <- readPyPSAcsv(
+    paths = file.path(pyDir, paste0("resources/costs_", y, ".csv"))) %>%
+    filter(parameter == "investment",
+           technology %in% names(costMap)) %>%
+    mutate(year = y)
+
+  dataCapexPyPSA <- bind_rows(dataCapexPyPSA, temp)
+}
+
+dataPlotPyPSA <- dataCapexPyPSA %>%
+  revalue.levels(technology = costMap) %>%
+  select(technology, year, value)
+
+dataPlotREMIND <- dataCapexWeightedREMIND %>%
+  filter(iteration == max(iteration),
+         technology %in% costMap) %>%
+  select(technology, year, capex) %>%
+  rename(value = capex)
+
+pTech <- ggplot() +
+  geom_line(data = dataPlotREMIND, aes(x = year, y = value, color = technology, linetype = "REMIND")) +
+  geom_line(data = dataPlotPyPSA, aes(x = year, y = value, color = technology, linetype = "PyPSA-Eur")) +
+  scale_color_manual(name = "Technology",
+                     values = colorsTech,
+                     labels = namesTech) +
+  scale_linetype_manual(name = "Model",
+                     values = c("REMIND" = "solid", "PyPSA-Eur" = "dashed")) +
+  labs(x = "Year", y = "Specific capital costs (USD/kW)") +
+  ylim(0,NA) +
+  ggtitle("Cost comparison") +
+  facet_wrap(~ technology, scales = "free", labeller = labeller(technology = namesTech))
+
+print(pTech)
+
+pTech <- pTech +
+    coord_cartesian(xlim = c(2025, 2050))
+
+print(pTech)
+
+```
+
+
+```{r cost comparison storage}
+
+# Original costs in PyPSA-Eur
+costMap <- c(
+  "electrolysis" = "electrolysis",
+  "hydrogen storage underground" = "hydrogen_storage",
+  "battery inverter" = "battery_charger",
+  "battery storage" = "battery_storage",
+  NULL
+)
+
+cost_years <- c(2025, 2030, 2035, 2040, 2045, 2050)
+
+dataCapexPyPSA <- tibble()
+for (y in cost_years) {
+  # Read costs from PyPSA-Eur
+  temp <- readPyPSAcsv(
+    paths = file.path(pyDir, paste0("resources/costs_", y, ".csv"))) %>%
+    filter(parameter == "investment",
+           technology %in% names(costMap)) %>%
+    mutate(year = y)
+
+  dataCapexPyPSA <- bind_rows(dataCapexPyPSA, temp)
+}
+
+dataPlotPyPSA <- dataCapexPyPSA %>%
+  revalue.levels(technology = costMap) %>%
+  select(technology, year, value)
+
+dataPlotREMIND <- dataCapexWeightedREMIND %>%
+  filter(iteration == max(iteration),
+         technology %in% costMap) %>%
+  select(technology, year, capex) %>%
+  rename(value = capex)
+
+# For electrolysis, convert USD/kW to USD/kW_el
+dataEtaConvREMIND <- readREMINDgdx(
+    paths = rmFiles,
+    gdxVar = "pm_eta_conv",
+    columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "eta"),
+    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+    restoreZeros = FALSE) %>%
+  filter(iteration == max(iteration),
+         technology == "elh2") %>%
+  mutate(technology = "electrolysis")
+
+dataPlotREMIND <- dataPlotREMIND %>%
+  full_join(dataEtaConvREMIND) %>%
+  mutate(value = ifelse(technology == "electrolysis", value * eta, value))
+
+p <- ggplot() +
+  geom_line(data = dataPlotREMIND, aes(x = year, y = value, color = technology, linetype = "REMIND")) +
+  geom_line(data = dataPlotPyPSA, aes(x = year, y = value, color = technology, linetype = "PyPSA-Eur")) +
+  scale_color_manual(name = "Technology",
+                     values = colorsTech,
+                     labels = namesTech) +
+  scale_linetype_manual(name = "Model",
+                     values = c("REMIND" = "solid", "PyPSA-Eur" = "dashed")) +
+  labs(x = "Year", y = "Specific capital costs (USD/kW and USD/kWh)") +
+  ylim(0, NA) +
+  ggtitle("Cost comparison") +
+  facet_wrap(~ technology, scales = "free", labeller = labeller(technology = namesTech))
+
+print(p)
+
+p <- p +
+    coord_cartesian(xlim = c(2025, 2050))
+
+print(p)
+
+```
 
 ## Runtime
 

@@ -82,9 +82,6 @@ v32_flexPriceShareMin(ttot,all_regi,all_te)         "possible minimum of share o
 *** (4) PyPSA reporting: Parameters that are calculated for reporting and plotting
 parameters
     !! Parameters for exporting data to PyPSA-Eur
-    p32_load(ttot,all_regi)                                         "PyPSA export: Total SE electricity load used for FE [TWa]"
-    p32_load_sector(ttot,all_regi,loadPy32)                         "PyPSA export: Sectoral electricity loads, sum of which is equal to p23_load [TWa]"
-    p32_ElecH2Demand(ttot,all_regi)                                 "PyPSA export: Electrolytic hydrogen demand outside the power sector [TWa]"
     p32_cap(ttot,all_regi,all_te)                                   "PyPSA export: Pre-investment capacities [TW for generation/link, TWh for storage]"
     p32_cap_iter(iteration,ttot,all_regi,all_te)                    "PyPSA export: Pre-investment capacities in iterations [TW for generation/link, TWh for storage]"
     p32_capAvg(ttot,all_regi,all_te)                                "PyPSA export: Pre-investment capacities averaged over iterations [TW for generation/link, TWh for storage]"
@@ -141,6 +138,8 @@ parameters
 *** Positive variables for the PyPSA coupling
 positive variables
     v32_load(ttot,all_regi)                                         "PyPSA coupling: Electricity load [TWa]"
+    v32_load_sector(ttot,all_regi,loadPy32)                         "PyPSA coupling: Sectoral electricity loads, sum of which is equal to p23_load [TWa]"
+    v32_share_sector(ttot,all_regi,loadPy32)                        "PyPSA coupling: Share of sectoral electricity loads in total electricity load [1]"
     v32_pe2seel(ttot,all_regi)                                      "PyPSA coupling: Domestic generation of SE electricity from primary energy carriers for all coupled technologies [TWa]"
     v32_pe2seelTe(ttot,all_regi,all_te)                             "PyPSA coupling: Domestic generation of SE electricity from primary energy carriers by coupled technology [TWa]"
     v32_shPe2seel(ttot,all_regi,all_te)                             "PyPSA coupling/export: Share of domestic generation of SE electricity from primary energy carriers by coupled technology [1]"
@@ -170,6 +169,13 @@ $endif.pypsa
 equations
     q32_load(ttot,all_regi,all_enty)                                "PyPSA coupling: Calculate electricity load"
     q32_loadMin(ttot,all_regi,all_enty)                             "PyPSA coupling: Helper equation to ensure load is not set to zero"
+    q32_load_EV_pass(ttot,all_regi)                                 "PyPSA coupling: Calculate electricity load for passenger electric vehicles"
+    q32_load_EV_freight(ttot,all_regi)                              "PyPSA coupling: Calculate electricity load for freight electric vehicles"
+    q32_load_heatpump(ttot,all_regi)                                "PyPSA coupling: Calculate electricity load for heat pumps"
+    q32_load_resistive(ttot,all_regi)                               "PyPSA coupling: Calculate electricity load for resistive heating"
+    q32_load_electrolysis(ttot,all_regi)                            "PyPSA coupling: Calculate additional electricity load for electrolysis (not for storage)"
+    q32_load_residual(ttot,all_regi)                                "PyPSA coupling: Calculate residual electricity load"
+    q32_loadshare(ttot,all_regi,loadPy32)                           "PyPSA coupling: Calculate share of electricity load per sector in total electricity load"
     q32_pe2seel(ttot,all_regi)                                      "PyPSA coupling: Calculate v32_pe2seel"
     q32_pe2seelTe(ttot,all_regi,all_te)                             "PyPSA coupling: Calculate v32_pe2seelTe"
     q32_shPe2seel(ttot,all_regi,all_te)                             "PyPSA coupling: Calculate v32_shpe2seel"
@@ -182,7 +188,6 @@ $endif
 $ifthen "%cm_pypsa_markup_demand%" == "on"
     q32_MarkUpDemand(ttot,all_regi,loadPy32)                        "PyPSA coupling: Equation for markup demand"
 $endif
-
 $ifthen "%c32_pypsa_peakcap%" == "on"
     q32_PeakResCap(ttot,all_regi)                                   "PyPSA coupling: Anticipation factor equation for peak residual load"
 $endif
