@@ -57,6 +57,10 @@ p21_taxrevChProdStartYear0(t,regi) = sum(en2en(enty,enty2,te), vm_changeProdStar
 p21_taxrevSE0(t,regi) =     sum(se2se(enty,enty2,te)$(teSeTax(te)), 
                                     v21_tau_SE_tax.l(t,regi,te) 
                                   * vm_demSe.l(t,regi,enty,enty2,te));
+p21_taxrevEI0(t,regi) = sum(entyPe, pm_taxEI_PE(t,regi,entyPe) * vm_prodPe.l(t,regi,entyPe))
+                      + sum(pe2se(enty,enty2,te), pm_taxEI_SE(t,regi,te) * vm_prodSe.l(t,regi,enty,enty2,te))
+                      + sum(se2se(enty,enty2,te), pm_taxEI_SE(t,regi,te) * vm_prodSe.l(t,regi,enty,enty2,te))
+                      + sum(te2rlf(te,rlf), pm_taxEI_cap(t,regi,te) * vm_deltaCap.l(t,regi,te,rlf));
     
 $ifthen.pypsa "%power%" == "PyPSA"
 $ifthen.markup_supply "%cm_pypsa_markup_supply%" == "on"
@@ -86,6 +90,7 @@ p21_taxrevFlex_iter(iteration+1,ttot,regi) = v21_taxrevFlex.l(ttot,regi);
 p21_taxrevImport_iter(iteration+1,ttot,regi,tradePe) = v21_taxrevImport.l(ttot,regi,tradePe);
 p21_taxrevChProdStartYear_iter(iteration+1,t,regi) = v21_taxrevChProdStartYear.l(t,regi);
 p21_taxrevSE_iter(iteration+1,t,regi) = v21_taxrevSE.l(t,regi);
+p21_taxrevEI_iter(iteration+1,t,regi) = v21_taxrevEI.l(t,regi);
 $ifthen.pypsa "%power%" == "PyPSA"
 $ifthen.markup_supply "%cm_pypsa_markup_supply%" == "on"
 p21_taxrevPyPSAMarkup_iter(iteration,ttot,all_regi) = v21_taxrevPyPSAMarkup.l(ttot,all_regi);
