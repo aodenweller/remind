@@ -55,8 +55,6 @@ $endif.c32_pypsa_potentials
 $ifthen.c32_windoffFree %c32_windoffFree% == "on"
     q_windoff_low.l(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
     q_windoff_low.m(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
-    q_windoff_high.l(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
-    q_windoff_high.m(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
 $endif.c32_windoffFree
 );
 

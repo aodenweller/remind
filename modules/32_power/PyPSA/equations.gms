@@ -535,7 +535,7 @@ $ifthen.c32_pypsa_peakcap "%c32_pypsa_peakcap%" == "on"
 q32_PeakResCap(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
     sum(tePyDisp32, vm_cap(t,regi,tePyDisp32, "1"))
     =g=
-    p32_PyPSA_PeakResLoadRel(t,regi) * ( v32_load(t,regi) - v32_load_sector(t,regi,"electrolysis") )
+    p32_PyPSA_PeakResLoadRel(t,regi) * v32_load(t,regi)
 $ontext
 $ifthen "%c32_pypsa_anticipation%" == "on"
     * ( 1 - 0.2 * ( sum(tePyVRE32, v32_shPe2seel(t,regi,tePyVRE32) - p32_PyPSA_shPe2seel(t,regi,tePyVRE32)) ) )
@@ -598,7 +598,7 @@ $ifthen "%c32_pypsa_btstor%" == "on"
 q32_battery(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
     vm_prodSe(t,regi,"seelstor","seel","btout")
     =g=
-    p32_PyPSA_BatteryDischargeRel(t,regi) * ( v32_load(t,regi) - v32_load_sector(t,regi,"electrolysis") ) 
+    p32_PyPSA_BatteryDischargeRel(t,regi) * v32_load(t,regi)
 ;
 
 * TEMPORARY: Set btin to btout, in theory this shouldn't be necessary
@@ -622,7 +622,7 @@ $endif
 q32_gridLosses(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
     v32_gridLosses(t,regi)
     =e=
-    p32_PyPSA_GridLossesRel(t,regi) * ( v32_load(t,regi) - v32_load_sector(t,regi,"electrolysis") )
+    p32_PyPSA_GridLossesRel(t,regi) * v32_load(t,regi)
 ;
 
 
