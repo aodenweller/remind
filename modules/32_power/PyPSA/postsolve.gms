@@ -238,9 +238,7 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startI
         !! Grid losses relative to load
         p32_PyPSA_GridLossesRel,
         !! Generation share from PE carriers (for anticipation)
-        p32_PyPSA_shPe2seel,
-        !! Availability factors (for harmonising hydro)
-        p32_PyPSA_AF;
+        p32_PyPSA_shPe2seel;
 $ifthen "%c32_pypsa_anticipation%" == "diffQuot"
     Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_DQ_CF, p32_PyPSA_DQ_MarkupSupply;
 $endif

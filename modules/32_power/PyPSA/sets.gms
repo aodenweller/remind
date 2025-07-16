@@ -44,6 +44,7 @@ $endif
 
     rep32                       "Generic set for PyPSA reporting"
         /1*20/
+
 ;
 
 * Remove year 2025 if cm_startyear is 2030
