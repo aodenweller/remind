@@ -71,9 +71,8 @@ p32_cap_iter(iteration,t,regi,te) = p32_cap(t,regi,te);
 
 *** Special treatment for hydro: Pass full capacity and generation in separate variables
 *** This is used to force PyPSA onto REMIND's capacity factor by adjusting the inflow time series in PyPSA
-*** TODO: Rename p32_hydroGen as very confusing
-p32_hydroCap(t,regi)$(tPy32(t) AND regPy32(regi)) = vm_cap.l(t,regi,"hydro","1");
-p32_hydroGen(t,regi)$(tPy32(t) AND regPy32(regi)) = v32_pe2seelTe.l(t,regi,"hydro") * p32_hydroCorrectionFactor(t,regi);
+p32_hydroCapacity(t,regi)$(tPy32(t) AND regPy32(regi)) = vm_cap.l(t,regi,"hydro","1");
+p32_hydroGeneration(t,regi)$(tPy32(t) AND regPy32(regi)) = v32_pe2seelTe.l(t,regi,"hydro");
 
 ***------------------------------------------------------------
 ***                  PyPSA-Eur coupling
@@ -127,10 +126,9 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startI
         + sum(regPy32(regi), pm_prtp(regi)) / card(regPy32)
         ;
 
-    !! Limit p32_discountRate to 3-10%
+    !! Limit p32_discountRate to 2-10%
     p32_discountRate(ttot)$(tPy32(ttot) and ttot.val le 2100) = 
         min(0.1, max(0.02, p32_discountRate(ttot)));  !! Limit between 2% and 10%
-
     !! Set the interest rate to 3% after 2100
     p32_discountRate(ttot)$(ttot.val gt 2100) = 0.03;
 
@@ -193,8 +191,8 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startI
         p32_weightGen, p32_weightStor, p32_weightPEprice,
         !! Pre-installed capacities
         p32_capAvg,
-        !! Hydro capacities and generation (special treatment in PyPSA)
-        p32_hydroCap, p32_hydroGen
+        !! Hydro capacities and generation (forcing PyPSA onto REMIND's capacity factors)
+        p32_hydroCapacity, p32_hydroGeneration
     ;
     option epsToZero=off;
 
