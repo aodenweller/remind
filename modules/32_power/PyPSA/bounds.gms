@@ -23,8 +23,6 @@ $endif
   !! Set v32_storloss to zero for all technologies
   v32_storloss.fx(tPy32,regPy32,tePy32) = 0;
   v32_storloss.fx(tPy32,regPy32,teVRE) = 0;
-
-  p32_hydroCorrectionFactor(tPy32,regPy32)$(p32_PyPSA_CF(tPy32,regPy32,"hydro") gt sm_eps) = p32_PyPSA_AF(tPy32,regPy32,"hydro") / p32_PyPSA_CF(tPy32,regPy32,"hydro");
   
 );
 

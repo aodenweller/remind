@@ -1849,7 +1849,7 @@ print(pCO2PriceIter)
 # Hydro capacities
 dataHydroCapREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "p32_hydroCap",
+    gdxVar = "p32_hydroCapacity",
     columns = c("ttot" = "year", "all_regi" = "region", "value" = "value"),
     colFilter = list("year" = years, "region" = regions),
     restoreZeros = FALSE,
@@ -1887,7 +1887,7 @@ print(pHydroCapIter)
 # Hydro generation
 dataHydroGenREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "p32_hydroGen",
+    gdxVar = "p32_hydroGeneration",
     columns = c("ttot" = "year", "all_regi" = "region", "value" = "value"),
     colFilter = list("year" = years, "region" = regions),
     restoreZeros = FALSE) %>%

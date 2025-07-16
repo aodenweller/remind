@@ -77,7 +77,7 @@ ATTEMPT=0
 CONFIG_FILE="resources/${scenario}/i${iteration}/config.remind_scenario.yaml"
 while [[ ! -f "${directory}/${CONFIG_FILE}" && $ATTEMPT -lt $MAX_ATTEMPTS ]]; do
     echo "PyPSA log: Attempt $((ATTEMPT + 1)) to create PyPSA config file..."
-    snakemake -s "${directory}/${snakefile}" --directory "${directory}" "${CONFIG_FILE}" >> "log_pypsa_snakemake.txt" 2>&1
+    snakemake -c 1 -s "${directory}/${snakefile}" --directory "${directory}" "${CONFIG_FILE}" >> "log_pypsa_snakemake.txt" 2>&1
     # Increment attempt counter
     ((ATTEMPT++))
     # Sleep for 2 seconds

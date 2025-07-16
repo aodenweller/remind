@@ -92,8 +92,8 @@ parameters
     p32_weightGen(ttot,all_regi,all_te)                             "PyPSA export: Weights for generation technologies [TWa]"
     p32_weightStor(ttot,all_regi,all_te)                            "PyPSA export: Weights for storage technologies, currently electrolysis and hydrogen turbines [TWa]"
     p32_weightPEprice(ttot,all_regi,all_enty)                       "PyPSA export: Weights for primary energy prices [TWa]"
-    p32_hydroCap(ttot,all_regi)                                     "PyPSA export: Hydro capacity [TW]"
-    p32_hydroGen(ttot,all_regi)                                     "PyPSA export: Hydro generation [TWa]"
+    p32_hydroCapacity(ttot,all_regi)                                "PyPSA export: Hydro capacity [TW]"
+    p32_hydroGeneration(ttot,all_regi)                              "PyPSA export: Hydro generation [TWa]"
     !! Parameters for importing data from PyPSA-Eur
     p32_PyPSA_CF(ttot,all_regi,all_te)                              "PyPSA import: Capacity factors [1]"
     p32_PyPSA_CF_iter(iteration,ttot,all_regi,all_te)               "PyPSA import calc: Capacity factors in iterations [1]"
@@ -119,10 +119,9 @@ parameters
     p32_PyPSA_DQ_CF(ttot,all_regi,all_te,all_te)                    "PyPSA import: Difference quotient of capacity factors w.r.t perturbations of capacity [1/MW]"
     p32_PyPSA_DQ_MarkupSupply(ttot,all_regi,all_te,all_te)          "PyPSA import: Difference quotient of supply-side markups w.r.t perturbations of capacity [($/MWh)/MW]"
     !! Parameters for the PyPSA coupling
-    p32_anticipation_CF(ttot, all_regi,all_te)                      "PyPSA coupling: Manual anticipation factor for the capacity factor [1]"
+    p32_anticipation_CF(ttot,all_regi,all_te)                      "PyPSA coupling: Manual anticipation factor for the capacity factor [1]"
     p32_anticipation_MV(all_regi,all_te)                            "PyPSA coupling: Manual cnticipation factor for the market value [1]"
     p32_usableSeDispForeign(ttot,all_regi)                          "PyPSA coupling: Foreign usable SE electricity generation, without own consumption, without imports/exports [TWa]"
-    p32_hydroCorrectionFactor(ttot,all_regi)                        "PyPSA coupling: Hydro correction factor, defined as availability factor / capacity factor of previous iteration [1]"
     sm_PyPSA_eq                                                     "PyPSA coupling: Boolean that activates PyPSA coupling equations (1 = on, 0 = off)"
     s32_checkPrice                                                  "PyPSA coupling: Boolean that checks if budget equation is binding (1 = yes, 0 = no)"
     s32_checkPrice_iter(iteration)                                  "PyPSA coupling: s32_checkPrice in iterations"

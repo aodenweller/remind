@@ -38,7 +38,6 @@ p32_PyPSA_Trade(tPy32,regPy32,regPy32) = 0;
 p32_PyPSA_TradePriceImport(tPy32,regPy32,regPy32) = 0;
 p32_PyPSA_TradePriceExport(tPy32,regPy32,regPy32) = 0;
 p32_PyPSA_shPe2seelRegi(tPy32,regPy32) = 0;
-p32_hydroCorrectionFactor(tPy32,regPy32) = 1;
 s32_PyPSA_called(iteration) = 0;
 * Starting values for some variables
 *v32_pe2seel.l(tPy32,regPy32) = 0;
