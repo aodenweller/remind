@@ -931,7 +931,7 @@ dataCapexPyPSArm <- dataCapexPyPSA %>%
   group_by(technology, parameter, source, iteration, year) %>%
   # Special treatment for electrolysers: Costs are per MWel not per MW
   full_join(dataEtaPyPSA) %>%
-  mutate(value = if_else(technology %in% c("electrolysis", "battery inverter"), value / eta, value)) %>%
+  mutate(value = if_else(technology %in% c("electrolysis", "battery inverter"), value * eta, value)) %>%
   # Values should be the same across generic technologies
   summarise(value = unique_tolerance(value)) %>%
   order.levels(technology = names(colorsTech))
@@ -1893,35 +1893,6 @@ dataHydroGenREMIND <- readREMINDgdx(
     restoreZeros = FALSE) %>%
   filter(iteration %in% pyIterations)
 
-# Calculate availability factor
-dataHydroAvailREMIND <- dataHydroGenREMIND %>%
-  left_join(dataHydroCapREMIND, by = c("year", "region", "iteration")) %>%
-  mutate(value = 1E3 * value.x / value.y)
-
-dataHydroAvailPyPSA <- readPyPSAcsv(
-    paths = file.path(pyCouplingDirs, "availability_factors.csv")) %>%
-  filter(general_carrier == "hydro")
-
-pHydroAvailYear <- ggplot() +
-  geom_line(data = dataHydroAvailREMIND, aes(x = year, y = value, color = region)) +
-  geom_point(data = dataHydroAvailPyPSA, aes(x = year, y = value, color = region)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  labs(x = "Year", y = "Availability factor") +
-  ggtitle("Hydro (dams & ror) availability factor over years") +
-  facet_wrap(~ iteration)
-
-print(pHydroAvailYear)
-
-pHydroAvailIter <- ggplot() +
-  geom_line(data = dataHydroAvailREMIND, aes(x = iteration, y = value, color = region)) +
-  geom_point(data = dataHydroAvailPyPSA, aes(x = iteration, y = value, color = region)) +
-  scale_y_continuous(limits = c(0, 1)) +
-  labs(x = "Iteration", y = "Availability factor") +
-  ggtitle("Hydro (dams & ror) availability factor over iterations") +
-  facet_wrap(~ year)
-
-print(pHydroAvailIter)
-
 ```
 
 ## PyPSA-Eur to REMIND
@@ -2201,12 +2172,21 @@ for (r in regList) {
     facet_wrap(~ iteration)
 
   print(pMarkUpRevenue)
+
+  pMarkUpRevenueIter <- ggplot() +
+      geom_line(data = dataMarkUpRevenuePlot, aes(x = iteration, y = value)) +
+      labs(x = "Iteration", y = "Markup revenue (Million $/yr)") +
+      scale_x_continuous(breaks = integer_breaks()) +
+      ggtitle("Markup revenue over iterations (supply side)", regSubtitle(r)) +
+      facet_wrap(~ year)
+
+  print(pMarkUpRevenueIter)
 }
 ```
 
 ### Markups (demand side)
 
-```{r markup electrolysis}
+```{r markup demand}
 
 # REMIND
 dataMarkupDemandREMIND <- readREMINDgdx(
@@ -2215,33 +2195,42 @@ dataMarkupDemandREMIND <- readREMINDgdx(
     columns = c("ttot" = "year", "all_regi" = "region", "loadPy32" = "sector", "value" = "value"),
     colFilter = list("year" = years, "region" = regions),
     restoreZeros = FALSE,
-    recalcUnit = trUSDpTWa2USDpMWh)
+    recalcUnit = trUSDpTWa2USDpMWh) %>%
+  filter(!is.na(sector)) %>%
+  revalue.levels(sector = rm2genTech)
 
 # PyPSA electricity price for electrolysis
 dataMarkupDemandPyPSA <- readPyPSAcsv(
   paths = file.path(pyCouplingDirs, "markups_demand.csv")) %>%
   # Increment iteration by 1 to match REMIND
-  mutate(iteration = iteration + 1)
+  mutate(iteration = iteration + 1) %>%
+  revalue.levels(general_carrier = py2genTech)
 
 # Plot
-pYear <- ggplot() +
+pMarkupDemandYear <- ggplot() +
   geom_line(data = dataMarkupDemandREMIND, aes(x = year, y = value, color = sector)) +
   geom_point(data = dataMarkupDemandPyPSA, aes(x = year, y = value, color = general_carrier)) +
+  scale_color_manual(name = "Sector",
+                     values = colorsTech,
+                     labels = namesTech) +
   labs(x = "Year", y = "Markup ($/MWh)") +
-  ggtitle("Markup for electricity prices for electrolysis over years") +
+  ggtitle("Markup for sectoral electricity prices over years (demand side)") +
   facet_wrap(~ iteration, scales = "free")
 
-print(pYear)
+print(pMarkupDemandYear)
 
-pIter <- ggplot() +
+pMarkupDemandIter <- ggplot() +
   geom_line(data = dataMarkupDemandREMIND, aes(x = iteration, y = value, color = sector)) +
   geom_point(data = dataMarkupDemandPyPSA, aes(x = iteration, y = value, color = general_carrier)) +
+  scale_color_manual(name = "Sector",
+                     values = colorsTech,
+                     labels = namesTech) +
   labs(x = "Iteration", y = "Markup ($/MWh)") +
   scale_x_continuous(breaks = integer_breaks()) +
-  ggtitle("Markup for electricity prices for electrolysis over iterations") +
+  ggtitle("Markup for sectoral electricity prices over iterations (demand side)") +
   facet_wrap(~ year, scales = "free")
 
-print(pIter)
+print(pMarkupDemandIter)
 
 ```
 
@@ -2253,20 +2242,38 @@ print(pIter)
 dataMarkUpRevenue <- readREMINDgdx(
     paths = rmFiles,
     gdxVar = "v21_taxrevPyPSAMarkupDemand",
-    columns = c("ttot" = "year", "all_regi" = "region", "loadPy32" = "sector", "value" = "value"),
+    columns = c("ttot" = "year", "all_regi" = "region", "loadPyMV32" = "sector", "value" = "value"),
     colFilter = list("year" = years, "region" = regions),
     restoreZeros = FALSE,
-    recalcUnit = -1E6)  # T$/yr to Million $/yr
-    
+    recalcUnit = -1E6) %>%  # T$/yr to Million $/yr
+  filter(!is.na(sector)) %>%
+  revalue.levels(sector = rm2genTech)
+
 pMarkUpRevenue <- ggplot() +
     geom_line(data = dataMarkUpRevenue, aes(x = year, y = value, color = sector)) +
+    scale_color_manual(name = "Sector",
+                       values = colorsTech,
+                       labels = namesTech) +
     labs(x = "Year", y = "Markup revenue (Million $/yr)") +
     ggtitle("Markup revenue over years (demand side)") +
     facet_wrap(~ iteration)
 
 print(pMarkUpRevenue)
 
+pMarkUpRevenueIter <- ggplot() +
+    geom_line(data = dataMarkUpRevenue, aes(x = iteration, y = value, color = sector)) +
+    scale_color_manual(name = "Sector",
+                       values = colorsTech,
+                       labels = namesTech) +
+    labs(x = "Iteration", y = "Markup revenue (Million $/yr)") +
+    scale_x_continuous(breaks = integer_breaks()) +
+    ggtitle("Markup revenue over iterations (demand side)") +
+    facet_wrap(~ year)
+  
+print(pMarkUpRevenueIter)
+
 ```
+
 
 ### Peak residual load relative to load
 
@@ -3148,6 +3155,114 @@ for (t in techsets) {
 # Convergence indicators
 
 This section includes variables that are not exchanged directly between REMIND and PyPSA-Eur, but that should converge.
+
+## Convergence metrics
+
+### Relative channge over iterations (tech dimension)
+
+```{r conv metric}
+
+categoryNames <- c(
+  "CF" = "Capacity factor",
+  "MarkupSupply" = "Supply-side markups",
+  "MarkupDemand" = "Demand-side markups",
+  "PeakResLoadRel" = "Peak residual load",
+  "OptCap" = "Optimal storage capacity",
+  "Potential" = "Potential",
+  "H2TurbRel" = "Hydrogen turbine share",
+  "BatteryDischargeRel" = "Battery discharge share",
+  "GridLossesRel" = "Grid losses share"
+)
+
+lastIter <- max(pyIterations)
+last_fulldata_file <- rmFiles[str_detect(rmFiles, paste0("fulldata_", lastIter, "\\.gdx$"))]
+
+dataDeltaTech <- readGDX(last_fulldata_file, "p32_delta_tech", restore_zeros = FALSE) %>%
+  as_tibble() %>%
+  filter(all_regi %in% regions,
+         all_te %in% names(rm2genTech),
+         paramsPyTech32 != "shPe2seel") %>%
+  rename(region = all_regi, technology = all_te, category = paramsPyTech32) %>%
+  revalue.levels(technology = rm2genTech) %>%
+  group_by(region, technology, category, iteration) %>%
+  summarise(test = unique(value))
+
+p <- ggplot() +
+  geom_line(data = dataDeltaTech, aes(x = iteration, y = test, color = technology)) +
+  scale_color_manual(name = "Technology", values = colorsTech, labels = namesTech) +
+  labs(x = "Iteration", y = "Relative change") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+  ggtitle("Relative change of variables with tech dimension over iterations (agg. over time)") +
+  facet_grid(category ~ ., scales = "free", labeller = labeller(category = categoryNames))
+
+print(p)
+
+ggsave("conv_metric_tech.png", p, width = 10, height = 10, dpi = 300)
+
+```
+
+### Relative change over iterations (load dimension)
+
+```{r conv metric load}
+
+dataDeltaLoad <- readGDX(last_fulldata_file, "p32_delta_load", restore_zeros = FALSE) %>%
+  as_tibble() %>%
+  filter(all_regi %in% regions) %>%
+  rename(region = all_regi, load = loadPy32, category = paramsPyLoad32) %>%
+  revalue.levels(load = rm2genTech)
+
+pLoad <- ggplot() +
+  geom_line(data = dataDeltaLoad, aes(x = iteration, y = value, color = load)) +
+  scale_color_manual(name = "Load", values = colorsTech, labels = namesTech) +
+  labs(x = "Iteration", y = "Relative change") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+  ggtitle("Relative change of variables with load dimension over iterations (agg. over time)") +
+  facet_wrap(category ~., scales = "free", labeller = labeller(category = categoryNames))
+
+print(pLoad)  
+
+```
+
+### Relative change over iterations (scalars)
+
+```{r r conv metric scalars}
+
+dataScalarLoad <- readGDX(last_fulldata_file, "p32_delta_scalar", restore_zeros = FALSE) %>%
+  as_tibble() %>%
+  filter(all_regi %in% regions) %>%
+  rename(region = all_regi, category = paramsPyScalar32)
+
+p <- ggplot() +
+  geom_line(data = dataScalarLoad, aes(x = iteration, y = value)) +
+  labs(x = "Iteration", y = "Relative change") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+  ggtitle("Relative change of scalar variables over iterations (agg. over time)") +
+  facet_wrap(category ~ ., scales = "free", labeller = labeller(category = categoryNames))
+
+print(p)
+
+```
+
+### Aggregated per category
+
+```{r conv metric agg}
+
+dataDeltaTechAgg <- readGDX(last_fulldata_file, "p32_delta_AVG", restore_zeros = FALSE) %>%
+  as_tibble() %>%
+  filter(all_regi %in% regions,
+         paramsPy32 != "shPe2seel") %>%
+  rename(region = all_regi, category = paramsPy32)
+
+p <- ggplot() +
+  geom_line(data = dataDeltaTechAgg, aes(x = iteration, y = value)) +
+  labs(x = "Iteration", y = "Relative change") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
+  ggtitle("Relative change of categories over iterations (agg. over time and techs)") +
+  facet_wrap(~ category, scales = "free", labeller = labeller(category = categoryNames))
+
+print(p)
+
+```
 
 ## Capacities
 
@@ -6011,6 +6126,7 @@ dataPlotREMIND <- dataCapexWeightedREMIND %>%
   rename(value = capex)
 
 # For electrolysis, convert USD/kW to USD/kW_el
+# Don't bother for batteries as efficiency is almost 100%
 dataEtaConvREMIND <- readREMINDgdx(
     paths = rmFiles,
     gdxVar = "pm_eta_conv",
@@ -6023,7 +6139,7 @@ dataEtaConvREMIND <- readREMINDgdx(
 
 dataPlotREMIND <- dataPlotREMIND %>%
   full_join(dataEtaConvREMIND) %>%
-  mutate(value = ifelse(technology == "electrolysis", value * eta, value))
+  mutate(value = ifelse(technology == "electrolysis", value / eta, value))
 
 p <- ggplot() +
   geom_line(data = dataPlotREMIND, aes(x = year, y = value, color = technology, linetype = "REMIND")) +

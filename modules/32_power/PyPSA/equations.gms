@@ -597,7 +597,7 @@ $endif
 $ifthen "%c32_pypsa_btstor%" == "on"
 q32_battery(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
     vm_prodSe(t,regi,"seelstor","seel","btout")
-    =g=
+    =e=
     p32_PyPSA_BatteryDischargeRel(t,regi) * v32_load(t,regi)
 ;
 
@@ -605,13 +605,11 @@ q32_battery(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
 * when fixing the capacity factors of btin and btout to PyPSA values.
 * This only works when there is a bit of freedom to the capacity factors
 * as otherwise REMIND is overconstrained, leading to a small numerical infeasibility
-$ontext
 q32_batinEQbatout(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
     vm_cap(t,regi,"btin","1")
     =e=
     vm_cap(t,regi,"btout","1") * pm_eta_conv(t,regi,"btout")
 ;
-$offtext
 $endif
 
 ***------------------------------------------------------------

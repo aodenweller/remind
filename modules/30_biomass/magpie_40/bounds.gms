@@ -56,6 +56,12 @@ else
 *** be supplied  from purpose-grown biomass.
 p30_maxprod_residue(ttot,regi)     = max(p30_datapebio(regi,"pebiolc","2","maxprod",ttot), sum(teBioPebiolc, pm_pedem_res(ttot,regi,teBioPebiolc)));
 vm_fuExtr.up(t,regi,"pebiolc","2") = p30_maxprod_residue(t,regi)*1.0001;
+*** If coupling to PyPSA, always use the full residue potential
+*** to ensure that biomass prices passed to PyPSA don't oscillate
+*** due to a feedback loop with biomass capacity factors from PyPSA.
+$ifthen "%power%" == "PyPSA"
+vm_fuExtr.fx(tPy32,regPy32,"pebiolc","2") = p30_maxprod_residue(tPy32,regPy32)*1.0001;
+$endif
 *'
 
 ***-------------------------------------------------------------

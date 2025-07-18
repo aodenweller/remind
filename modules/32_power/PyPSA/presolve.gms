@@ -25,8 +25,8 @@ pm_SEPrice(t,regi,entySe)$(    abs(qm_budget.m(t,regi)) gt sm_eps
 if ((sm_PyPSA_eq eq 1),
     !! Render validation Rmd file
     !! Don't put in postsolve.gms because fulldata_i.gdx is only written afterwards
-    Put_utility logfile, "Exec" /
-    "sbatch RenderREMIND-PyPSA-Eur_Validation.sh";
+    !!Put_utility logfile, "Exec" /
+    !!"sbatch RenderREMIND-PyPSA-Eur_Validation.sh";
 
     !! Overwrite deactivated equations with zeros to avoid confusion
     !! Otherwise, these contain the numbers from the previous iteration

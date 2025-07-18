@@ -53,11 +53,24 @@ If (cm_startyear = 2030, tPy32("2025") = no);
 *** Sets to import PyPSA data
 sets
     loadPy32                    "Sectoral electricity loads passed to PyPSA"
-        /"electrolysis", "EV_pass", "EV_freight", "heatpump", "resistive", "AC"/
+        /electrolysis, EV_pass, EV_freight, heatpump, resistive, AC/
     
     loadPyMV32(loadPy32)        "Sectoral electricity loads for which market values are imported from PyPSA and used in 21_tax"
         !! Don't include EVs, for which the electricity price needs to be passed to EDGE-T
-        /"electrolysis", "heatpump", "resistive", "AC"/
+        /electrolysis, heatpump, resistive, AC/
+    
+    paramsPy32                  "Parameters imported from PyPSA, which are used to track values over iterations and calculate convergence criteria"
+        / CF, MarkupSupply, MarketValueSupply, OptCap, Potential, shPe2seel, MarkupDemand, SectoralElectricityPrices, PeakResLoadRel, H2TurbRel, BatteryDischargeRel, GridLossesRel, AverageElectricityPrice /
+
+    paramsPyTech32(paramsPy32) "Parameters imported from PyPSA with technology dimension, which are used to track values over iterations and calculate convergence criteria"
+        / CF, MarkupSupply, MarketValueSupply, OptCap, Potential, shPe2seel /
+
+    paramsPyLoad32(paramsPy32) "Parameters imported from PyPSA with load dimension, which are used to track values over iterations and calculate convergence criteria"
+        / MarkupDemand, SectoralElectricityPrices /
+
+    paramsPyScalar32(paramsPy32) "Parameters imported from PyPSA with scalar dimension, used to track values over iterations and calculate convergence criteria"
+        / PeakResLoadRel, H2TurbRel, BatteryDischargeRel, GridLossesRel, AverageElectricityPrice /
+
 ;
 
 *** Make alises for use in equations

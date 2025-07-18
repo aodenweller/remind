@@ -96,14 +96,17 @@ parameters
     p32_hydroGeneration(ttot,all_regi)                              "PyPSA export: Hydro generation [TWa]"
     !! Parameters for importing data from PyPSA-Eur
     p32_PyPSA_CF(ttot,all_regi,all_te)                              "PyPSA import: Capacity factors [1]"
-    p32_PyPSA_CF_iter(iteration,ttot,all_regi,all_te)               "PyPSA import calc: Capacity factors in iterations [1]"
-    p32_PyPSA_CFAvg(ttot,all_regi,all_te)                           "PyPSA import calc: Capacity factors averaged over iterations [1]"
-    p32_PyPSA_MarkupSupply(ttot,all_regi,all_te)                    "PyPSA import: Markups for electricity technologies according to PyPSA-Eur [$/MWh]"
-    p32_PyPSA_MarkupSupply_iter(iteration,ttot,all_regi,all_te)     "PyPSA import calc: Markups in iterations [$/MWh]"
-    p32_PyPSA_MarkupSupplyAvg(ttot,all_regi,all_te)                 "PyPSA import calc: Markups averaged over iterations [$/MWh]"
-    p32_PyPSA_MarkupDemand(ttot,all_regi,loadPy32)                  "PyPSA import: Markups for electricity consumption technologies according to PyPSA-Eur [$/MWh]"
-    p32_PyPSA_MarkupDemand_iter(iteration,ttot,all_regi,loadPy32)   "PyPSA import calc: Markups in iterations [$/MWh]"
-    p32_PyPSA_MarkupDemandAvg(ttot,all_regi,loadPy32)               "PyPSA import calc: Markups averaged over iterations [$/MWh]"
+    p32_PyPSA_CF_iter(iteration,ttot,all_regi,all_te)               "PyPSA import calc: Capacity factors in iterations [1]"  !! TODO: Remove 
+    p32_PyPSA_CFAvg(ttot,all_regi,all_te)                           "PyPSA import calc: Capacity factors averaged over iterations [1]"  !! TODO: REmove
+    p32_PyPSA_MarkupSupply(ttot,all_regi,all_te)                    "PyPSA import: Markups for electricity generation technologies (market value - average elec price) [$/MWh]"
+    p32_PyPSA_MarkupSupply_iter(iteration,ttot,all_regi,all_te)     "PyPSA import calc: Markups in iterations [$/MWh]"  !! TODO: Remove
+    p32_PyPSA_MarkupSupplyAvg(ttot,all_regi,all_te)                 "PyPSA import calc: Markups averaged over iterations [$/MWh]"  !! TODO: Remove
+    p32_PyPSA_MarkupDemand(ttot,all_regi,loadPy32)                  "PyPSA import: Markups for sectoral electricity demand (sectoral elec price - average elec price) [$/MWh]"
+    p32_PyPSA_MarkupDemand_iter(iteration,ttot,all_regi,loadPy32)   "PyPSA import calc: Markups in iterations [$/MWh]"  !! TODO: Remove
+    p32_PyPSA_MarkupDemandAvg(ttot,all_regi,loadPy32)               "PyPSA import calc: Markups averaged over iterations [$/MWh]"  !! TODO: Remove
+    p32_PyPSA_MarketValueSupply(ttot,all_regi,all_te)               "PyPSA import: Market values for electricity generation technologies [$/MWh]"
+    p32_PyPSA_SectoralElectricityPrices(ttot,all_regi,loadPy32)     "PyPSA import: Sectoral electricity prices [$/MWh]"
+    p32_PyPSA_AverageElectricityPrice(ttot,all_regi)                "PyPSA import: Average electricity price [$/MWh]"
     p32_PyPSA_PeakResLoadRel(ttot,all_regi)                         "PyPSA import: Peak residual load relative to average load [1]"
     p32_PyPSA_shPe2seel(ttot,all_regi,all_te)                       "PyPSA import: Electricity generation share by technology within region [1]"
     p32_PyPSA_H2TurbRel(ttot,all_regi)                              "PyPSA import: Hydrogen turbine supply relative to total load [1]"
@@ -118,6 +121,9 @@ parameters
     p32_PyPSA_OptCap(ttot,all_regi,all_te)                          "PyPSA import: Optimal capacities [MW for generators/links, MWh for stores]. Attention: Links w.r.t. input!"
     p32_PyPSA_DQ_CF(ttot,all_regi,all_te,all_te)                    "PyPSA import: Difference quotient of capacity factors w.r.t perturbations of capacity [1/MW]"
     p32_PyPSA_DQ_MarkupSupply(ttot,all_regi,all_te,all_te)          "PyPSA import: Difference quotient of supply-side markups w.r.t perturbations of capacity [($/MWh)/MW]"
+    p32_PyPSA_tech_iter(ttot,all_regi,all_te,iteration,paramsPy32)  "PyPSA import calc: All parameters with time-region-technology dimensions imported from PyPSA-Eur over iterations [different units]"
+    p32_PyPSA_load_iter(ttot,all_regi,loadPy32,iteration,paramsPy32) "PyPSA import calc: All parameters with time-region-load dimensions imported from PyPSA-Eur over iterations [different units]"
+    p32_PyPSA_scalar_iter(ttot,all_regi,iteration,paramsPy32)       "PyPSA import calc: All scalar parameters with time-region dimensions imported from PyPSA-Eur over iterations [different units]"
     !! Parameters for the PyPSA coupling
     p32_anticipation_CF(ttot,all_regi,all_te)                      "PyPSA coupling: Manual anticipation factor for the capacity factor [1]"
     p32_anticipation_MV(all_regi,all_te)                            "PyPSA coupling: Manual cnticipation factor for the market value [1]"
@@ -127,6 +133,12 @@ parameters
     s32_checkPrice_iter(iteration)                                  "PyPSA coupling: s32_checkPrice in iterations"
     s32_anticipationFactorFadeOut                                   "PyPSA coupling: Multiplicative factor to fade out ancitipation factors [1]"
     s32_PyPSA_called(iteration)                                     "PyPSA coupling: Boolean that tracks if PyPSA was called over iterations, necessary for averaging (1 = yes, 0 = no)"
+    p32_delta_tech(all_regi,all_te,paramsPyTech32,iteration)        "PyPSA coupling: Convergence criterion for imported parameters with technology dimension [1]"
+    p32_delta_load(all_regi,loadPy32,paramsPyLoad32,iteration)      "PyPSA coupling: Convergence criterion for imported parameters with load dimension [1]"
+    p32_delta_scalar(all_regi,paramsPyScalar32,iteration)           "PyPSA coupling: Convergence criterion for imported scalar parameters [1]"
+    p32_delta_AVG(all_regi,paramsPy32,iteration)                    "PyPSA coupling: Convergence criterion for imported parameters [1]"
+    p32_convWeights_tech(ttot,all_regi,all_te)                      "PyPSA coupling: Weights for convergence criterion of imported parameters with technology dimension [different units]"
+    p32_convWeights_load(ttot,all_regi,loadPy32)                    "PyPSA coupling: Weights for convergence criterion of imported parameters with load dimension [different units]"
     !! Switches for the PyPSA coupling that are based on compile switches, but need to be passed to PyPSA and therefore require another parameter
     c32_pypsa_cfg_perturb                                           "PyPSA coupling: Switch for perturbation of capacities, set automatically (1 = on, 0 = off)"
     !! Parameters for the PyPSA coupling reporting
@@ -196,7 +208,7 @@ $ifthen "%c32_pypsa_h2stor%" == "on"
 $endif
 $ifthen "%c32_pypsa_btstor%" == "on"
     q32_battery(ttot,all_regi)                                      "PyPSA coupling: Equation for battery discharge requirements"
-    !!q32_batinEQbatout(ttot,all_regi)                                "PyPSA coupling: Equation that equals capacities of battery charge and discharge"
+    q32_batinEQbatout(ttot,all_regi)                                "PyPSA coupling: Equation that equals capacities of btin and btout (same battery inverter in the real world)"
 $endif
     q32_gridLosses(ttot,all_regi)                                   "PyPSA coupling: Equation to calculate grid losses"
 $ifthen "%c32_pypsa_trade%" == "on"
@@ -207,5 +219,8 @@ $ifthen "%c32_pypsa_trade%" == "on"
     q32_shSeELTradeExport(ttot,all_regi)                            "PyPSA coupling: Calculate v32_shSeELTradeExport"
 $endif
 ;
+
+*** Scalar for the PyPSA convergence tracking
+scalar iter_prev /0/, iter_last /0/;
 
 *** EOF ./modules/32_power/PyPSA/declarations.gms

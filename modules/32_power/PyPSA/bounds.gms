@@ -10,7 +10,7 @@
 ***                  PyPSA-Eur coupling (data import))
 ***------------------------------------------------------------
 
-* Read in values after first PyPSA run in previous iteration
+* TODO: Move or delete this section
 if ((sm_PyPSA_eq eq 1),
 
 * Capacity factors: Overwrite pm_cf for dispatchable technologies
@@ -99,7 +99,7 @@ vm_cap.fx(t,regi,"elh2VRE",rlf) = 0;
 v32_shPe2seel.lo(tPy32,regPy32,tePy32) = 0;
 v32_shPe2seel.up(tPy32,regPy32,tePy32) = 1;
 
-*** Restrict load share to generous upper bounds to help solver
+*** Restrict sectoral load shares generously to help solver
 v32_share_sector.lo(tPy32,regPy32,loadPy32) = 0;
 v32_share_sector.up(tPy32,regPy32,"resistive") = 0.2;
 v32_share_sector.up(tPy32,regPy32,"heatpump") = 0.2;
@@ -116,9 +116,9 @@ if ((sm_PyPSA_eq eq 1),
     v32_load.up(tPy32,"DEU") = 1500 / 8760;  !! 1500 TWh/a max
 );
 
-*** All capacity factors come from PyPSA-Eur.
+*** All capacity factors other than for hydro come from PyPSA-Eur.
 *** Set vm_capFac free here, so that REMIND can adjust it freely to match the capacity factor from PyPSA-Eur (equation q32_capFac).
-*** vm_capFac can be larger than 1 since it is used as a correction factor. Limit to between 0 and 2 here.
+*** vm_capFac can be larger than 1 since it is used as a correction factor. Limit to between 0 and 2.
 $ifthen "%c32_pypsa_capfac%" == "on"
 if ((sm_PyPSA_eq eq 1),
     vm_capFac.lo(tPy32,regPy32,tePy32)$(not sameas(tePy32,"hydro")) = 0;
@@ -141,20 +141,25 @@ if ((sm_PyPSA_eq eq 1),
     !! Otherwise REMIND cheekily builds hydrogen storage before cm_startyear
     vm_deltaCap.fx(ttot,regPy32,"h2stor","1")$(ttot.val lt cm_startyear) = 0;
     vm_cap.fx(ttot,regPy32,"h2stor","1")$(ttot.val lt cm_startyear) = 0;
+    !! Set starting values for hydrogen production and capacity to help the solver
+    vm_prodSe.l(tPy32,regPy32,"seh2","seel","h2turb") = p32_PyPSA_H2TurbRel(tPy32,regPy32) * v32_load.l(tPy32,regPy32);
+    vm_cap.l(tPy32,regPy32,"elh2","1") = p32_PyPSA_OptCap(tPy32,regPy32,"elh2") * pm_eta_conv(tPy32,regPy32,"elh2") / 1E6;  !! MW to TW
+    vm_cap.l(tPy32,regPy32,"h2turb","1") = p32_PyPSA_OptCap(tPy32,regPy32,"h2turb") * pm_eta_conv(tPy32,regPy32,"h2turb") / 1E6;  !! MW to TW
+    vm_cap.l(tPy32,regPy32,"h2stor","1") = p32_PyPSA_OptCap(tPy32,regPy32,"h2stor") * pm_eta_conv(tPy32,regPy32,"h2stor") / 1E6;  !! MWh to TWh
 );
 $endif
 
 *** Capacity factor for battery storage
 $ifthen "%c32_pypsa_btstor%" == "on"
 if ((sm_PyPSA_eq eq 1),
-    !! Fix capacity factor of battery charger to PyPSA value
-    !!vm_capFac.lo(tPy32,regPy32,"btin") = 0.5*p32_PyPSA_CF(tPy32,regPy32,"btin");
-    !!vm_capFac.up(tPy32,regPy32,"btin") = p32_PyPSA_CF(tPy32,regPy32,"btin");
-    vm_capFac.fx(tPy32,regPy32,"btin") = p32_PyPSA_CF(tPy32,regPy32,"btin");
-    !! Fix capacity factor of battery discharger to PyPSA value
-    !!vm_capFac.lo(tPy32,regPy32,"btout") = 0.5*p32_PyPSA_CF(tPy32,regPy32,"btout");
-    !!vm_capFac.up(tPy32,regPy32,"btout") = p32_PyPSA_CF(tPy32,regPy32,"btout");
-    vm_capFac.fx(tPy32,regPy32,"btout") = p32_PyPSA_CF(tPy32,regPy32,"btout");
+    !! Limit capacity factor of battery charger to PyPSA, but allow it to be lower
+    vm_capFac.lo(tPy32,regPy32,"btin") = 0.5*p32_PyPSA_CF(tPy32,regPy32,"btin");
+    vm_capFac.up(tPy32,regPy32,"btin") = p32_PyPSA_CF(tPy32,regPy32,"btin");
+    !!vm_capFac.fx(tPy32,regPy32,"btin") = p32_PyPSA_CF(tPy32,regPy32,"btin");
+    !! Limit capacity factor of battery discharger to PyPSA, but allow it to be lower
+    vm_capFac.lo(tPy32,regPy32,"btout") = 0.5*p32_PyPSA_CF(tPy32,regPy32,"btout");
+    vm_capFac.up(tPy32,regPy32,"btout") = p32_PyPSA_CF(tPy32,regPy32,"btout");
+    !!vm_capFac.fx(tPy32,regPy32,"btout") = p32_PyPSA_CF(tPy32,regPy32,"btout");
     !! Lower bound of battery storage capacity from PyPSA value
     vm_cap.lo(tPy32,regPy32,"btstor","1") = p32_PyPSA_OptCap(tPy32,regPy32,"btstor") / 1E6;  !! MWh to TWh
     !! Disable all battery technologies before cm_startyear
@@ -165,6 +170,11 @@ if ((sm_PyPSA_eq eq 1),
     vm_cap.fx(ttot,regPy32,"btout","1")$(ttot.val lt cm_startyear) = 0;
     vm_deltaCap.fx(ttot,regPy32,"btstor","1")$(ttot.val lt cm_startyear) = 0;
     vm_cap.fx(ttot,regPy32,"btstor","1")$(ttot.val lt cm_startyear) = 0;
+    !! Set starting values for battery production and capacity to help the solver
+    vm_prodSe.l(tPy32,regPy32,"seelstor","seel","btout") = p32_PyPSA_BatteryDischargeRel(tPy32,regPy32) * v32_load.l(tPy32,regPy32);
+    vm_cap.l(tPy32,regPy32,"btin","1") = p32_PyPSA_OptCap(tPy32,regPy32,"btin") * pm_eta_conv(tPy32,regPy32,"btin") / 1E6;  !! MW to TW
+    vm_cap.l(tPy32,regPy32,"btout","1") = p32_PyPSA_OptCap(tPy32,regPy32,"btout") * pm_eta_conv(tPy32,regPy32,"btout") / 1E6;  !! MW to TW
+    vm_cap.l(tPy32,regPy32,"btstor","1") = p32_PyPSA_OptCap(tPy32,regPy32,"btstor") * pm_eta_conv(tPy32,regPy32,"btstor") / 1E6;  !! MWh to TWh
 );
 $endif
 
@@ -181,13 +191,6 @@ if ((sm_PyPSA_eq eq 1),
     !! Set upper bound for vm_cap for VRE technologies (other than hydro)
     vm_cap.up(t,regi,te,"1")$(tPy32(t) AND regPy32(regi) AND tePyVRE32(te) AND NOT sameas(te, "hydro")) =
         p32_PyPSA_Potential(t,regi,te) / 1E6;  !! MW to TW
-);
-$endif
-
-*** Set starting value for battery production to help the solver
-$ifthen "%c32_pypsa_btstor%" == "on"
-if ((sm_PyPSA_eq eq 1),
-    vm_prodSe.l(t,regi,"seelstor","seel","btout") = p32_PyPSA_BatteryDischargeRel(t,regi) * v32_load.l(t,regi);
 );
 $endif
 
