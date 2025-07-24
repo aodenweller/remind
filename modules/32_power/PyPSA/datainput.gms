@@ -144,9 +144,15 @@ p32_anticipation_MV("DEU","spv") = -0.5;
 *** Write efficiencies into pm_eta_conv for btin and btout
 *** This is necessary, because in 05_initialCap/on/preloop.gms
 *** this is only set if cm_startyear eq 2005 and otherwise read in from input_ref
+!! TODO: Check how else to implement this
 loop(regi,
         pm_eta_conv(ttot,regi,"btin") = pm_data(regi,"eta","btin");
         pm_eta_conv(ttot,regi,"btout") = pm_data(regi,"eta","btout");
     );
+
+*** Set convergence thresholds for PyPSA coupling
+*** Use 5% in general
+p32_conv_threshold(regPy32,paramsPyCheck32) = 0.05;
+p32_conv_threshold(regPy32,"GridLossesRel") = 0.1;
 
 *** EOF ./modules/32_power/PyPSA/datainput.gms

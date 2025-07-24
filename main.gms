@@ -1258,20 +1258,28 @@ parameter
   c32_startIter_PyPSA = 1; !! def = 1
 *'
 parameter
-    c32_everyIter_PyPSA         "Switch that specifies to run PyPSA every x-th iteration"
+    c32_everyIter_PyPSA         "After c32_startIter_PyPSA, run PyPSA every x-th iteration"
 ;
 *' Switch that specifies to run PyPSA every x-th iteration
 c32_everyIter_PyPSA = 1;  !! def = 1 !! regexp = [1-5]
+*'
+parameter
+    c32_minIter_PyPSA          "Minimum iteration until which PyPSA is run"
+;
+*' Switch that specifies the minimum iteration until which PyPSA is run
+c32_minIter_PyPSA = 20;  !! def = 20 !! regexp = [20-200]
+*'
+parameter
+    c32_avgIter_PyPSA          "Number of iterations to average over once convergence is reached"
+;
+*' Switch that specifies how many iterations to average over once convergence is reached
+c32_avgIter_PyPSA = 4;  !! def = 4 !! regexp = [1-5]
+*'
 parameter
   c32_avg_rm2py                "Average over iterations from REMIND to PyPSA (0 = off, 1 = on)"
 ;
 c32_avg_rm2py = 0;  !! def = 0  !! regexp = 0|1
 *' Pass iteration-averaged variables from REMIND to PyPSA (0 = off, 1 = on)
-parameter
-  c32_avg_py2rm                "Average over iteration from PyPSA to REMIND (0 = off, 1 = on)"
-;
-c32_avg_py2rm = 0; !! def = 0  !! regexp = 0|1
-*' Pass iteration-averaged variables from PyPSA to REMIND (0 = off, 1 = on)
 parameter
   c32_iterAnticipationFadeOut        "Iteration in which to activate PyPSA anticipation factor fade out"
 ;
@@ -1288,16 +1296,6 @@ parameter
 ;
 c32_checkPrice = 0; !! def = 0 !! regexp = 0|1
 *' Switch whether to check for negative prices before running PyPSA
-parameter
-    c32_deactivateTech         "Switch to deactivate certain technologies"
-;
-*' Switch to deactivate certain technologies
-c32_deactivateTech = 0;  !! def = 0 !! regexp = 0|1
-parameter
-    c32_pypsa_trade_max        "Maximum share of electricity imports and exports relative to total electricity production"
-;
-c32_pypsa_trade_max = 1;  !! def = 1 !! regexp = is.numeric
-*' Maximum share of electricity imports and exports relative to total electricity production
 parameter
     c32_iter_fullCap           "Iteration after which not the pre-investment capacity, but the full capacity is passed to PyPSA"
 ;
@@ -1349,6 +1347,11 @@ parameter
 c32_pypsa_cfg_heating = 0;  !! def = 0 !! regexp = [0-2]
 *' PyPSA config: Heating technologies
 *' 0 = off, 1 = on w/o flexibility, 2 = on w/ flexibility (configured in PyPSA)
+parameter
+    c32_pypsa_trade_max        "Maximum share of electricity imports and exports relative to total electricity production"
+;
+c32_pypsa_trade_max = 1;  !! def = 1 !! regexp = is.numeric
+*' Maximum share of electricity imports and exports relative to total electricity production
 
 ***-----------------------------------------------------------------------------
 *' ####                     FLAGS
@@ -2006,13 +2009,15 @@ $setglobal cm_subsec_model_steel  processes  !! def = processes  !! regexp = pro
 $setglobal cm_tech_bounds_2025  on  !! def = on  !! regexp = on|off
 *** c32_pypsa_dir
 *** Directory of PyPSA-Eur
-$setglobal c32_pypsa_dir /p/tmp/adrianod/pypsa-eur_v0.13.0
+$setglobal c32_pypsa_dir /p/tmp/adrianod/pypsa-eur_v2025.07.0  !! def = /p/tmp/adrianod/pypsa-eur_v2025.07.0
 *** c32_pypsa_conda_dir
 *** Directory or name of conda environment for PyPSA-Eur
-$setglobal c32_pypsa_conda_dir pypsa-eur-20241119  !! def = pypsa-eur-20241119
-*** c32_pypsa_multiregion
-*** Switch to enable PyPSA in multiple regions (changes PyPSA/sets.gms)
-$setglobal c32_pypsa_multiregion off !! def = off !! regexp = off|on
+$setglobal c32_pypsa_conda_dir /p/tmp/adrianod/software/conda_envs/pypsa-eur_v2025.07.0_20250715  !! def = /p/tmp/adrianod/software/conda_envs/pypsa-eur_v2025.07.0_20250715
+*** c32_pypsa_startgdx
+*** Path to a PyPSAEUR2REMIND.gdx file from a previous run
+*** If enabled, this is used before c32_startIter_PyPSA
+*** This immediately enables all equations for the PyPSA coupling
+$setglobal c32_pypsa_startgdx  off !! def = off
 *** c32_pypsa_capfac
 *** Switch to enable capacity factor import from PyPSA-Eur
 $setglobal c32_pypsa_capfac on !! def = on !! regexp = off|on
@@ -2021,7 +2026,6 @@ $setglobal c32_pypsa_capfac on !! def = on !! regexp = off|on
 $setglobal cm_pypsa_markup_supply on !! def = on !! regexp = off|on
 *** cm_pypsa_markup_demand
 *** Switch to enable demand-side markups/markdowns from PyPSA-Eur via tax module
-*** This includes the demand-side markups for electrolysis, EVs, heat pumps, resistive heating and general load
 $setglobal cm_pypsa_markup_demand off !! def = off !! regexp = off|on
 *** c32_pypsa_peakcap
 *** Switch to enable peak capacity constraint
@@ -2029,6 +2033,21 @@ $setglobal c32_pypsa_peakcap on !! def = on !! regexp = off|on
 *** c32_pypsa_anticipation
 *** Switch to enable anticipation factor, if using diffQuot this also enables the calculation of perturbed runs in PyPSA (computationally expensive!)
 $setglobal c32_pypsa_anticipation manual !! def = manual !! regexp = off|manual|diffQuot
+*** c32_pypsa_potentials
+*** Switch to enable reading in VRE potentials from PyPSA (in terms of capacity, not generation)
+$setglobal c32_pypsa_potentials on !! def = on !! regexp = off|on
+*** c32_pypsa_h2stor
+*** Switch to enable hydrogen storage from PyPSA
+$setglobal c32_pypsa_h2stor on !! def = on !! regexp = off|on
+*** c32_pypsa_btstor
+*** Switch to enable battery storage from PyPSA
+$setglobal c32_pypsa_btstor on !! def = on !! regexp = off|on
+*** c32_windoffFree
+*** Switch to enable free wind offshore deployment
+$setglobal c32_windoffFree off !! def = off !! regexp = off|on
+*** c32_pypsa_multiregion
+*** Switch to enable PyPSA in multiple regions (changes PyPSA/sets.gms)
+$setglobal c32_pypsa_multiregion off !! def = off !! regexp = off|on
 *** c32_pypsa_trade
 *** Switch to enable electricity trade
 $setglobal c32_pypsa_trade off !! def = off !! regexp = off|on
@@ -2043,18 +2062,6 @@ $setglobal c32_pypsa_trade_prices abs !! def = abs !! regexp = abs|diff
 *** c32_pypsa_trade_anticipation
 *** Switch to enable anticipation of trade
 $setglobal c32_pypsa_trade_anticipation off !! def = off !! regexp = off|on
-*** c32_pypsa_potentials
-*** Switch to enable reading in VRE potentials from PyPSA (in terms of capacity, not generation)
-$setglobal c32_pypsa_potentials on !! def = on !! regexp = off|on
-*** c32_windoffFree
-*** Switch to enable free wind offshore deployment
-$setglobal c32_windoffFree off !! def = off !! regexp = off|on
-*** c32_pypsa_h2stor
-*** Switch to enable hydrogen storage from PyPSA
-$setglobal c32_pypsa_h2stor on !! def = on !! regexp = off|on
-*** c32_pypsa_btstor
-*** Switch to enable battery storage from PyPSA
-$setglobal c32_pypsa_btstor on !! def = on !! regexp = off|on
 *** set conopt version. Warning: conopt4 is in beta
 $setGlobal cm_conoptv  conopt3    !! def = conopt3
 *' c_empty_model  "Short-circuit the model, just use the input as solution"

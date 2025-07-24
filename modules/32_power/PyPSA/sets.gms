@@ -47,30 +47,39 @@ $endif
 
 ;
 
-* Remove year 2025 if cm_startyear is 2030
+*** Remove year 2025 from tPy32 if cm_startyear is 2030
 If (cm_startyear = 2030, tPy32("2025") = no);
 
 *** Sets to import PyPSA data
 sets
-    loadPy32                    "Sectoral electricity loads passed to PyPSA"
+    loadPy32                    "Sectoral electricity loads passed to PyPSA, see v32_load_sector"
         /electrolysis, EV_pass, EV_freight, heatpump, resistive, AC/
     
     loadPyMV32(loadPy32)        "Sectoral electricity loads for which market values are imported from PyPSA and used in 21_tax"
         !! Don't include EVs, for which the electricity price needs to be passed to EDGE-T
         /electrolysis, heatpump, resistive, AC/
     
+    !! TODO: Clean up sets below
     paramsPy32                  "Parameters imported from PyPSA, which are used to track values over iterations and calculate convergence criteria"
         / CF, MarkupSupply, MarketValueSupply, OptCap, Potential, shPe2seel, MarkupDemand, SectoralElectricityPrices, PeakResLoadRel, H2TurbRel, BatteryDischargeRel, GridLossesRel, AverageElectricityPrice /
 
-    paramsPyTech32(paramsPy32) "Parameters imported from PyPSA with technology dimension, which are used to track values over iterations and calculate convergence criteria"
+    paramsPyTech32(paramsPy32)  "Parameters withtechnology dimension, which are used to track values over iterations and calculate convergence criteria"
         / CF, MarkupSupply, MarketValueSupply, OptCap, Potential, shPe2seel /
 
-    paramsPyLoad32(paramsPy32) "Parameters imported from PyPSA with load dimension, which are used to track values over iterations and calculate convergence criteria"
+    paramsPyLoad32(paramsPy32)  "Parameters with load dimension, which are used to track values over iterations and calculate convergence criteria"
         / MarkupDemand, SectoralElectricityPrices /
 
-    paramsPyScalar32(paramsPy32) "Parameters imported from PyPSA with scalar dimension, used to track values over iterations and calculate convergence criteria"
+    paramsPyScalar32(paramsPy32) "Parameters with scalar dimension, used to track values over iterations and calculate convergence criteria"
         / PeakResLoadRel, H2TurbRel, BatteryDischargeRel, GridLossesRel, AverageElectricityPrice /
 
+    paramsPyCheck32(paramsPy32)  "Parameters that are checked for convergence"
+        / CF, MarketValueSupply, OptCap, SectoralElectricityPrices, PeakResLoadRel, H2TurbRel, BatteryDischargeRel, GridLossesRel, AverageElectricityPrice /
+
+    iterPyPSAcalled32(iteration) "Iterations in which PyPSA was called, used for convergence calculation and averages"
+        / /
+
+    iterPyPSAlastx32(iteration)  "Last x iterations in which PyPSA was called, used for convergence calculation and averages"
+    
 ;
 
 *** Make alises for use in equations

@@ -132,13 +132,14 @@ parameters
     s32_checkPrice                                                  "PyPSA coupling: Boolean that checks if budget equation is binding (1 = yes, 0 = no)"
     s32_checkPrice_iter(iteration)                                  "PyPSA coupling: s32_checkPrice in iterations"
     s32_anticipationFactorFadeOut                                   "PyPSA coupling: Multiplicative factor to fade out ancitipation factors [1]"
-    s32_PyPSA_called(iteration)                                     "PyPSA coupling: Boolean that tracks if PyPSA was called over iterations, necessary for averaging (1 = yes, 0 = no)"
-    p32_delta_tech(all_regi,all_te,paramsPyTech32,iteration)        "PyPSA coupling: Convergence criterion for imported parameters with technology dimension [1]"
-    p32_delta_load(all_regi,loadPy32,paramsPyLoad32,iteration)      "PyPSA coupling: Convergence criterion for imported parameters with load dimension [1]"
-    p32_delta_scalar(all_regi,paramsPyScalar32,iteration)           "PyPSA coupling: Convergence criterion for imported scalar parameters [1]"
-    p32_delta_AVG(all_regi,paramsPy32,iteration)                    "PyPSA coupling: Convergence criterion for imported parameters [1]"
-    p32_convWeights_tech(ttot,all_regi,all_te)                      "PyPSA coupling: Weights for convergence criterion of imported parameters with technology dimension [different units]"
-    p32_convWeights_load(ttot,all_regi,loadPy32)                    "PyPSA coupling: Weights for convergence criterion of imported parameters with load dimension [different units]"
+    p32_delta_tech(all_regi,all_te,paramsPyTech32,iteration)        "PyPSA coupling: Relative change w.r.t. previous iteration for imported parameters with technology dimension (agg. over time) [1]"
+    p32_delta_load(all_regi,loadPy32,paramsPyLoad32,iteration)      "PyPSA coupling: Relative change w.r.t. previous iteration for imported parameters with load dimension (agg. over time) [1]"
+    p32_delta_scalar(all_regi,paramsPyScalar32,iteration)           "PyPSA coupling: Relative change w.r.t. previous iteration for imported scalar parameters (agg. over time) [1]"
+    p32_delta_weighted(all_regi,paramsPy32,iteration)               "PyPSA coupling: Relative change w.r.t. previous iteration for imported parameters (agg. over time, weighted agg. over tech and load) [1]"
+    p32_conv_threshold(all_regi,paramsPy32)                         "PyPSA coupling: Convergence threshold applied to different parameters (checks p32_delta_weighted) [1]"  !! TODO: Turn into switch?
+    p32_below_threshold(regPy32,paramsPyCheck32,iteration)          "PyPSA coupling: Boolean that tracks if the relative change of parameters is below the convergence threshold in the current iteration (1 = yes, 0 = no)"
+    p32_converged(regPy32,paramsPyCheck32,iteration)                "PyPSA coupling: Boolean that tracks if the relative change of parameters is below the convergence threshold in the previous 4 iterations (1 = yes, 0 = no)"
+    s32_pypsa_conv                                                  "PyPSA coupling: Boolean that tracks if convergence was reached (1 = yes, 0 = no)"
     !! Switches for the PyPSA coupling that are based on compile switches, but need to be passed to PyPSA and therefore require another parameter
     c32_pypsa_cfg_perturb                                           "PyPSA coupling: Switch for perturbation of capacities, set automatically (1 = on, 0 = off)"
     !! Parameters for the PyPSA coupling reporting
@@ -220,7 +221,7 @@ $ifthen "%c32_pypsa_trade%" == "on"
 $endif
 ;
 
-*** Scalar for the PyPSA convergence tracking
-scalar iter_prev /0/, iter_last /0/;
+*** Helper scalars for the PyPSA convergence tracking
+scalar iter_prev /0/, iter_last /0/, iter_counter /0/;
 
 *** EOF ./modules/32_power/PyPSA/declarations.gms

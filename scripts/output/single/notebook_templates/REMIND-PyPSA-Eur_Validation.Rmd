@@ -3197,8 +3197,6 @@ p <- ggplot() +
 
 print(p)
 
-ggsave("conv_metric_tech.png", p, width = 10, height = 10, dpi = 300)
-
 ```
 
 ### Relative change over iterations (load dimension)
@@ -3225,7 +3223,7 @@ print(pLoad)
 
 ### Relative change over iterations (scalars)
 
-```{r r conv metric scalars}
+```{r conv metric scalars}
 
 dataScalarLoad <- readGDX(last_fulldata_file, "p32_delta_scalar", restore_zeros = FALSE) %>%
   as_tibble() %>%
@@ -3247,20 +3245,32 @@ print(p)
 
 ```{r conv metric agg}
 
-dataDeltaTechAgg <- readGDX(last_fulldata_file, "p32_delta_AVG", restore_zeros = FALSE) %>%
+dataDeltaTechAgg <- readGDX(last_fulldata_file, "p32_delta_weighted", restore_zeros = FALSE) %>%
   as_tibble() %>%
   filter(all_regi %in% regions,
          paramsPy32 != "shPe2seel") %>%
   rename(region = all_regi, category = paramsPy32)
 
-p <- ggplot() +
+pAgg <- ggplot() +
   geom_line(data = dataDeltaTechAgg, aes(x = iteration, y = value)) +
   labs(x = "Iteration", y = "Relative change") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "black") +
   ggtitle("Relative change of categories over iterations (agg. over time and techs)") +
   facet_wrap(~ category, scales = "free", labeller = labeller(category = categoryNames))
 
-print(p)
+print(pAgg)
+
+threshold <- readGDX(last_fulldata_file, "p32_conv_threshold", restore_zeros = FALSE) %>%
+  as_tibble() %>%
+  filter(all_regi %in% regions) %>%
+  rename(region = all_regi, category = paramsPy32)
+
+pConv <- pAgg +
+  coord_cartesian(ylim = c(0, 0.2)) +
+  geom_hline(data = threshold, aes(yintercept = value, color = "Threshold"), linetype = "dashed") +
+  scale_color_manual(name = NULL, values = c("Threshold" = "darkred"))
+
+print(pConv)
 
 ```
 

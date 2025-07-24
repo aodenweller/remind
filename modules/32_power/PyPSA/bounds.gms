@@ -194,19 +194,6 @@ if ((sm_PyPSA_eq eq 1),
 );
 $endif
 
-*** Disable some technologies
-if ((c32_deactivateTech eq 1 and sm_PyPSA_eq eq 1),
-    vm_shSeEl.fx(tPy32,regPy32,"csp") = 0;  !! Overwrite RP's hotfix above
-    vm_capFac.fx(tPy32,regPy32,"csp") = 0;
-    vm_capFac.fx(tPy32,regPy32,"geohdr") = 0;
-    vm_capFac.fx(tPy32,regPy32,"biochp") = 0;
-    vm_capFac.fx(tPy32,regPy32,"gaschp") = 0;
-    vm_capFac.fx(tPy32,regPy32,"coalchp") = 0;
-    vm_capFac.fx(tPy32,regPy32,"bioigccc") = 0;
-    vm_capFac.fx(tPy32,regPy32,"igccc") = 0;
-    vm_capFac.fx(tPy32,regPy32,"ngccc") = 0;
-);
-
 *** Electricity trade
 $ifthen.c32_pypsa_trade "%c32_pypsa_trade%" == "on"
 if ((sm_PyPSA_eq eq 1),

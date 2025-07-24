@@ -79,10 +79,11 @@ p32_hydroGeneration(t,regi)$(tPy32(t) AND regPy32(regi)) = v32_pe2seelTe.l(t,reg
 ***------------------------------------------------------------
 if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startIter_PyPSA
     ( mod(iteration.val - c32_startIter_PyPSA, c32_everyIter_PyPSA) eq 0 ) AND  !! Only start every c32_everyIter_PyPSA iterations
-    ( s32_checkPrice eq 1 ),  !! Only start if budget equation is binding
+    ( s32_checkPrice eq 1 ) AND  !! Only start if budget equation is binding
+    (( s32_pypsa_conv eq 0) OR (card(iterPyPSAcalled32) le c32_avgIter_PyPSA)),  !! Only start if convergence has not been reached yet, but require at least c32_avgIter_PyPSA
 
     !! Track iterations in which PyPSA was executed, this is necessary to calculate averages
-    s32_PyPSA_called(iteration) = 1;
+    iterPyPSAcalled32(iteration) = yes;
 
     !! REMIND to PyPSA-Eur: Calculate averages to reduce oscillations
     !! (i) Capacities
@@ -104,12 +105,12 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startI
     elseif (c32_avg_rm2py eq 1),
         !! Average capacities over past y iterations
         p32_capAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and (tePy32(te) OR teStoreTransPy32(te))) =
-            sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2) * p32_cap_iter(iteration2,t,regi,te)) /
-            sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2)) + EPS;
+            sum(iteration2$(iteration2.val gt (iteration.val - 4) and iterPyPSAcalled32(iteration2)), p32_cap_iter(iteration2,t,regi,te)) /
+            sum(iteration2$(iteration2.val gt (iteration.val - 4) and iterPyPSAcalled32(iteration2)), 1) + EPS;
         !! Average non-negative PE prices over past y iterations, limited to 0 and 200 EUR/MWh (for uranium 200 T$/Mt corresponds to 1752 $/kg)
         p32_PEPriceAvg(t,regi,entyPe)$(tPy32(t) and regPy32(regi) and entyPePy32(entyPe)) =
-            sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2) * min(200 * sm_TWa_2_MWh/1E12, max(0, p32_PEPrice_iter(iteration2,t,regi,entyPe)))) /
-            sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2)) + EPS;
+            sum(iteration2$(iteration2.val gt (iteration.val - 4) and iterPyPSAcalled32(iteration2)), min(200 * sm_TWa_2_MWh/1E12, max(0, p32_PEPrice_iter(iteration2,t,regi,entyPe)))) /
+            sum(iteration2$(iteration2.val gt (iteration.val - 4) and iterPyPSAcalled32(iteration2)), 1) + EPS;
     );
 
     !! Minimum biomass price of 30 USD/MWh
@@ -192,6 +193,7 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startI
         !! Marginal cost components
         pm_eta_conv, pm_dataeta, p32_PEPriceAvg, pe2se, p_priceCO2, pm_emifac,
         !! Weights to calculate weighted averages
+        !! TODO: Remove in favour of 1:1 technology mapping
         p32_weightGen, p32_weightStor, p32_weightPEprice,
         !! Pre-installed capacities
         p32_capAvg,
@@ -240,7 +242,7 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startI
         !! Optimal capacities (for btstor and h2stor)
         p32_PyPSA_OptCap,
         !! Potentials
-        p32_PyPSA_Potential
+        p32_PyPSA_Potential,
         !! Hydrogen turbine generation relative to load
         p32_PyPSA_H2TurbRel,
         !! Battery discharge relative to load
@@ -259,32 +261,30 @@ $endif
 
     !! Track all imports over iterations
     !! TODO: Change export in PyPSA-Eur to just export only three parameters (one for each group)?
-    !! Save for parameters with technology dimension
+    !! Parameters with technology dimension
     p32_PyPSA_tech_iter(tPy32,regPy32,te,iteration,"CF")$(tePy32(te) or teStoreTransPy32(te)) = p32_PyPSA_CF(tPy32,regPy32,te);
     p32_PyPSA_tech_iter(tPy32,regPy32,tePy32,iteration,"MarkupSupply") = p32_PyPSA_MarkupSupply(tPy32,regPy32,tePy32);
     p32_PyPSA_tech_iter(tPy32,regPy32,tePy32,iteration,"MarketValueSupply") = p32_PyPSA_MarketValueSupply(tPy32,regPy32,tePy32);
     p32_PyPSA_tech_iter(tPy32,regPy32,teStorePy32,iteration,"OptCap") = p32_PyPSA_OptCap(tPy32,regPy32,teStorePy32);
     p32_PyPSA_tech_iter(tPy32,regPy32,tePy32,iteration,"Potential") = p32_PyPSA_Potential(tPy32,regPy32,tePy32);
     p32_PyPSA_tech_iter(tPy32,regPy32,tePy32,iteration,"shPe2seel") = p32_PyPSA_shPe2seel(tPy32,regPy32,tePy32);
-    !! Save for parameters with load dimension
+    !! Parameters with load dimension
     p32_PyPSA_load_iter(tPy32,regPy32,loadPy32,iteration,"MarkupDemand") = p32_PyPSA_MarkupDemand(tPy32,regPy32,loadPy32);
     p32_PyPSA_load_iter(tPy32,regPy32,loadPy32,iteration,"SectoralElectricityPrices") = p32_PyPSA_SectoralElectricityPrices(tPy32,regPy32,loadPy32);
-    !! Save for parameters with no additional dimension (apart from time and region)
+    !! Parameters with no additional dimension (apart from time and region)
     p32_PyPSA_scalar_iter(tPy32,regPy32,iteration,"PeakResLoadRel") = p32_PyPSA_PeakResLoadRel(tPy32,regPy32);
     p32_PyPSA_scalar_iter(tPy32,regPy32,iteration,"BatteryDischargeRel") = p32_PyPSA_BatteryDischargeRel(tPy32,regPy32);
     p32_PyPSA_scalar_iter(tPy32,regPy32,iteration,"H2TurbRel") = p32_PyPSA_H2TurbRel(tPy32,regPy32);
     p32_PyPSA_scalar_iter(tPy32,regPy32,iteration,"GridLossesRel") = p32_PyPSA_GridLossesRel(tPy32,regPy32);
     p32_PyPSA_scalar_iter(tPy32,regPy32,iteration,"AverageElectricityPrice") = p32_PyPSA_AverageElectricityPrice(tPy32,regPy32);
 
-    !! Calculate convergence criterion
-    !! First, find last two iterations where PyPSA was called
-    loop(iteration2$(s32_PyPSA_called(iteration2)),
+    !! Find last two iterations where PyPSA was called
+    loop(iterPyPSAcalled32,
         iter_prev = iter_last;
-        iter_last = iteration2.val;
+        iter_last = iterPyPSAcalled32.val;
     );
 
-    !! Calculate the quotient of the L1-norm of the difference between the last two iterations
-    !! divided by the L1-norm of the previous iteration
+    !! Calculate the convergence criterion for the imported parameters
     if (iter_prev gt 0,
         !! Parameters with technology dimension  
         loop(paramsPyTech32,
@@ -327,71 +327,108 @@ $endif
         );
         
         !! Calculate weighted average of the convergence criterion for capacity factors and supply-side markups
-        p32_convWeights_tech(tPy32,regPy32,tePy32) = v32_pe2seelTe.l(tPy32,regPy32,tePy32);
         !! TODO: Also include CF for storage technologies into average
-        p32_delta_AVG(regPy32,paramsPyTech32,iteration)$(sameas(paramsPyTech32,"CF") or sameas(paramsPyTech32,"MarkupSupply")) =
+        p32_delta_weighted(regPy32,paramsPyTech32,iteration)$(sameas(paramsPyTech32,"CF") or sameas(paramsPyTech32,"MarketValueSupply")) =
             sum((tePy32,tPy32),
-                p32_convWeights_tech(tPy32,regPy32,tePy32)
-                * p32_delta_tech(regPy32,tePy32,paramsPyTech32,iteration)
+                v32_pe2seelTe.l(tPy32,regPy32,tePy32)
+                * abs(p32_delta_tech(regPy32,tePy32,paramsPyTech32,iteration))
             )
         /
             (sum((tePy32,tPy32),
-                p32_convWeights_tech(tPy32,regPy32,tePy32)
+                v32_pe2seelTe.l(tPy32,regPy32,tePy32)
             ) + sm_eps);
+
         !! Calculate non-weighted average for optimal capacity of battery and hydrogen storage
-        p32_delta_AVG(regPy32,paramsPyTech32,iteration)$(sameas(paramsPyTech32,"OptCap")) =
+        p32_delta_weighted(regPy32,paramsPyTech32,iteration)$(sameas(paramsPyTech32,"OptCap")) =
             sum(teStorePy32, abs(p32_delta_tech(regPy32,teStorePy32,paramsPyTech32,iteration))) / card(teStorePy32);
 
         !! Calculate weighted average of the convergence criterion across all loads and time steps
-        p32_convWeights_load(tPy32,regPy32,loadPy32) = v32_share_sector.l(tPy32,regPy32,loadPy32);
-        p32_delta_AVG(regPy32, paramsPyLoad32, iteration) =
+        p32_delta_weighted(regPy32,paramsPyLoad32,iteration)$(sameas(paramsPyLoad32,"SectoralElectricityPrices")) =
             sum((loadPy32, tPy32),
-                    p32_convWeights_load(tPy32, regPy32, loadPy32)
-                    * p32_delta_load(regPy32, loadPy32, paramsPyLoad32, iteration)
+                v32_share_sector.l(tPy32,regPy32,loadPy32)
+                * abs(p32_delta_load(regPy32,loadPy32,paramsPyLoad32,iteration))
             )
         /
             (sum((loadPy32, tPy32),
-                p32_convWeights_load(tPy32, regPy32, loadPy32)
+                v32_share_sector.l(tPy32,regPy32,loadPy32)
             ) + sm_eps);
 
         !! Calculate weighted average of the convergence criterion across all time steps
-        p32_delta_AVG(regPy32, paramsPyScalar32, iteration) =
-            p32_delta_scalar(regPy32, paramsPyScalar32, iteration);
+        p32_delta_weighted(regPy32,paramsPyScalar32,iteration) =
+            abs(p32_delta_scalar(regPy32,paramsPyScalar32,iteration));
+
+       !! Check which iterations pass the convergence threshold in this iteration
+        p32_below_threshold(regPy32, paramsPyCheck32, iteration)$(iterPyPSAcalled32(iteration)) = 
+            (p32_delta_weighted(regPy32, paramsPyCheck32, iteration) <= p32_conv_threshold(regPy32, paramsPyCheck32));
+
+        !! Check for which parameters the convergence threshold is not passed in the last 4 iterations
+        p32_converged(regPy32, paramsPyCheck32, iteration)$(iterPyPSAcalled32(iteration)) =
+            sum(iteration2$(iterPyPSAcalled32(iteration2) and ord(iteration2) > ord(iteration) - 4 and ord(iteration2) <= ord(iteration)),
+                not p32_below_threshold(regPy32, paramsPyCheck32, iteration2)
+            ) = 0;
+
+        !! If any parameter does not pass the convergence threshold, set s32_pypsa_conv to 0
+        s32_pypsa_conv = 1;
+        loop((regPy32,paramsPyCheck32),
+            if (not p32_converged(regPy32, paramsPyCheck32, iteration),
+                s32_pypsa_conv = 0;
+                break;
+            );
+        );
     );
 
-    !! Track capacity factors in iterations
-    p32_PyPSA_CF_iter(iteration,t,regi,te) = p32_PyPSA_CF(t,regi,te);
-    !! Track supply-side markup in iterations
-    p32_PyPSA_MarkupSupply_iter(iteration,t,regi,te) = p32_PyPSA_MarkupSupply(t,regi,te);
-    !! Track demand-side markup in iterations
-    p32_PyPSA_MarkupDemand_iter(iteration,t,regi,loadPy32) = p32_PyPSA_MarkupDemand(t,regi,loadPy32);
+    !! If PyPSA has converged, pass average numbers of the previous x iterations to REMIND
+    !! TODO: Also implement a switch to average iterations before convergence
+    if (s32_pypsa_conv eq 1,
 
-    !! PyPSA-Eur to REMIND: Calculate averages to reduce oscillations
-    !! (1) Capacity factors
-    !! (2) Markups
-    !! The idea behind averaging is the same as for REMIND to PyPSA-Eur. See above.
-    !! Currently set x to 3 and y to 4
-    if ((c32_avg_py2rm eq 0) or (iteration.val lt max(c32_startIter_PyPSA, 3) + 4 - 1),  !! c32_startIter_PYPSA + x + y - 1
-        !! Non-averaged capacity factors
-        p32_PyPSA_CFAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_PyPSA_CF(t,regi,te);
-        !! Non averaged supply-side markup
-        p32_PyPSA_MarkupSupplyAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_PyPSA_MarkupSupply(t,regi,te);
-        !! Non averaged demand-side markup
-        p32_PyPSA_MarkupDemandAvg(t,regi,loadPy32)$(tPy32(t) and regPy32(regi)) = p32_PyPSA_MarkupDemand(t,regi,loadPy32);
-    !! Implement step (3)
-    elseif (c32_avg_py2rm eq 1),
-        !! Averaged capacity factors over iterations
+        !! Deactivate anticipation factors now at the latest
+        s32_anticipationFactorFadeOut = 0;
+
+        !! How many times was PyPSA called
+        iter_counter = card(iterPyPSAcalled32)
+        !! Count up over iteration2 while counting down over iter_counter
+        loop(iteration2$(iterPyPSAcalled32(iteration2)),
+            !! Get the last x iterations where PyPSA was called
+            if (iter_counter <= c32_avgIter_PyPSA,
+                iterPyPSAlastx32(iteration2) = yes;
+            );
+            iter_counter = iter_counter - 1;
+        );
+
+        !! Calculate averages over the last x iterations, where x is c32_avgIter_PyPSA
         p32_PyPSA_CFAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) =
-        sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2) * p32_PyPSA_CF_iter(iteration2,t,regi,te)) /
-        sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2));
-        !! Averaged markups over iterations
+            sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_tech_iter(t,regi,te,iteration2,"CF"))
+        / (card(iterPyPSAlastx32) + sm_eps);
         p32_PyPSA_MarkupSupplyAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) =
-        sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2) * p32_PyPSA_MarkupSupply_iter(iteration2,t,regi,te)) /
-        sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2));
-        !! Averaged markups over iterations
-        p32_PyPSA_MarkupDemandAvg(t,regi,loadPy32)$(tPy32(t) and regPy32(regi)) =
-        sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2) * p32_PyPSA_MarkupDemand_iter(iteration2,t,regi,loadPy32)) /
-        sum(iteration2$(iteration2.val gt (iteration.val - 4)), s32_PyPSA_called(iteration2));
+            sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_tech_iter(t,regi,te,iteration2,"MarkupSupply"))
+        / (card(iterPyPSAlastx32) + sm_eps);
+        p32_PyPSA_MarkupDemandAvg(t,regi,loadPy32)$(tPy32(t) and regPy32(regi) and loadPy32(loadPy32)) =
+            sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_load_iter(t,regi,loadPy32,iteration2,"MarkupDemand"))
+        / (card(iterPyPSAlastx32) + sm_eps);
+        !! Overwrite the previous values with the averaged values
+        p32_PyPSA_OptCap(t,regi,te)$(tPy32(t) and regPy32(regi) and teStoreTransPy32(te)) =
+            sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_tech_iter(t,regi,te,iteration2,"OptCap"))
+        / (card(iterPyPSAlastx32) + sm_eps);
+        p32_PyPSA_Potential(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) =
+            sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_tech_iter(t,regi,te,iteration2,"Potential"))
+        / (card(iterPyPSAlastx32) + sm_eps);
+        p32_PyPSA_PeakResLoadRel(t,regi)$(tPy32(t) and regPy32(regi)) =
+            sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_scalar_iter(t,regi,iteration2,"PeakResLoadRel"))
+        / (card(iterPyPSAlastx32) + sm_eps);
+        p32_PyPSA_H2TurbRel(t,regi)$(tPy32(t) and regPy32(regi)) =
+            sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_scalar_iter(t,regi,iteration2,"H2TurbRel"))
+        / (card(iterPyPSAlastx32) + sm_eps);
+        p32_PyPSA_BatteryDischargeRel(t,regi)$(tPy32(t) and regPy32(regi)) =
+            sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_scalar_iter(t,regi,iteration2,"BatteryDischargeRel"))
+        / (card(iterPyPSAlastx32) + sm_eps);
+        p32_PyPSA_GridLossesRel(t,regi)$(tPy32(t) and regPy32(regi)) =
+            sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_scalar_iter(t,regi,iteration2,"GridLossesRel"))
+        / (card(iterPyPSAlastx32) + sm_eps);
+    else
+        !! Non-averaged values
+        p32_PyPSA_CFAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_PyPSA_CF(t,regi,te);
+        p32_PyPSA_MarkupSupplyAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_PyPSA_MarkupSupply(t,regi,te);
+        p32_PyPSA_MarkupDemandAvg(t,regi,loadPy32)$(tPy32(t) and regPy32(regi)) = p32_PyPSA_MarkupDemand(t,regi,loadPy32);
     );
 
     !! Activate PyPSA equations if PyPSA ran once
