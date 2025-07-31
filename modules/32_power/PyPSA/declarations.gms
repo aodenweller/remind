@@ -116,7 +116,6 @@ parameters
     p32_PyPSA_TradePriceExport(ttot,all_regi,all_regi)              "PyPSA import: Price for electricity exports received by region 1 due to trade with region 2 [$/MWh]"
     p32_PyPSA_Potential(ttot,all_regi,all_te)                       "PyPSA import: VRE potentials by technology within region [MW]"
     p32_PyPSA_shPe2seelRegi(ttot,all_regi)                          "PyPSA import: Electricity generation share across coupled regions [1]"
-    p32_PyPSA_AF(ttot,all_regi,all_te)                              "PyPSA import: Availability factors [1]"
     p32_PyPSA_GridLossesRel(ttot,all_regi)                          "PyPSA import: Transmission losses relative to total load [1]"
     p32_PyPSA_OptCap(ttot,all_regi,all_te)                          "PyPSA import: Optimal capacities [MW for generators/links, MWh for stores]. Attention: Links w.r.t. input!"
     p32_PyPSA_DQ_CF(ttot,all_regi,all_te,all_te)                    "PyPSA import: Difference quotient of capacity factors w.r.t perturbations of capacity [1/MW]"

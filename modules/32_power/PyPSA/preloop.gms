@@ -26,7 +26,6 @@ p32_PyPSA_CFAvg(tPy32,regPy32,tePy32) = 0;
 p32_PyPSA_MarkupSupplyAvg(tPy32,regPy32,tePy32) = 0;
 p32_PyPSA_MarkupDemandAvg(tPy32,regPy32,loadPy32) = 0;
 p32_PyPSA_PeakResLoadRel(tPy32,regPy32) = 0;
-p32_PyPSA_AF(tPy32,regPy32,tePy32) = 0;
 p32_PyPSA_shPe2seel(tPy32,regPy32,tePy32) = 0;
 p32_PyPSA_Potential(tPy32,regPy32,tePy32) = 0;
 p32_PyPSA_H2TurbRel(tPy32,regPy32) = 0;
