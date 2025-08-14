@@ -135,10 +135,10 @@ p32_anticipation_MV("DEU","coalchp") = -5;
 p32_anticipation_MV("DEU","tnrs") = -1;
 p32_anticipation_MV("DEU","fnrs") = -1;
 p32_anticipation_MV("DEU","ngt") = -8;
-p32_anticipation_MV("DEU","windoff") = -0.5;
 p32_anticipation_MV("DEU","dot") = -2;
+p32_anticipation_MV("DEU","hydro") = 0;
+p32_anticipation_MV("DEU","windoff") = -0.5;
 p32_anticipation_MV("DEU","windon") = -0.5;
-p32_anticipation_MV("DEU","hydro") = -1;
 p32_anticipation_MV("DEU","spv") = -0.5;
 
 *** Write efficiencies into pm_eta_conv for btin and btout
@@ -153,6 +153,11 @@ loop(regi,
 *** Set convergence thresholds for PyPSA coupling
 *** Use 5% in general
 p32_conv_threshold(regPy32,paramsPyCheck32) = 0.05;
-p32_conv_threshold(regPy32,"GridLossesRel") = 0.1;
+*** Use 10% for variables that are not as critical for the total system
+p32_conv_threshold(regPy32,"OptCap") = 0.1;  !! Optimal storage capacity
+p32_conv_threshold(regPy32,"H2TurbRel") = 0.1;  !! Hydrogen turbine
+p32_conv_threshold(regPy32,"BatteryDischargeRel") = 0.1;  !! Battery discharge
+p32_conv_threshold(regPy32,"GridLossesRel") = 0.1;  !! Grid losses
+
 
 *** EOF ./modules/32_power/PyPSA/datainput.gms

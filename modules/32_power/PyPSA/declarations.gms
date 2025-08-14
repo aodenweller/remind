@@ -129,7 +129,6 @@ parameters
     p32_usableSeDispForeign(ttot,all_regi)                          "PyPSA coupling: Foreign usable SE electricity generation, without own consumption, without imports/exports [TWa]"
     sm_PyPSA_eq                                                     "PyPSA coupling: Boolean that activates PyPSA coupling equations (1 = on, 0 = off)"
     s32_checkPrice                                                  "PyPSA coupling: Boolean that checks if budget equation is binding (1 = yes, 0 = no)"
-    s32_checkPrice_iter(iteration)                                  "PyPSA coupling: s32_checkPrice in iterations"
     s32_anticipationFactorFadeOut                                   "PyPSA coupling: Multiplicative factor to fade out ancitipation factors [1]"
     p32_delta_tech(all_regi,all_te,paramsPyTech32,iteration)        "PyPSA coupling: Relative change w.r.t. previous iteration for imported parameters with technology dimension (agg. over time) [1]"
     p32_delta_load(all_regi,loadPy32,paramsPyLoad32,iteration)      "PyPSA coupling: Relative change w.r.t. previous iteration for imported parameters with load dimension (agg. over time) [1]"
@@ -139,6 +138,8 @@ parameters
     p32_below_threshold(regPy32,paramsPyCheck32,iteration)          "PyPSA coupling: Boolean that tracks if the relative change of parameters is below the convergence threshold in the current iteration (1 = yes, 0 = no)"
     p32_converged(regPy32,paramsPyCheck32,iteration)                "PyPSA coupling: Boolean that tracks if the relative change of parameters is below the convergence threshold in the previous 4 iterations (1 = yes, 0 = no)"
     s32_pypsa_conv                                                  "PyPSA coupling: Boolean that tracks if convergence was reached (1 = yes, 0 = no)"
+    s32_pypsa_avg                                                   "PyPSA coupling: Boolean to track if average has been calculated (1 = yes, 0 = no)"
+    p32_lastCap(ttot,all_regi,all_te)                               "PyPSA coupling: Last capacities from converged iteration"
     !! Switches for the PyPSA coupling that are based on compile switches, but need to be passed to PyPSA and therefore require another parameter
     c32_pypsa_cfg_perturb                                           "PyPSA coupling: Switch for perturbation of capacities, set automatically (1 = on, 0 = off)"
     !! Parameters for the PyPSA coupling reporting
@@ -201,6 +202,7 @@ $ifthen "%cm_pypsa_markup_demand%" == "on"
 $endif
 $ifthen "%c32_pypsa_peakcap%" == "on"
     q32_PeakResCap(ttot,all_regi)                                   "PyPSA coupling: Anticipation factor equation for peak residual load"
+    q32_PeakResCapMax(ttot,all_regi)                                "PyPSA coupling: Maximum level for peak residual load"
 $endif
 $ifthen "%c32_pypsa_h2stor%" == "on"
     q32_h2turb(ttot,all_regi)                                       "PyPSA coupling: Equation for hydrogen turbine supply requirements"
@@ -208,7 +210,7 @@ $ifthen "%c32_pypsa_h2stor%" == "on"
 $endif
 $ifthen "%c32_pypsa_btstor%" == "on"
     q32_battery(ttot,all_regi)                                      "PyPSA coupling: Equation for battery discharge requirements"
-    q32_batinEQbatout(ttot,all_regi)                                "PyPSA coupling: Equation that equals capacities of btin and btout (same battery inverter in the real world)"
+    q32_btin_btout(ttot,all_regi)                                   "PyPSA coupling: Equation that equals capacities of btin and btout (same battery inverter in the real world)"
 $endif
     q32_gridLosses(ttot,all_regi)                                   "PyPSA coupling: Equation to calculate grid losses"
 $ifthen "%c32_pypsa_trade%" == "on"

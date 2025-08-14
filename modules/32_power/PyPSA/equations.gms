@@ -344,35 +344,35 @@ q32_flexAdj(t,regi,te)$(teFlexTax(te))..
 *** This is based on the harmonisation of the electricity balance equation of REMIND and PyPSA-Eur.
 *** Additional electricity demand for hydrogen production is included separately.
 q32_load(t,regi,enty2)$(tPy32(t) and regPy32(regi) and sameas(enty2,"seel"))..
-  v32_load(t,regi)
-  =e=
-  !! Demand for electricity from final energy sectors
-    sum(se2fe(enty2,enty3,te), vm_demSe(t,regi,enty2,enty3,te) )
-  !! Add additional electricity load from electrolytic hydrogen production
-  + v32_load_sector(t,regi,"electrolysis")
-  !! Add electricity demand for fuel extraction
-  + sum(pe2rlf(enty3,rlf2), (pm_fuExtrOwnCons(regi, enty2, enty3) * vm_fuExtr(t,regi,enty3,rlf2))$(pm_fuExtrOwnCons(regi, enty2, enty3) gt 0))$(t.val > 2005) !! do not use in 2005 because this demand is not contained in 05_initialCap
-  !! Subtract electricity supply due to co-production of secondary energy
-  !! This can also be negative, in which case it is added to the load
-  - sum(pc2te(enty,entySe(enty3),te,enty2), 
-        pm_prodCouple(regi,enty,enty3,te,enty2) * vm_prodSe(t,regi,enty,enty3,te) )
-  !! Subtract electricity supply due to co-production of final energy
-  !! This can also be negative, in which case it is added to the load
-  - sum(pc2te(enty4,entyFe(enty5),te,enty2), 
-        pm_prodCouple(regi,enty4,enty5,te,enty2) * vm_prodFe(t,regi,enty4,enty5,te) )
-  !! Subtract electricity supply due to co-production of CCS (?)
-  !! This can also be negative, in which case it is added to the load
-  - sum(pc2te(enty,enty3,te,enty2),
-        sum(teCCS2rlf(te,rlf),
-            pm_prodCouple(regi,enty,enty3,te,enty2) * vm_co2CCS(t,regi,enty,enty3,te,rlf) ) )
+    v32_load(t,regi)
+    =e=
+    !! Demand for electricity from final energy sectors
+      sum(se2fe(enty2,enty3,te), vm_demSe(t,regi,enty2,enty3,te) )
+    !! Add additional electricity load from electrolytic hydrogen production
+    + v32_load_sector(t,regi,"electrolysis")
+    !! Add electricity demand for fuel extraction
+    + sum(pe2rlf(enty3,rlf2), (pm_fuExtrOwnCons(regi, enty2, enty3) * vm_fuExtr(t,regi,enty3,rlf2))$(pm_fuExtrOwnCons(regi, enty2, enty3) gt 0))$(t.val > 2005) !! do not use in 2005 because this demand is not contained in 05_initialCap
+    !! Subtract electricity supply due to co-production of secondary energy
+    !! This can also be negative, in which case it is added to the load
+    - sum(pc2te(enty,entySe(enty3),te,enty2), 
+            pm_prodCouple(regi,enty,enty3,te,enty2) * vm_prodSe(t,regi,enty,enty3,te) )
+    !! Subtract electricity supply due to co-production of final energy
+    !! This can also be negative, in which case it is added to the load
+    - sum(pc2te(enty4,entyFe(enty5),te,enty2), 
+            pm_prodCouple(regi,enty4,enty5,te,enty2) * vm_prodFe(t,regi,enty4,enty5,te) )
+    !! Subtract electricity supply due to co-production of CCS (?)
+    !! This can also be negative, in which case it is added to the load
+    - sum(pc2te(enty,enty3,te,enty2),
+            sum(teCCS2rlf(te,rlf),
+                pm_prodCouple(regi,enty,enty3,te,enty2) * vm_co2CCS(t,regi,enty,enty3,te,rlf) ) )
 ;
 
 *** Require that at least 75% of the usable electricity output from comes from primary energy
 *** This should not be binding, but makes sure to constrain the solver to a meaningful solution
 q32_loadMin(t,regi,enty2)$(tPy32(t) and regPy32(regi) and sameas(enty2,"seel"))..
-  sum(pe2se(enty,enty2,te), vm_prodSe(t,regi,enty,enty2,te) )
-  =g=
-  0.75 * vm_usableSe(t,regi,"seel")
+    sum(pe2se(enty,enty2,te), vm_prodSe(t,regi,enty,enty2,te) )
+    =g=
+    0.75 * vm_usableSe(t,regi,"seel")
 ;
 
 
@@ -526,48 +526,55 @@ $endif.markup_supply
 ***------------------------------------------------------------
 ***            PyPSA-Eur to REMIND: Peak residual load
 ***------------------------------------------------------------
-*** Equation that requires the minimum dispatchable capacity for peak residual load.
-*** This constraint is formulated relative to the average load, v32_load [TWa/a].
-*** The anticipation factor can be based on the following intuition:
-*** If the sum of VRE shares increases, peak residual load decreases.
-*** However, since VREs have a small capacity credit, this effect is also small.
+*** Equations that set require minimum (as well as maximum) dispatchable capacity
+*** to cover peak residual load hours. This constraint is formulated relative to the
+*** average load, v32_load [TWa/a = TW], which is provided by PyPSA. This makes sure
+*** that if REMIND increases total electricity demand, it also needs to provide more
+*** dispatchable capacity. Two equations are needed:
+*** 1. Equation that sets the required production of dispatchable capacity relative to the load.
+*** 2. Equation that limits the maximum dispatchable capacity to 1.5 times the maximum residual peak load,
+***    which prevents the solver from over-investing in dispatchable capacity.
+
 $ifthen.c32_pypsa_peakcap "%c32_pypsa_peakcap%" == "on"
+*** Equation 1: Set the required production of dispatchable capacity relative to the load.
 q32_PeakResCap(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
-    sum(tePyDisp32, vm_cap(t,regi,tePyDisp32, "1"))
+    sum(tePyDisp32, vm_cap(t,regi,tePyDisp32,"1"))
     =g=
     p32_PyPSA_PeakResLoadRel(t,regi) * v32_load(t,regi)
-$ontext
-$ifthen "%c32_pypsa_anticipation%" == "on"
-    * ( 1 - 0.2 * ( sum(tePyVRE32, v32_shPe2seel(t,regi,tePyVRE32) - p32_PyPSA_shPe2seel(t,regi,tePyVRE32)) ) )
-$endif
-$offtext
+;
+
+*** Equation 2: Limit relative residual peak load to 1.5 times the maximum residual peak load
+*** to help the solver. This should not be binding in the optimum.
+q32_PeakResCapMax(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
+    sum(tePyDisp32, vm_cap(t,regi,tePyDisp32,"1"))
+    =l=
+    1.5 * smax(t2, p32_PyPSA_PeakResLoadRel(t2,regi)) * v32_load(t,regi)
 ;
 $endif.c32_pypsa_peakcap
 
 ***------------------------------------------------------------
-***            PyPSA-Eur to REMIND: Hydrogen for power storage
+***            PyPSA-Eur to REMIND: Hydrogen storage
 ***------------------------------------------------------------
 *** In PyPSA hydrogen storage works like a big battery, with all hydrogen consumed by turbines
 *** previously produced by electrolysers within that year (no storage losses).
 *** The implementation of hydrogen storage is based on two equations:
 *** 1. Equation that sets the required production of hydrogen turbines relative to the load (from PyPSA).
-*** 2. Equation that requires all hydrogen consumed by turbines to be produced by electrolysers.
+*** 2. Equation that requires all hydrogen consumed by hydrogen turbines to be produced by electrolysers.
 *** Jointly, these two equations ensure that hydrogen storage is harmonised, while giving REMIND
 *** freedom to decide on the production of electrolytic hydrogen for other end-uses.
 *** Note: Capacity factors of elh2 and h2turb are fixed to PyPSA values in bounds.gms.
 *** Note: The lower bound of hydrogen storage capacity (h2stor) is set to PyPSA values in bounds.gms.
 
-*** Equation 1: Set the required production of hydrogen turbines relative to the load.
 $ifthen "%c32_pypsa_h2stor%" == "on"
+*** Equation 1: Set the required production of hydrogen turbines relative to the load.
 q32_h2turb(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
     vm_prodSe(t,regi,"seh2","seel","h2turb")
     =g=
     p32_PyPSA_H2TurbRel(t,regi) * v32_load(t,regi)
 ;
-$endif
 
 *** Equation 2: Ensure that enough hydrogen is produced by electrolysers to cover the demand of hydrogen turbines.
-$ifthen "%c32_pypsa_h2stor%" == "on"
+*** This makes sure that REMIND doesn't use hydrogen from other sources for electricity production (e.g. biomass, gas).
 q32_elh2forh2turb(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
     vm_prodSe(t,regi,"seel","seh2","elh2")
     =g=
@@ -587,25 +594,25 @@ $endif
 *** Note that btin and btout are the same phyiscal technology (inverter + balance of system).
 *** Therefore, btout does not have capital or FOM costs and the capacity of btin
 *** and btout should be the same when accounting for the efficiency.
-*** Note: Capacity factors of btin and btout are fixed to PyPSA values in bounds.gms.
+*** The implementation requires two equations:
+*** 1. Equation that sets the required production of battery discharging relative to the load (from PyPSA).
+*** 2. Equation that sets the capacity of battery charging equal to the capacity of battery discharging
+***    multiplied by the efficiency of battery discharging (this equation also exists in PyPSA).
+*** Note: Upper bounds of capacity factors for btin and btout are set in bounds.gms. REMIND can
+*** endogenously decrease capacity factors, which is necessary due to vintage tracking of capacities. 
+*** This approach enforces harmonisation of the electricity balance, but not necessarily of capacities. 
 *** Note: The lower bound of battery storage capacity (btstor) is set to PyPSA values in bounds.gms.
 
-*** The implementation of battery storage only needs one equation to set the required production
-*** of battery discharging relative to the load from PyPSA. This drives the investment into btout.
-*** Due to (i) fixed capacity factors and (ii) the energy balance equation (in core/equations.gms)
-*** this then also drives investment into battery charging (btin).
 $ifthen "%c32_pypsa_btstor%" == "on"
+*** Equation 1: Set the required production of battery discharging relative to the load.
 q32_battery(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
     vm_prodSe(t,regi,"seelstor","seel","btout")
     =e=
     p32_PyPSA_BatteryDischargeRel(t,regi) * v32_load(t,regi)
 ;
 
-* TEMPORARY: Set btin to btout, in theory this shouldn't be necessary
-* when fixing the capacity factors of btin and btout to PyPSA values.
-* This only works when there is a bit of freedom to the capacity factors
-* as otherwise REMIND is overconstrained, leading to a small numerical infeasibility
-q32_batinEQbatout(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
+*** Equation 2: Set the capacity of battery charging equal to the capacity of battery discharging.
+q32_btin_btout(t,regi)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq eq 1))..
     vm_cap(t,regi,"btin","1")
     =e=
     vm_cap(t,regi,"btout","1") * pm_eta_conv(t,regi,"btout")
@@ -642,7 +649,7 @@ $endif.markup_demand
 ***------------------------------------------------------------
 ***            PyPSA-Eur to REMIND: Electricity trade
 ***------------------------------------------------------------
-*** The EU electricity trade implementation is work in progress.
+*** NOTE: THIS IS WORK IN PROGRESS AND NOT CURRENTLY USED.
 
 $ifthen.c32_pypsa_trade "%c32_pypsa_trade%" == "on"
 * Parametrise anticipation for electricity trade

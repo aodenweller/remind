@@ -49,8 +49,6 @@ $ifthen "%c32_pypsa_anticipation%" == "manual"
         );
 $endif
 );
-*** Track s32_checkPrice over iterations
-s32_checkPrice_iter(iteration) = s32_checkPrice;
 
 *** Track PE price over iterations
 p32_PEPrice_iter(iteration,ttot,regi,entyPe) = pm_PEPrice(ttot,regi,entyPe);
@@ -75,12 +73,78 @@ p32_hydroCapacity(t,regi)$(tPy32(t) AND regPy32(regi)) = vm_cap.l(t,regi,"hydro"
 p32_hydroGeneration(t,regi)$(tPy32(t) AND regPy32(regi)) = v32_pe2seelTe.l(t,regi,"hydro");
 
 ***------------------------------------------------------------
+***                  PyPSA averaging if converged
+***------------------------------------------------------------
+
+*** If PyPSA has converged in the previous iteration, pass average values of the previous x iterations to REMIND
+if ((s32_pypsa_avg ne 1) AND  !! Only call once
+    (
+        ((s32_pypsa_conv eq 1) AND (iteration.val ge c32_minIter_PyPSA)) OR  !! If PyPSA has converged and at least c32_minIter_PyPSA iterations have passed
+        (iteration.val ge c32_maxIter_PyPSA)  !! If at least c32_maxIter_PyPSA iterations have passed, irrespective of convergence 
+    ),
+
+    !! Store capacities of last iteration
+    p32_lastCap(tPy32,regPy32,te)$(tePy32(te) OR teStoreTransPy32(te)) = vm_cap.l(tPy32,regPy32,te,"1");
+
+    !! How many times was PyPSA called
+    iter_counter = card(iterPyPSAcalled32)
+    !! Count up over iteration2 while counting down over iter_counter
+    loop(iteration2$(iterPyPSAcalled32(iteration2)),
+        !! Get the last x iterations where PyPSA was called
+        if (iter_counter <= c32_avgIter_PyPSA,
+            iterPyPSAlastx32(iteration2) = yes;
+        );
+        iter_counter = iter_counter - 1;
+    );
+
+    !! Calculate averages over the last x iterations, where x is c32_avgIter_PyPSA
+    p32_PyPSA_CFAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) =
+        sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_tech_iter(t,regi,te,iteration2,"CF"))
+    / (card(iterPyPSAlastx32) + sm_eps);
+    p32_PyPSA_MarkupSupplyAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) =
+        sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_tech_iter(t,regi,te,iteration2,"MarkupSupply"))
+    / (card(iterPyPSAlastx32) + sm_eps);
+    p32_PyPSA_MarkupDemandAvg(t,regi,loadPy32)$(tPy32(t) and regPy32(regi) and loadPy32(loadPy32)) =
+        sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_load_iter(t,regi,loadPy32,iteration2,"MarkupDemand"))
+    / (card(iterPyPSAlastx32) + sm_eps);
+    !! Overwrite the previous values with the averaged values
+    p32_PyPSA_OptCap(t,regi,te)$(tPy32(t) and regPy32(regi) and teStoreTransPy32(te)) =
+        sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_tech_iter(t,regi,te,iteration2,"OptCap"))
+    / (card(iterPyPSAlastx32) + sm_eps);
+    p32_PyPSA_Potential(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) =
+        sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_tech_iter(t,regi,te,iteration2,"Potential"))
+    / (card(iterPyPSAlastx32) + sm_eps);
+    p32_PyPSA_PeakResLoadRel(t,regi)$(tPy32(t) and regPy32(regi)) =
+        sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_scalar_iter(t,regi,iteration2,"PeakResLoadRel"))
+    / (card(iterPyPSAlastx32) + sm_eps);
+    p32_PyPSA_H2TurbRel(t,regi)$(tPy32(t) and regPy32(regi)) =
+        sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_scalar_iter(t,regi,iteration2,"H2TurbRel"))
+    / (card(iterPyPSAlastx32) + sm_eps);
+    p32_PyPSA_BatteryDischargeRel(t,regi)$(tPy32(t) and regPy32(regi)) =
+        sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_scalar_iter(t,regi,iteration2,"BatteryDischargeRel"))
+    / (card(iterPyPSAlastx32) + sm_eps);
+    p32_PyPSA_GridLossesRel(t,regi)$(tPy32(t) and regPy32(regi)) =
+        sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_scalar_iter(t,regi,iteration2,"GridLossesRel"))
+    / (card(iterPyPSAlastx32) + sm_eps);
+    p32_PyPSA_shPe2seel(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) =
+        sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_tech_iter(t,regi,te,iteration2,"shPe2seel"))
+    / (card(iterPyPSAlastx32) + sm_eps);
+
+    s32_pypsa_avg = 1;
+);
+
+
+***------------------------------------------------------------
 ***                  PyPSA-Eur coupling
 ***------------------------------------------------------------
 if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startIter_PyPSA
     ( mod(iteration.val - c32_startIter_PyPSA, c32_everyIter_PyPSA) eq 0 ) AND  !! Only start every c32_everyIter_PyPSA iterations
     ( s32_checkPrice eq 1 ) AND  !! Only start if budget equation is binding
-    (( s32_pypsa_conv eq 0) OR (card(iterPyPSAcalled32) le c32_avgIter_PyPSA)),  !! Only start if convergence has not been reached yet, but require at least c32_avgIter_PyPSA
+    ( iteration.val le c32_maxIter_PyPSA ) AND  !! Never call after this iteration
+    (
+        ( iteration.val le c32_minIter_PyPSA ) OR  !! Force calls until this iteration
+        ( s32_pypsa_conv eq 0 )                    !! After that, only call if not converged
+    ),
 
     !! Track iterations in which PyPSA was executed, this is necessary to calculate averages
     iterPyPSAcalled32(iteration) = yes;
@@ -177,7 +241,8 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startI
         c32_pypsa_cfg_rcl_cost,
         c32_pypsa_cfg_perturb,  !! Automatically set if c32_pypsa_anticipation=="diffQuot"
         c32_pypsa_cfg_EVs,
-        c32_pypsa_cfg_heating
+        c32_pypsa_cfg_heating,
+        c32_pypsa_cfg_min_load_elh2
     ;
 
     !! Export REMIND data for PyPSA (REMIND2PyPSAEUR.gdx)
@@ -255,9 +320,21 @@ $ifthen "%c32_pypsa_anticipation%" == "diffQuot"
     Execute_Loadpoint "PyPSAEUR2REMIND.gdx", p32_PyPSA_DQ_CF, p32_PyPSA_DQ_MarkupSupply;
 $endif
 
-***------------------------------------------------------------
-***                  PyPSA-Eur convergence
-***------------------------------------------------------------
+    !! Limit supply markups to 200 EUR/MWh
+    p32_PyPSA_MarkupSupply(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) =
+        min(200, p32_PyPSA_MarkupSupply(t,regi,te));
+
+    !! Minimum of 1E-5 for p32_PyPSA_BatteryDischargeRel and p32_PyPSA_H2TurbRel
+    !! to avoid issues with vm_cap.lo = 1E-7 by default (1E-5 = 0.001%, so negligible)
+    p32_PyPSA_BatteryDischargeRel(t,regi)$(tPy32(t) and regPy32(regi)) =
+        max(1E-5, p32_PyPSA_BatteryDischargeRel(t,regi));
+    p32_PyPSA_H2TurbRel(t,regi)$(tPy32(t) and regPy32(regi)) =
+        max(1E-5, p32_PyPSA_H2TurbRel(t,regi));
+
+    !! Non-averaged values
+    p32_PyPSA_CFAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_PyPSA_CF(t,regi,te);
+    p32_PyPSA_MarkupSupplyAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_PyPSA_MarkupSupply(t,regi,te);
+    p32_PyPSA_MarkupDemandAvg(t,regi,loadPy32)$(tPy32(t) and regPy32(regi)) = p32_PyPSA_MarkupDemand(t,regi,loadPy32);
 
     !! Track all imports over iterations
     !! TODO: Change export in PyPSA-Eur to just export only three parameters (one for each group)?
@@ -277,6 +354,10 @@ $endif
     p32_PyPSA_scalar_iter(tPy32,regPy32,iteration,"H2TurbRel") = p32_PyPSA_H2TurbRel(tPy32,regPy32);
     p32_PyPSA_scalar_iter(tPy32,regPy32,iteration,"GridLossesRel") = p32_PyPSA_GridLossesRel(tPy32,regPy32);
     p32_PyPSA_scalar_iter(tPy32,regPy32,iteration,"AverageElectricityPrice") = p32_PyPSA_AverageElectricityPrice(tPy32,regPy32);
+
+***------------------------------------------------------------
+***                  PyPSA-Eur convergence
+***------------------------------------------------------------
 
     !! Find last two iterations where PyPSA was called
     loop(iterPyPSAcalled32,
@@ -375,60 +456,6 @@ $endif
                 break;
             );
         );
-    );
-
-    !! If PyPSA has converged, pass average numbers of the previous x iterations to REMIND
-    !! TODO: Also implement a switch to average iterations before convergence
-    if (s32_pypsa_conv eq 1,
-
-        !! Deactivate anticipation factors now at the latest
-        s32_anticipationFactorFadeOut = 0;
-
-        !! How many times was PyPSA called
-        iter_counter = card(iterPyPSAcalled32)
-        !! Count up over iteration2 while counting down over iter_counter
-        loop(iteration2$(iterPyPSAcalled32(iteration2)),
-            !! Get the last x iterations where PyPSA was called
-            if (iter_counter <= c32_avgIter_PyPSA,
-                iterPyPSAlastx32(iteration2) = yes;
-            );
-            iter_counter = iter_counter - 1;
-        );
-
-        !! Calculate averages over the last x iterations, where x is c32_avgIter_PyPSA
-        p32_PyPSA_CFAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) =
-            sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_tech_iter(t,regi,te,iteration2,"CF"))
-        / (card(iterPyPSAlastx32) + sm_eps);
-        p32_PyPSA_MarkupSupplyAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) =
-            sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_tech_iter(t,regi,te,iteration2,"MarkupSupply"))
-        / (card(iterPyPSAlastx32) + sm_eps);
-        p32_PyPSA_MarkupDemandAvg(t,regi,loadPy32)$(tPy32(t) and regPy32(regi) and loadPy32(loadPy32)) =
-            sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_load_iter(t,regi,loadPy32,iteration2,"MarkupDemand"))
-        / (card(iterPyPSAlastx32) + sm_eps);
-        !! Overwrite the previous values with the averaged values
-        p32_PyPSA_OptCap(t,regi,te)$(tPy32(t) and regPy32(regi) and teStoreTransPy32(te)) =
-            sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_tech_iter(t,regi,te,iteration2,"OptCap"))
-        / (card(iterPyPSAlastx32) + sm_eps);
-        p32_PyPSA_Potential(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) =
-            sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_tech_iter(t,regi,te,iteration2,"Potential"))
-        / (card(iterPyPSAlastx32) + sm_eps);
-        p32_PyPSA_PeakResLoadRel(t,regi)$(tPy32(t) and regPy32(regi)) =
-            sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_scalar_iter(t,regi,iteration2,"PeakResLoadRel"))
-        / (card(iterPyPSAlastx32) + sm_eps);
-        p32_PyPSA_H2TurbRel(t,regi)$(tPy32(t) and regPy32(regi)) =
-            sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_scalar_iter(t,regi,iteration2,"H2TurbRel"))
-        / (card(iterPyPSAlastx32) + sm_eps);
-        p32_PyPSA_BatteryDischargeRel(t,regi)$(tPy32(t) and regPy32(regi)) =
-            sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_scalar_iter(t,regi,iteration2,"BatteryDischargeRel"))
-        / (card(iterPyPSAlastx32) + sm_eps);
-        p32_PyPSA_GridLossesRel(t,regi)$(tPy32(t) and regPy32(regi)) =
-            sum(iteration2$iterPyPSAlastx32(iteration2), p32_PyPSA_scalar_iter(t,regi,iteration2,"GridLossesRel"))
-        / (card(iterPyPSAlastx32) + sm_eps);
-    else
-        !! Non-averaged values
-        p32_PyPSA_CFAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_PyPSA_CF(t,regi,te);
-        p32_PyPSA_MarkupSupplyAvg(t,regi,te)$(tPy32(t) and regPy32(regi) and tePy32(te)) = p32_PyPSA_MarkupSupply(t,regi,te);
-        p32_PyPSA_MarkupDemandAvg(t,regi,loadPy32)$(tPy32(t) and regPy32(regi)) = p32_PyPSA_MarkupDemand(t,regi,loadPy32);
     );
 
     !! Activate PyPSA equations if PyPSA ran once

@@ -194,6 +194,15 @@ if ((sm_PyPSA_eq eq 1),
 );
 $endif
 
+*** Once converged limit capacity changes
+if (((s32_pypsa_avg eq 1) AND (iteration.val ge c32_minIter_PyPSA)) OR  !! If PyPSA has converged and at least c32_minIter_PyPSA iterations have passed
+    (iteration.val ge c32_maxIter_PyPSA),  !! If at least c32_maxIter_PyPSA iterations have passed, irrespective of convergence
+    loop((tPy32,regPy32,te)$((tePy32(te) or teStoreLinkPy32(te)) and (p32_lastCap(tPy32,regPy32,te) > 1E-3)),  !! Only if at least one GW exists
+        vm_cap.lo(tPy32,regPy32,te,"1") = 0.95 * p32_lastCap(tPy32,regPy32,te);
+        vm_cap.up(tPy32,regPy32,te,"1") = 1.05 * p32_lastCap(tPy32,regPy32,te);
+    );
+);
+
 *** Electricity trade
 $ifthen.c32_pypsa_trade "%c32_pypsa_trade%" == "on"
 if ((sm_PyPSA_eq eq 1),

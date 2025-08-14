@@ -12,6 +12,7 @@
 
 *** REMIND sets used for the PyPSA coupling
 sets
+    !! TODO: Remove as this is the same as t
     tPy32(ttot)                 "Years coupled to PyPSA, later adjusted to exclude 2025 if cm_startyear is 2030"
         /2025, 2030, 2035, 2040, 2045, 2050, 2055, 2060, 2070, 2080, 2090, 2100, 2110, 2130, 2150/
 
@@ -38,6 +39,9 @@ $endif
     !! TODO: Rename?
     teStoreTransPy32(all_te)    "Storage and transmission technologies coupled to PyPSA"
         /elh2, h2turb, h2stor, btin, btout, btstor/
+
+    teStoreLinkPy32(all_te)     "Storage and transmission technologies that are links in PyPSA"
+        /elh2, h2turb, btin, btout/
 
     teStorePy32(all_te)         "Storage technologies coupled to PyPSA (not conversion, but size of store in TWh)"
         /h2stor, btstor/
