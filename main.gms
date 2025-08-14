@@ -1267,13 +1267,19 @@ parameter
     c32_minIter_PyPSA          "Minimum iteration until which PyPSA is run"
 ;
 *' Switch that specifies the minimum iteration until which PyPSA is run
-c32_minIter_PyPSA = 20;  !! def = 20 !! regexp = [20-200]
+c32_minIter_PyPSA = 0;  !! def = 0
+*'
+parameter 
+    c32_maxIter_PyPSA          "Maximum iteration until which PyPSA is run"
+;
+*' Switch that specifies the maximum iteration until which PyPSA is run
+c32_maxIter_PyPSA = 200;   !! def = 200
 *'
 parameter
     c32_avgIter_PyPSA          "Number of iterations to average over once convergence is reached"
 ;
 *' Switch that specifies how many iterations to average over once convergence is reached
-c32_avgIter_PyPSA = 4;  !! def = 4 !! regexp = [1-5]
+c32_avgIter_PyPSA = 1;  !! def = 1 !! regexp = [1-5]
 *'
 parameter
   c32_avg_rm2py                "Average over iterations from REMIND to PyPSA (0 = off, 1 = on)"
@@ -1347,6 +1353,11 @@ parameter
 c32_pypsa_cfg_heating = 0;  !! def = 0 !! regexp = [0-2]
 *' PyPSA config: Heating technologies
 *' 0 = off, 1 = on w/o flexibility, 2 = on w/ flexibility (configured in PyPSA)
+parameter
+    c32_pypsa_cfg_min_load_elh2     "PyPSA config: Minimum load of electrolysis at all times"
+;
+c32_pypsa_cfg_min_load_elh2 = 0.1;  !! def = 0.1 !! regexp = is.nonnegative
+*' PyPSA config: Minimum load of electrolysis at all times
 parameter
     c32_pypsa_trade_max        "Maximum share of electricity imports and exports relative to total electricity production"
 ;
