@@ -1,0 +1,1097 @@
+---
+title: "REMIND-PyPSA-Eur Plots"
+author: "Adrian Odenweller"
+date: "`r format(Sys.time())`"
+output:
+  pdf_document:
+    number_sections: true
+    toc: true
+    toc_depth: 3
+#    fig_width: 11
+#    fig_height: 7.5
+    extra_dependencies: ["xcolor"]
+fontsize: 11pt
+geometry: "a4paper,landscape,left=0.5cm,right=0.5cm,top=0.5cm,bottom=0.5cm,footnotesep=0.0cm,footskip=0.1cm"
+documentclass: article
+---
+
+```{r setup, include=FALSE}
+# Load libraries
+library(gdx)
+library(tidyverse)
+library(stringr)
+library(quitte)
+library(ggpp)
+library(ggnewscale)
+library(cowplot)
+library(lubridate)
+
+font.size <- 7
+theme_set(theme_cowplot(font_size = font.size, font_family = "sans"))
+theme_update(
+  plot.title = element_text(size = font.size, hjust = 0.5, face = "plain"),
+  axis.line = element_line(linewidth = 0.25),
+  axis.ticks = element_line(linewidth = 0.25),
+)
+
+# Print error and warning messages in red
+color_block <- function(color) {
+  function(x, options) paste0('\\color{', color, '}\\begin{verbatim}', x, '\\end{verbatim}\\color{black}')
+}
+knitr::knit_hooks$set(
+  warning = color_block('red'),
+  error = color_block('red'))
+
+```
+
+```{r directories}
+
+scenarioNoFlex <- "PyPSA_KN2045_s2030_noFlex_electrolysis50p_2025-08-13_11.44.07"
+scenarioFlex <- "PyPSA_KN2045_s2030_Flex_limitPeakRes_2025-08-07_21.58.33"
+
+dirNoFlex <- paste0("output/", scenarioNoFlex)
+dirFlex <- paste0("output/", scenarioFlex)
+
+rmFulldataFilesNoFlex <- list.files(
+  dirNoFlex,
+  pattern = "fulldata_\\d{1,}.gdx",
+  full.names = TRUE)
+# Last iteration
+rmFulldataFilesNoFlex <- rmFulldataFilesNoFlex[which.max(as.integer(str_extract(rmFulldataFilesNoFlex, "(?<=fulldata_)\\d+")))]
+
+rmFulldataFilesFlex <- list.files(
+  dirFlex,
+  pattern = "fulldata_\\d{1,}.gdx",
+  full.names = TRUE)
+# Last iteration
+rmFulldataFilesFlex <- rmFulldataFilesFlex[which.max(as.integer(str_extract(rmFulldataFilesFlex, "(?<=fulldata_)\\d+")))]
+
+# Load configuration
+cfgNoFlex <- load(paste0(dirNoFlex, "/config.Rdata"))
+cfgFlex <- load(paste0(dirFlex, "/config.Rdata"))
+
+# Get pypsa directories
+pyDirNoFlex <- get(cfgNoFlex[1])$gms$c32_pypsa_dir
+pyDirFlex <- get(cfgFlex[1])$gms$c32_pypsa_dir
+
+# PyPSA-Eur results directories
+pyResultsDirNoFlex <- file.path(pyDirNoFlex, "results", scenarioNoFlex)
+pyResultsDirFlex <- file.path(pyDirFlex, "results", scenarioFlex)
+
+# Get subdirectories labeled "i" for iteration followed by an integer number
+pyResultsDirsNoFlex <- list.dirs(
+    pyResultsDirNoFlex,
+    recursive = FALSE,
+    full.names = TRUE)
+# Last iteration only
+#pyResultsDirsNoFlex <- pyResultsDirsNoFlex[which.max(as.integer(str_extract(pyResultsDirsNoFlex, "(?<=i)\\d+")))]
+# Manually pick iteration 32
+pyResultsDirsNoFlex <- file.path(pyResultsDirNoFlex, "i32")
+
+pyResultsDirsFlex <- list.dirs(
+    pyResultsDirFlex,
+    recursive = FALSE,
+    full.names = TRUE)
+# Last iteration only
+pyResultsDirsFlex <- pyResultsDirsFlex[which.max(as.integer(str_extract(pyResultsDirsFlex, "(?<=i)\\d+")))]
+
+# Get reporting parameters directories
+pyReportingDirsNoFlex <- list.dirs(pyResultsDirsNoFlex,
+                             recursive = TRUE,
+                             full.names = TRUE) %>%
+  keep(str_detect(., "reporting_parameters"))
+
+pyReportingDirsFlex <- list.dirs(pyResultsDirsFlex,
+                             recursive = TRUE,
+                             full.names = TRUE) %>%
+  keep(str_detect(., "reporting_parameters"))
+
+# Unit conversions
+twa2twh <- 8760
+twa2mwh <- 8760 * 1e6
+tC2tCO2 <- 44 / 12
+trUSDpTWa2USDpMWh <- 1E12 / twa2mwh
+trUSDpTW2USDpMW <- 1E6
+
+# Limit years
+years <- c(2020, 2025, 2030, 2035, 2040, 2045, 2050, 2055, 2060)
+regions <- "DEU"
+
+```
+
+```{r mappings, include = FALSE}
+#techMapping <- read.csv(file.path(pyValidationDirs[1], "technology_mapping.csv"))
+
+techMapping <- tribble(
+  ~remind.eu, ~general, ~pypsa.eur,
+  "ngcc", "CCGT", "CCGT",
+  "ngccc", "CCGT", "CCGT",
+  "gaschp", "CCGT", "CCGT",
+  "ngt", "OCGT", "OCGT",
+  "biochp", "biomass", "biomass",
+  "bioigcc", "biomass", "biomass",
+  "bioigccc", "biomass", "biomass",
+  "igcc", "all_coal", "coal & lignite",
+  "igccc", "all_coal", "coal & lignite",
+  "pc", "all_coal", "coal & lignite",
+  "coalchp", "all_coal", "coal & lignite",
+  "fnrs", "nuclear", "nuclear",
+  "tnrs", "nuclear", "nuclear",
+  "dot", "oil", "oil",
+  "windon", "wind_onshore", "onwind",
+  "windoff", "wind_offshore", "offwind",
+  "windoff", "wind_offshore", "offwind & offwind-ac & offwind-dc",
+  "spv", "solar_pv", "solar & solar-rooftop & solar-utility",
+  "spv", "solar_pv", "solar",
+  "hydro", "hydro", "hydro",
+  "hydro", "hydro", "ror",
+  "hydro", "hydro", "PHS & hydro & ror"
+)
+
+# Create mapping from technology_group to general
+techGroup2genTech <- c(
+  "biomass" = "biomass",
+  "coal & lignite" = "all_coal",
+  "oil" = "oil",
+  "electrolysis" = "electrolysis",
+  "nuclear" = "nuclear",
+  "CCGT" = "CCGT",
+  "PHS & hydro & ror" = "hydro",
+  "OCGT" = "OCGT",
+  "solar & solar-rooftop & solar-utility" = "solar_pv",
+  "onwind" = "wind_onshore",
+  "offwind & offwind-ac & offwind-dc" = "wind_offshore"
+)
+
+# Create mapping from REMIND to General
+rm2genTech <- setNames(techMapping$general, techMapping$remind.eu)
+rm2genTech <- rm2genTech[!duplicated(names(rm2genTech))]
+
+rm2genTech <- c(rm2genTech,
+                c("elh2" = "electrolysis",
+                  "h2turb" = "fuel_cell",
+                  "h2stor" = "hydrogen_storage",
+                  "btin" = "battery_charger",
+                  "btout" = "battery_discharger",
+                  "btstor" = "battery_storage",
+                  # Loads
+                  "AC" = "load",
+                  "EV_pass" = "ev_pass",
+                  "EV_freight" = "ev_freight",
+                  "heatpump" = "heatpump",
+                  "resistive" = "resistive",
+                  "electrolysis" = "electrolysis"))
+
+# Create mapping from PyPSA-Eur to General
+py2genTech <- setNames(techMapping$general, techMapping$pypsa.eur)
+py2genTech <- py2genTech[!duplicated(names(py2genTech))]
+
+# TODO: Remove and merge with mapping from above
+py2genTech <- c(py2genTech, c("H2 electrolysis" = "electrolysis",
+                              "battery discharger" = "battery_discharger",
+                              "battery charger" = "battery_charger",
+                              "battery inverter" = "battery_charger",
+                              "battery" = "battery_storage",
+                              "H2 fuel cell" = "fuel_cell",
+                              "H2" = "hydrogen_storage",
+                              "hydrogen storage underground" = "hydrogen_storage",
+                              "fuel cell" = "fuel_cell",
+                              "geothermal" = "geothermal",
+                              #"csp" = "csp",
+                              "solar-utility" = "solar_pv",
+                              "solar-rooftop" = "solar_pv",
+                              "lignite" = "all_coal",
+                              "coal" = "all_coal",
+                              # Loads
+                              "AC" = "load",
+                              "BEV pass charger" = "ev_pass",
+                              "BEV freight charger" = "ev_freight",
+                              "EV_pass" = "ev_pass",
+                              "EV_freight" = "ev_freight",
+                              "heatpump" = "heatpump",
+                              "resistive" = "resistive"))
+
+# Create mapping from REMIND to PyPSA-Eur (for cost components)
+# TODO: Remove
+rm2pyTech <- c(
+  "biochp" = "biomass",
+  "bioigcc" = "biomass",
+  "bioigccc" = "biomass",
+  "ngcc" = "CCGT",
+  "ngccc" = "CCGT",
+  "gaschp" = "CCGT",
+  "igcc" = "coal",
+  "igccc" = "coal",
+  "pc" = "coal",
+  "coalchp" = "coal",
+  "tnrs" = "nuclear",
+  "fnrs" = "nuclear",
+  "ngt" =  "OCGT",
+  "windoff" = "offwind",
+  "dot" = "oil",
+  "windon" = "onwind",
+  "hydro" = "hydro",
+  "spv" = "solar",
+  "elh2" = "electrolysis"
+)
+
+# Color mapping
+colorsTech <- c(
+  "line_losses" = "#759EA8",
+  "electrolysis" = "#8E5FBE",
+  "hydrogen_storage" = "#352447",
+  "battery_discharger" = "#BFF574",
+  "battery_charger" = "#BFF574",
+  "battery_storage" = "#4c6b3c",
+  "fuel_cell" = "#b08fd1",
+  "solar_pv" = "#ffcc00",
+  "csp" = "#ff9900",
+  "wind_onshore" = "#337fff",
+  "wind_offshore" = "#334cff",
+  "offwind" = "#334cff",  # Remove later
+  "hydro" = "#191999",
+  "geothermal" = "#C10505",
+  "biomass" = "#005900",
+  "CCGT" = "#999959",
+  "OCGT" = "#e5e5b2",
+  "oil" = "#663a00",
+  "all_coal" = "#0c0c0c",
+  "coal" = "#0c0c0c",  # Remove later
+  "lignite" = "#392306",  # Remove later
+  "nuclear" = "#ff33ff",
+  # Loads
+  "resistive" = "#B86B1F",
+  "heatpump" = "#F5835A",
+  "ev_pass" = "#E8E88A",
+  "ev_freight" = "#68B774",
+  "load" = "#4B5C67"
+  )
+
+# Pretty names
+namesTech <- c(
+  "line_losses" = "Grid Losses",
+  "electrolysis" = "Electrolysis",
+  "battery_discharger" = "Battery Discharger",
+  "battery_charger" = "Battery Charger",
+  "battery_storage" = "Battery Storage",
+  "fuel_cell" = "Hydrogen Turbine",  # Fuel cell is actually a hydrogen turbine
+  "hydrogen_storage" = "Hydrogen Storage",
+  "solar_pv" = "Solar",
+  "csp" = "CSP",
+  "wind_onshore" = "Wind Onshore",
+  "wind_offshore" = "Wind Offshore",
+  "offwind" = "Wind Offshore",  # Remove later?
+  "hydro" = "Hydro",
+  "geothermal" = "Geothermal",
+  "biomass" = "Biomass",
+  "CCGT" = "CCGT",
+  "OCGT" = "OCGT",
+  "oil" = "Oil",
+  "all_coal" = "Coal+Lignite",
+  "coal" = "Coal",  # Remove later?
+  "lignite" = "Lignite",  # Remove later?
+  "nuclear" = "Nuclear",
+  # Sectoral loads
+  "resistive" = "Resistive heating",
+  "heatpump" = "Heat pumps",
+  "ev_pass" = "EV Passenger",
+  "ev_freight" = "EV Freight",
+  "load" = "Other demand"
+  )
+
+# Technologies that supply energy
+supplyTech <- c(
+  "solar_pv",
+  "wind_onshore",
+  "wind_offshore",
+  "hydro",
+  "battery_discharger",
+  "fuel_cell",
+  "geothermal",
+  "biomass",
+  "CCGT",
+  "OCGT",
+  "oil",
+  "all_coal",
+  "nuclear"
+)
+
+# Primary generation technologies
+pe2seTech <- c(
+  "solar_pv",
+  "wind_onshore",
+  "wind_offshore",
+  "hydro",
+  "geothermal",
+  "biomass",
+  "CCGT",
+  "OCGT",
+  "oil",
+  "all_coal",
+  "nuclear"
+)
+
+# Technologies that withdraw energy
+withdrawTech <- c(
+  "load",
+  "electrolysis",
+  "battery_charger"
+)
+
+# Storage technologies
+storageTech <- c(
+  "hydrogen_storage",
+  "battery_storage"
+)
+
+```
+
+```{r helpers, include = FALSE}
+# This function reads in csv files in the PyPSA-Eur directory
+# Expected path: <PyPSA-Eur folder>/i<iteration>/<some file>.csv
+# (optionally also containing a y<year> folder)
+readPyPSAcsv <- function(paths) {
+  purrr::map_df(paths, ~{
+    # Extract iteration from path (one or more digits preceded by an i, followed by /)
+    iteration <- as.integer(str_extract(.x, "(?<=i)\\d{1,}(?=/)"))
+    # Extract year from path (four digits preceded by a y or _, followed by / or .)
+    year <- as.integer(str_extract(.x, "(?<=[y_])\\d{4}(?=[/.])"))
+    # Try to read csv file
+    tryCatch(
+      {
+        df <- read.csv(.x, header = TRUE) %>%
+          as_tibble() %>%
+          mutate(iteration = iteration)
+        # Conditionally add year column
+        if (!("year" %in% names(df)) && !is.na(year)) {
+          df <- df %>%
+            mutate(year = year)
+        }
+        df
+      },
+      error = function(e) {
+        cat("Error reading file:", .x, "\n")
+        tibble() # Return an empty tibble in case of an error
+      }
+    )
+  })
+}
+
+# This function reads in gdx files into tibbles
+# rmFile: Path to gdx file
+# gdxVar: Name of gdx variable to read
+# columns: Named *vector* of columns to select and rename, must contain "value"
+# colFilter: *List* of renamed columns and values to filter for
+readGDXtibble <- function(rmFile, gdxVar, columns, colFilter,
+                          restoreZeros = TRUE, field = "l", recalcUnit = 1) {
+  # Read gdx file
+  data <- gdx::readGDX(rmFile, gdxVar, restore_zeros = restoreZeros, field = field) %>%
+    tibble::as_tibble(.name_repair = "unique")
+  # If data is empty create tibble with columns from colFilter and column "value" filled with 0
+  if (nrow(data) == 0) {
+    data <- tibble::tibble(expand.grid(colFilter), value = 0)
+  } else {
+    data <- data %>%
+      # Select desired columns and rename
+      dplyr::select_at(names(columns), ~ columns) %>%
+      # Filter columns according to colFilter
+      dplyr::filter(dplyr::if_all(names(colFilter), ~ . %in% colFilter$.)) %>%
+      # Multiply by recalcUnit
+      dplyr::mutate(dplyr::across(columns["value"][[1]], ~ . * recalcUnit))
+  }
+  return(data)
+}
+
+# This function reads in multiple gdx files from REMIND
+readREMINDgdx <- function(paths, gdxVar, columns, colFilter,
+                          restoreZeros = TRUE, field = "l", recalcUnit = 1) {
+  purrr::map_df(paths, ~{
+    # Extract iteration from path.
+    # Files may be named "fulldata_<iteration>.gdx" or
+    # "non_optimal_<iteration>.gdx" or "REMIND2PyPSAEUR_<iteration>.gdx"
+    iteration <- as.integer(str_extract(.x, "((?<=fulldata_)|(?<=non_optimal_)|(?<=REMIND2PyPSAEUR_))\\d{1,}(?=.gdx)"))
+    readGDXtibble(.x, gdxVar, columns, colFilter, restoreZeros, field, recalcUnit) %>%
+      mutate(iteration = iteration)
+  })
+}
+
+# Helper function to extract unique values with a given tolerance
+unique_tolerance <- function(x, tolerance = 1e-8) {
+  x[!duplicated(round(x / tolerance))]
+}
+
+# Helper function to format ggplot subtitles
+regSubtitle <- function(r) {
+  paste(r, collapse = " + ")
+}
+
+# Helper function to return integer breaks for axis labels
+integer_breaks <- function(n = 5, ...) {
+  fxn <- function(x) {
+    breaks <- floor(pretty(x, n, ...))
+    names(breaks) <- attr(breaks, "labels")
+    breaks
+  }
+  return(fxn)
+}
+
+```
+
+# Capacity mix
+
+```{r capacity mix}
+
+dataCapREMINDFlex <- readREMINDgdx(
+  paths = rmFulldataFilesFlex,
+  gdxVar = "vm_cap",
+  columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "rlf" = "grade", "value" = "vm_cap"),
+  colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech), "grade" = 1),
+  restoreZeros = FALSE,
+  recalcUnit = 1e3) %>%
+  mutate(scenario = "flex")
+
+dataCapREMINDnoFlex <- readREMINDgdx(
+  paths = rmFulldataFilesNoFlex,
+  gdxVar = "vm_cap",
+  columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "rlf" = "grade", "value" = "vm_cap"),
+  colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech), "grade" = 1),
+  restoreZeros = FALSE,
+  recalcUnit = 1e3) %>%
+  mutate(scenario = "noFlex")
+
+dataCapREMIND <- bind_rows(dataCapREMINDFlex, dataCapREMINDnoFlex)
+
+# Plot capacities
+data.plot <- dataCapREMIND %>%
+  revalue.levels(technology = rm2genTech) %>%
+  filter(technology %in% supplyTech) %>%
+  group_by(year, region, technology, iteration, scenario) %>%
+  summarise(value = sum(vm_cap)) %>%
+  order.levels(technology = supplyTech)
+
+pCap <- ggplot() +
+  geom_bar(data = data.plot,
+          mapping = aes(x = year, y = value, fill = technology),
+          stat = "identity",
+          position = position_stack()) +
+  scale_fill_manual(
+    name = "Technology",
+    values = colorsTech,
+    labels = namesTech
+    ) +
+  scale_x_continuous(breaks = years) +
+  labs(x = "Year", y = "Capacity (GW)") +
+  facet_wrap(~ scenario, ncol = 2,
+    labeller = labeller(scenario = c("flex" = "With demand-side flexibility", "noFlex" = "Without demand-side flexibility"))) +
+  # Make box of facet white
+  theme(strip.background = element_rect(fill = "white")) +
+  background_grid(major = "y", minor = "none", colour.major = "gray80", size.major = 0.25) +
+  ggtitle("Capacity mix")
+
+# Dispatchable capacities
+data.plot.disp <- data.plot %>%
+    filter(technology %in% c("CCGT", "OCGT", "oil", "all_coal", "biomass", "nuclear", "fuel_cell", "battery_discharger"))
+
+pCapDisp <- ggplot() +
+  geom_bar(data = data.plot.disp,
+          mapping = aes(x = year, y = value, fill = technology),
+          stat = "identity",
+          position = position_stack()) +
+  scale_fill_manual(
+    name = "Technology",
+    values = colorsTech,
+    labels = namesTech
+    ) +
+  scale_x_continuous(breaks = years) +
+  labs(x = "Year", y = "Capacity (GW)") +
+  facet_wrap(~ scenario, ncol = 2,
+    labeller = labeller(scenario = c("flex" = "With demand-side flexibility", "noFlex" = "Without demand-side flexibility"))) +
+  # Make box of facet white
+  theme(strip.background = element_rect(fill = "white")) +
+  background_grid(major = "y", minor = "none", colour.major = "gray80", size.major = 0.25) +
+  ggtitle("Capacities of dispatchable and storage technologies")
+
+p <- plot_grid(pCap, pCapDisp, ncol = 1, align = "v")
+
+ggsave("capacity_mix.png", width = 180, height = 140, units = "mm", dpi = 300, bg = "white")
+
+```
+
+## Side-by-side
+
+```{r}
+
+dataCapREMINDFlex <- readREMINDgdx(
+  paths = rmFulldataFilesFlex,
+  gdxVar = "vm_cap",
+  columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "rlf" = "grade", "value" = "vm_cap"),
+  colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech), "grade" = 1),
+  restoreZeros = FALSE,
+  recalcUnit = 1e3) %>%
+  mutate(scenario = "flex")
+
+dataCapREMINDnoFlex <- readREMINDgdx(
+  paths = rmFulldataFilesNoFlex,
+  gdxVar = "vm_cap",
+  columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "rlf" = "grade", "value" = "vm_cap"),
+  colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech), "grade" = 1),
+  restoreZeros = FALSE,
+  recalcUnit = 1e3) %>%
+  mutate(scenario = "noFlex")
+
+dataCapREMIND <- bind_rows(dataCapREMINDFlex, dataCapREMINDnoFlex)
+
+# Plot capacities
+data.plot <- dataCapREMIND %>%
+  revalue.levels(technology = rm2genTech) %>%
+  filter(technology %in% supplyTech) %>%
+  group_by(year, region, technology, iteration, scenario) %>%
+  summarise(value = sum(vm_cap)) %>%
+  order.levels(technology = supplyTech) %>%
+  mutate(scenario = factor(scenario, levels = c("flex", "noFlex")))
+
+pCap <- ggplot() +
+  geom_bar(data = data.plot,
+          mapping = aes(x = scenario, y = value, fill = technology),
+          stat = "identity",
+          position = position_stack()) +
+  scale_fill_manual(
+    name = "Technology",
+    values = colorsTech,
+    labels = namesTech
+    ) +
+  scale_x_discrete(labels = c("flex" = "DSM", "noFlex" = "NoDSM")) +
+  labs(x = "Year", y = "Capacity (GW)") +
+  facet_wrap(~ year, nrow = 1, strip.position = "bottom") +
+  # Make box of facet white
+  theme(strip.background = element_rect(fill = "white"),
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
+  #background_grid(major = "y", minor = "none", colour.major = "gray80", size.major = 0.25) +
+  ggtitle("Capacity mix")
+
+# Dispatchable capacities
+data.plot.disp <- data.plot %>%
+    filter(technology %in% c("CCGT", "OCGT", "oil", "all_coal", "biomass", "nuclear", "fuel_cell", "battery_discharger"))
+
+pCapDisp <- ggplot() +
+  geom_bar(data = data.plot.disp,
+          mapping = aes(x = scenario, y = value, fill = technology),
+          stat = "identity",
+          position = position_stack()) +
+  scale_fill_manual(
+    name = "Technology",
+    values = colorsTech,
+    labels = namesTech
+    ) +
+  scale_x_discrete(labels = c("flex" = "DSM", "noFlex" = "NoDSM")) +
+  labs(x = "Year", y = "Capacity (GW)") +
+  facet_wrap(~ year, nrow = 1, strip.position = "bottom") +
+  # Make box of facet white
+  theme(strip.background = element_rect(fill = "white"),
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
+  #background_grid(major = "y", minor = "none", colour.major = "gray80", size.major = 0.25) +
+  ggtitle("Capacities of dispatchable and storage technologies")
+
+p <- plot_grid(pCap, pCapDisp, ncol = 1, align = "v")
+
+ggsave("capacity_mix_side-by-side.png", width = 180, height = 140, units = "mm", dpi = 300, bg = "white")
+
+
+```
+
+# Annual electricity balance
+
+```{r electricity mix}
+
+get_balance <- function(rmFiles) {
+  # REMIND generation by technology (including hydrogen turbine)
+  dataSupplyREMIND <- readREMINDgdx(
+      paths = rmFiles,
+      gdxVar = "vm_prodSe",
+      columns = c("tall" = "year", "all_regi" = "region", "all_enty" = "enty1", "all_enty1" = "enty2", "all_te" = "technology", "value" = "value"),
+      colFilter = list("year" = years, "region" = regions, "enty2" = "seel", "technology" = names(rm2genTech)),
+      restoreZeros = FALSE,
+      recalcUnit = twa2twh) %>%  # TWa to TWh
+    revalue.levels(technology = rm2genTech) %>%
+    group_by(year, region, technology, iteration) %>%
+    summarise(value = sum(value)) %>%
+    mutate(technology = factor(technology, levels = names(colorsTech)))
+
+  # REMIND load
+  dataLoadREMIND <- readREMINDgdx(
+      paths = rmFiles,
+      gdxVar = "v32_load_sector", 
+      columns = c("ttot" = "year", "all_regi" = "region", "loadPy32" = "technology", "value" = "value"),
+      colFilter = list("year" = years, "region" = regions),
+      restoreZeros = FALSE,
+      recalcUnit = twa2twh) %>%
+    mutate(technology = ifelse(as.character(technology) == "EV_freight", "AC", as.character(technology))) %>%
+    # Optional: convert back to factor
+    mutate(technology = factor(technology)) %>%
+    revalue.levels(technology = rm2genTech) %>%
+    group_by(year, region, technology, iteration) %>%
+    summarise(value = sum(value)) %>%
+    select(year, region, technology, iteration, value)
+
+  # REMIND grid losses
+  dataGridLossesREMIND <- readREMINDgdx(
+      paths = rmFiles,
+      gdxVar = "v32_gridLosses",
+      columns = c("ttot" = "year", "all_regi" = "region", "value" = "value"),
+      colFilter = list("year" = years, "region" = regions),
+      restoreZeros = FALSE,
+      recalcUnit = twa2twh) %>%
+    mutate(technology = "line_losses") %>%
+    select(year, region, technology, iteration, value)
+
+  # REMIND electricity demand for electrolysis (additional demand and electricity storage)
+  dataElectrolysisREMIND <- readREMINDgdx(
+      paths = rmFiles,
+      gdxVar = "vm_demSe",
+      columns = c("ttot" = "year", "all_regi" = "region", "all_enty" = "enty1", "all_enty1" = "enty2", "all_te" = "technology", "value" = "value"),
+      colFilter = list("year" = years, "region" = regions, "enty1" = "seel", "enty2" = "seh2", "technology" = "elh2"),
+      restoreZeros = FALSE,
+      recalcUnit = twa2twh) %>%
+    revalue.levels(technology = rm2genTech) %>%
+    select(year, region, technology, iteration, value)
+
+  # Electrolysis used for storage
+  dataElectrolysisStorREMIND <- dataLoadREMIND %>%
+    filter(technology == "electrolysis") %>%
+    full_join(dataElectrolysisREMIND, by=c("year", "region", "technology", "iteration")) %>%
+    mutate(value = value.y - value.x) %>%
+    select(-value.x, -value.y) %>%
+    mutate(technology = "electrolysis_stor")
+
+  # REMIND battery charging
+  dataBatteryChargeREMIND <- readREMINDgdx(
+      paths = rmFiles,
+      gdxVar = "vm_demSe",
+      columns = c("ttot" = "year", "all_regi" = "region", "all_enty" = "enty1", "all_enty1" = "enty2", "all_te" = "technology", "value" = "value"),
+      colFilter = list("year" = years, "region" = regions, "enty1" = "seel", "enty2" = "seelstor", "technology" = "btin"),
+      restoreZeros = FALSE,
+      recalcUnit = twa2twh) %>%
+    revalue.levels(technology = rm2genTech) %>%
+    select(year, region, technology, iteration, value)
+
+  # Combine load with electrolysers to withdrawal
+  dataWithdrawalREMIND <- bind_rows(dataLoadREMIND, dataElectrolysisStorREMIND) %>%
+    bind_rows(dataGridLossesREMIND) %>%
+    bind_rows(dataBatteryChargeREMIND) %>%
+    mutate(technology = ifelse(technology == "electrolysis", "electrolysis_add", technology)) %>%
+    mutate(value = -value)
+
+  return(list(dataSupplyREMIND, dataWithdrawalREMIND))
+}
+
+temp <- get_balance(rmFulldataFilesFlex)
+dataSupplyFlex <- temp[[1]] %>%
+  mutate(scenario = "flex")
+dataWithdrawalFlex <- temp[[2]] %>%
+  mutate(scenario = "flex")
+
+temp <- get_balance(rmFulldataFilesNoFlex)
+dataSupplyNoFlex <- temp[[1]] %>%
+  mutate(scenario = "noFlex")
+dataWithdrawalNoFlex <- temp[[2]] %>%
+  mutate(scenario = "noFlex")
+
+withdrawal <- c("line_losses", "battery_charger", "electrolysis_stor", "electrolysis_add", "resistive", "heatpump", "ev_pass", "ev_freight", "load")
+
+namesTechplot <- c(
+  namesTech,
+  c("electrolysis_stor" = "Electrolysis storage",
+    "electrolysis_add" = "Electrolysis end-use")
+)
+namesTechplot <- namesTechplot[withdrawal]
+
+colorsTechplot <- c(
+  colorsTech,
+  c("electrolysis_stor" = "#b08fd1",
+    "electrolysis_add" = "#633a8e")
+)
+colorsTechplot <- colorsTechplot[withdrawal]
+
+# Combine
+dataSupply <- bind_rows(dataSupplyFlex, dataSupplyNoFlex)
+dataWithdrawal <- bind_rows(dataWithdrawalFlex, dataWithdrawalNoFlex) %>%
+  order.levels(technology = withdrawal)
+
+pGenComp <- ggplot() +
+  # REMIND supply
+  geom_col(data = dataSupply,
+          mapping = aes(x = year, y = value, fill = technology),
+          position = position_stack()) +
+  # Supply legend
+  scale_fill_manual(
+    name = "Supply",
+    values = colorsTech,
+    labels = namesTech,
+    guide = guide_legend(order = 1)) +
+  new_scale_fill() +
+  # REMIND withdrawal
+  geom_col(data = dataWithdrawal,
+          mapping = aes(x = year, y = value, fill = technology),
+          position = position_stack()) +
+  # Withdrawal legend
+  scale_fill_manual(
+    name = "Demand",
+    values = colorsTechplot,
+    labels = namesTechplot,
+    breaks = rev(withdrawal),
+    guide = guide_legend(order = 2)) +
+  labs(x = "Year", y = "Electricity (TWh/a)") +
+  facet_wrap(~ scenario, ncol = 2,
+    labeller = labeller(scenario = c("flex" = "With demand-side flexibility", "noFlex" = "Without demand-side flexibility"))) +
+  # Make box of facet white
+  theme(strip.background = element_rect(fill = "white")) +
+  background_grid(major = "y", minor = "none", colour.major = "gray80", size.major = 0.25)
+
+ggsave("electricity_balance.png", width = 180, height = 100, units = "mm", dpi = 300, bg = "white")
+
+```
+
+## Side-by-side
+
+```{r electricity mix side-by-side}
+
+dataSupplyFlex <- dataSupplyFlex %>%
+  mutate(scenario = factor(scenario, levels = c("flex", "noFlex")))
+dataSupplyNoFlex <- dataSupplyNoFlex %>%
+  mutate(scenario = factor(scenario, levels = c("flex", "noFlex")))
+
+dataWithdrawalFlex <- dataWithdrawalFlex %>%
+  mutate(scenario = factor(scenario, levels = c("flex", "noFlex")))
+dataWithdrawalNoFlex <- dataWithdrawalNoFlex %>%
+  mutate(scenario = factor(scenario, levels = c("flex", "noFlex")))
+
+dataSupply <- bind_rows(dataSupplyFlex, dataSupplyNoFlex)
+dataWithdrawal <- bind_rows(dataWithdrawalFlex, dataWithdrawalNoFlex) %>%
+  order.levels(technology = withdrawal)
+
+pGenComp <- ggplot() +
+  # REMIND supply
+  geom_col(data = dataSupply,
+          mapping = aes(x = scenario, y = value, fill = technology),
+          position = position_stack()) +
+  # Supply legend
+  scale_fill_manual(
+    name = "Supply",
+    values = colorsTech,
+    labels = namesTech,
+    guide = guide_legend(order = 1)) +
+  new_scale_fill() +
+  # REMIND withdrawal
+  geom_col(data = dataWithdrawal,
+          mapping = aes(x = scenario, y = value, fill = technology),
+          position = position_stack()) +
+  # Withdrawal legend
+  scale_fill_manual(
+    name = "Demand",
+    values = colorsTechplot,
+    labels = namesTechplot,
+    breaks = rev(withdrawal),
+    guide = guide_legend(order = 2)) +
+  labs(x = "Year / Scenario", y = "Electricity (TWh/a)") +
+  scale_x_discrete(labels = c("flex" = "DSM", "noFlex" = "NoDSM")) +
+  facet_wrap(~ year, nrow = 1, strip.position = "bottom") +
+  # Make box of facet white
+  theme(strip.background = element_rect(fill = "white"),
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
+  ggtitle("Electricity balance")
+
+print(pGenComp)
+
+ggsave("electricity_balance_side-by-side.png", width = 180, height = 100, units = "mm", dpi = 300, bg = "white")
+
+```
+
+# Market values and sectoral electricity prices
+
+```{r market values sectoral prices}
+
+pyReportingDirs <- pyReportingDirsFlex
+
+# Supply side market values
+dataMarketValuePyPSAcutoff <- readPyPSAcsv(
+    paths = file.path(pyReportingDirs, "market_values_supply_cutoff.csv")) %>%
+  rename(carrier = general_carrier) %>%
+  revalue.levels(carrier = py2genTech) %>%
+  group_by(year, region, carrier, iteration) %>%
+  summarise(value = unique(value)) %>%
+  order.levels(carrier = names(namesTech))
+
+dataGenPyPSA <- readPyPSAcsv(
+  paths = file.path(pyReportingDirs, "energy_balance_ac.csv")) %>%
+  rename(carrier = general_carrier) %>%
+  revalue.levels(carrier = py2genTech) %>%
+  filter(component == "Generator", value >0) %>%
+  group_by(year, region, iteration) %>%
+  mutate(share = value / sum(value)) %>%
+  select(year, region, carrier, iteration, share)
+
+data.plot <- dataMarketValuePyPSAcutoff %>%
+  left_join(dataGenPyPSA, by = c("year", "region", "carrier", "iteration")) %>%
+  filter(year %in% years) %>%
+  filter(share > 0.001) %>%
+  mutate(scenario = "flex")
+
+data.price <- readPyPSAcsv(
+  paths = file.path(pyReportingDirs, "load_prices_cutoff.csv")) %>%
+  rename(carrier = general_carrier) %>%
+  revalue.levels(carrier = py2genTech) %>%
+  filter(year %in% years, carrier == "total") %>%
+  mutate(scenario = "flex")
+
+# Again 
+pyReportingDirs <- pyReportingDirsNoFlex
+
+# Supply side market values
+dataMarketValuePyPSAcutoff <- readPyPSAcsv(
+    paths = file.path(pyReportingDirs, "market_values_supply_cutoff.csv")) %>%
+  rename(carrier = general_carrier) %>%
+  revalue.levels(carrier = py2genTech) %>%
+  group_by(year, region, carrier, iteration) %>%
+  summarise(value = unique(value)) %>%
+  order.levels(carrier = names(namesTech))
+
+dataGenPyPSA <- readPyPSAcsv(
+  paths = file.path(pyReportingDirs, "energy_balance_ac.csv")) %>%
+  rename(carrier = general_carrier) %>%
+  revalue.levels(carrier = py2genTech) %>%
+  filter(component == "Generator", value >0) %>%
+  group_by(year, region, iteration) %>%
+  mutate(share = value / sum(value)) %>%
+  select(year, region, carrier, iteration, share)
+
+data.plot.noFlex <- dataMarketValuePyPSAcutoff %>%
+  left_join(dataGenPyPSA, by = c("year", "region", "carrier", "iteration")) %>%
+  filter(year %in% years) %>%
+  filter(share > 0.001) %>%
+  mutate(scenario = "noFlex")
+
+data.price.noFlex <- readPyPSAcsv(
+  paths = file.path(pyReportingDirs, "load_prices_cutoff.csv")) %>%
+  rename(carrier = general_carrier) %>%
+  revalue.levels(carrier = py2genTech) %>%
+  filter(year %in% years, carrier == "total") %>%
+  mutate(scenario = "noFlex")
+
+data.plot <- bind_rows(data.plot, data.plot.noFlex)
+data.price <- bind_rows(data.price, data.price.noFlex)
+
+pMarketValueYear <- ggplot() +
+  geom_line(data = data.plot, aes(x = year, y = value, color = carrier)) +
+  scale_color_manual(
+    name = "Technology",
+    values = colorsTech,
+    labels = namesTech,
+  ) +
+  new_scale_color() +
+  geom_line(data = data.price,
+            aes(x = year, y = value, color = "Average price"),
+            linewidth = 1) +
+    scale_color_manual(
+      name = NULL,
+      values = c("Average price" = "black")) +
+  labs(x = "Year", y = "Market value ($/MWh)") +
+  facet_wrap(~ scenario, ncol = 2,
+    labeller = labeller(scenario = c("flex" = "With demand-side flexibility", "noFlex" = "Without demand-side flexibility")))
+
+print(pMarketValueYear)
+
+# Demand-side electricity prices
+dataSectoralPrices <- readPyPSAcsv(
+  paths = file.path(pyReportingDirs, "load_prices_cutoff.csv")) %>%
+  rename(carrier = general_carrier) %>%
+  revalue.levels(carrier = py2genTech) %>%
+  filter(!(carrier %in% c("total", "ev_freight")))
+
+data.plot <- dataSectoralPrices %>%
+  filter(year %in% years)
+
+pSectoralPrices <- ggplot() +
+  geom_line(data = data.plot,
+            aes(x = year, y = value, color = carrier)) +
+  scale_color_manual(
+    name = "Sector",
+    values = colorsTech,
+    labels = namesTech,
+  ) +
+  new_scale_color() +
+  geom_line(data = data.price,
+            aes(x = year, y = value, color = "Average price"),
+            linewidth = 1) +
+  scale_color_manual(
+    name = NULL,
+    values = c("Average price" = "black")) +
+  labs(x = "Year", y = "Electricity price ($/MWh)") +
+  scale_y_continuous(limits = c(0, NA))
+
+```
+
+```{r}
+
+# Function to create market values plot
+create_market_values_plot <- function(pyReportingDirsFlex, pyReportingDirsNoFlex, years, 
+                                    py2genTech, namesTech, colorsTech) {
+  
+  # Helper function to process market value data for a scenario
+  process_market_value_data <- function(pyReportingDirs, scenario_name) {
+    # Supply side market values
+    dataMarketValuePyPSAcutoff <- readPyPSAcsv(
+      paths = file.path(pyReportingDirs, "market_values_supply_cutoff.csv")) %>%
+      rename(carrier = general_carrier) %>%
+      revalue.levels(carrier = py2genTech) %>%
+      group_by(year, region, carrier, iteration) %>%
+      summarise(value = unique(value), .groups = "drop") %>%
+      order.levels(carrier = names(namesTech))
+    
+    # Generation data
+    dataGenPyPSA <- readPyPSAcsv(
+      paths = file.path(pyReportingDirs, "energy_balance_ac.csv")) %>%
+      rename(carrier = general_carrier) %>%
+      revalue.levels(carrier = py2genTech) %>%
+      filter(component == "Generator", value > 0) %>%
+      group_by(year, region, iteration) %>%
+      mutate(share = value / sum(value)) %>%
+      select(year, region, carrier, iteration, share)
+    
+    # Market value plot data
+    data.plot <- dataMarketValuePyPSAcutoff %>%
+      left_join(dataGenPyPSA, by = c("year", "region", "carrier", "iteration")) %>%
+      filter(year %in% years) %>%
+      filter(share > 0.001) %>%
+      mutate(scenario = scenario_name)
+    
+    # Price data
+    data.price <- readPyPSAcsv(
+      paths = file.path(pyReportingDirs, "load_prices_cutoff.csv")) %>%
+      rename(carrier = general_carrier) %>%
+      revalue.levels(carrier = py2genTech) %>%
+      filter(year %in% years, carrier == "total") %>%
+      mutate(scenario = scenario_name)
+    
+    return(list(plot_data = data.plot, price_data = data.price))
+  }
+  
+  # Process data for both scenarios
+  flex_data <- process_market_value_data(pyReportingDirsFlex, "flex")
+  noFlex_data <- process_market_value_data(pyReportingDirsNoFlex, "noFlex")
+  
+  # Combine data
+  data.plot <- bind_rows(flex_data$plot_data, noFlex_data$plot_data)
+  data.price <- bind_rows(flex_data$price_data, noFlex_data$price_data)
+  
+  # Create plot
+  pMarketValueYear <- ggplot() +
+    geom_line(data = data.plot, aes(x = year, y = value, color = carrier)) +
+    scale_color_manual(
+      name = "Technology",
+      values = colorsTech,
+      labels = namesTech
+    ) +
+    new_scale_color() +
+    geom_line(data = data.price,
+              aes(x = year, y = value, color = "Average price"),
+              linewidth = 1) +
+    scale_color_manual(
+      name = NULL,
+      values = c("Average price" = "black")) +
+    labs(x = "Year", y = "Market value ($/MWh)") +
+    facet_wrap(~ scenario, ncol = 2,
+               labeller = labeller(scenario = c("flex" = "With demand-side flexibility", 
+                                               "noFlex" = "Without demand-side flexibility"))) +
+    theme(strip.background = element_rect(fill = "white")) +
+    background_grid(major = "y", minor = "none", colour.major = "gray80", size.major = 0.25)
+  
+  return(list(plot = pMarketValueYear, data = list(plot_data = data.plot, price_data = data.price)))
+}
+
+# Function to create sectoral prices plot
+create_sectoral_prices_plot <- function(pyReportingDirsFlex, pyReportingDirsNoFlex, years,
+  py2genTech, namesTech, colorsTech, data.price = NULL) {
+
+  # Read sectoral prices data for both scenarios
+  process_sectoral_prices_data <- function(pyReportingDirs, scenario_name) {
+    dataSectoralPrices <- readPyPSAcsv(
+      paths = file.path(pyReportingDirs, "load_prices_cutoff.csv")) %>%
+      rename(carrier = general_carrier) %>%
+      revalue.levels(carrier = py2genTech) %>%
+      filter(!(carrier %in% c("total", "ev_freight"))) %>%
+      filter(year %in% years) %>%
+      mutate(scenario = scenario_name)
+
+    # Price data
+    data.price <- readPyPSAcsv(
+      paths = file.path(pyReportingDirs, "load_prices_cutoff.csv")) %>%
+      rename(carrier = general_carrier) %>%
+      revalue.levels(carrier = py2genTech) %>%
+      filter(year %in% years, carrier == "total") %>%
+      mutate(scenario = scenario_name)
+    
+    return(list(plot_data = dataSectoralPrices, price_data = data.price))
+  }
+  
+  # Read sectoral prices data
+  dataSectoralPricesFlex <- process_sectoral_prices_data(pyReportingDirsFlex, "flex")
+  dataSectoralPricesNoFlex <- process_sectoral_prices_data(pyReportingDirsNoFlex, "noFlex")
+
+  # Combine data
+  data.plot <- bind_rows(dataSectoralPricesFlex$plot_data, dataSectoralPricesNoFlex$plot_data)
+  data.price <- bind_rows(dataSectoralPricesFlex$price_data, dataSectoralPricesNoFlex$price_data)
+
+  # Create plot
+  pSectoralPrices <- ggplot() +
+    geom_line(data = data.plot,
+              aes(x = year, y = value, color = carrier)) +
+    scale_color_manual(
+      name = "Sector",
+      values = colorsTech,
+      labels = namesTech
+    ) +
+    new_scale_color() +
+    geom_line(data = data.price,
+              aes(x = year, y = value, color = "Average price"),
+              linewidth = 1) +
+    scale_color_manual(
+      name = NULL,
+      values = c("Average price" = "black")) +
+    labs(x = "Year", y = "Electricity price ($/MWh)") +
+    scale_y_continuous(limits = c(0, NA)) +
+    facet_wrap(~ scenario, ncol = 2,
+               labeller = labeller(scenario = c("flex" = "With demand-side flexibility", 
+                                               "noFlex" = "Without demand-side flexibility"))) +
+    theme(strip.background = element_rect(fill = "white")) +
+    background_grid(major = "y", minor = "none", colour.major = "gray80", size.major = 0.25)
+
+  
+  return(list(plot = pSectoralPrices, data = list(sectoral_data = data.plot, price_data = data.price)))
+}
+ 
+# Create market values plot
+market_results <- create_market_values_plot(
+  pyReportingDirsFlex = pyReportingDirsFlex,
+  pyReportingDirsNoFlex = pyReportingDirsNoFlex,
+  years = years,
+  py2genTech = py2genTech,
+  namesTech = namesTech,
+  colorsTech = colorsTech
+)
+
+# Create sectoral prices plot
+sectoral_results <- create_sectoral_prices_plot(
+  pyReportingDirsFlex = pyReportingDirsFlex,
+  pyReportingDirsNoFlex = pyReportingDirsNoFlex,
+  years = years,
+  py2genTech = py2genTech,
+  namesTech = namesTech,
+  colorsTech = colorsTech,
+)
+
+p <- plot_grid(market_results$plot, sectoral_results$plot, ncol = 1, align = "v")
+
+print(p)
+ggsave("market_values_sectoral_prices.png", plot = p, width = 180, height = 100, units = "mm", dpi = 300, bg = "white")
+
+```
