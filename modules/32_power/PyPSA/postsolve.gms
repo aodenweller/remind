@@ -494,5 +494,45 @@ if ((sm_PyPSA_eq eq 1),
 );
 $endif
 
+p32_load(ttot,regPy32) = 
+    !! Demand for electricity from final energy sectors
+    sum(se2fe(enty2,enty3,te)$(sameas(enty2,"seel")), vm_demSe.l(ttot,regPy32,enty2,enty3,te) )
+    !! Add additional electricity load from electrolytic hydrogen production
+    + v32_load_sector.l(ttot,regPy32,"electrolysis")
+    !! Add electricity demand for fuel extraction
+    + sum(pe2rlf(enty3,rlf2), (pm_fuExtrOwnCons(regPy32, "seel", enty3) * vm_fuExtr.l(ttot,regPy32,enty3,rlf2))$(pm_fuExtrOwnCons(regPy32, "seel", enty3) gt 0))$(ttot.val > 2005) !! do not use in 2005 because this demand is not contained in 05_initialCap
+    !! Subtract electricity supply due to co-production of secondary energy
+    !! This can also be negative, in which case it is added to the load
+    - sum(pc2te(enty,entySe(enty3),te,enty2)$(sameas(enty2,"seel")), 
+            pm_prodCouple(regPy32,enty,enty3,te,enty2) * vm_prodSe.l(ttot,regPy32,enty,enty3,te) )
+    !! Subtract electricity supply due to co-production of final energy
+    !! This can also be negative, in which case it is added to the load
+    - sum(pc2te(enty4,entyFe(enty5),te,enty2)$(sameas(enty2,"seel")), 
+            pm_prodCouple(regPy32,enty4,enty5,te,enty2) * vm_prodFe.l(ttot,regPy32,enty4,enty5,te) )
+    !! Subtract electricity supply due to co-production of CCS (?)
+    !! This can also be negative, in which case it is added to the load
+    - sum(pc2te(enty,enty3,te,enty2)$(sameas(enty2,"seel")),
+            sum(teCCS2rlf(te,rlf),
+                pm_prodCouple(regPy32,enty,enty3,te,enty2) * vm_co2CCS.l(ttot,regPy32,enty,enty3,te,rlf) ) )
+;
+
+p32_load_sector(ttot,regPy32,"EV_pass") = vm_demFeForEs.l(ttot,regPy32,"feelt","eselt_pass_sm","te_eselt_pass_sm")
+    / pm_eta_conv(ttot,regPy32,"tdelt");
+p32_load_sector(ttot,regPy32,"EV_freight") = vm_demFeForEs.l(ttot,regPy32,"feelt","eselt_frgt_sm","te_eselt_frgt_sm")
+    / pm_eta_conv(ttot,regPy32,"tdelt");
+p32_load_sector(ttot,regPy32,"heatpump") = sum(in$(sameas(in, "feelhpb")),
+    vm_cesIO.l(ttot,regPy32,in)
+    + pm_cesdata(ttot,regPy32,in,"offset_quantity")
+) / pm_eta_conv(ttot,regPy32,"tdels");
+p32_load_sector(ttot,regPy32,"resistive") = sum(in$(sameas(in, "feelrhb")),
+    vm_cesIO.l(ttot,regPy32,in)
+    + pm_cesdata(ttot,regPy32,in,"offset_quantity")
+) / pm_eta_conv(ttot,regPy32,"tdels");
+
+p32_load_sector(ttot,regPy32,"AC") = p32_load(ttot,regPy32) - 
+    p32_load_sector(ttot,regPy32,"EV_pass") - 
+    p32_load_sector(ttot,regPy32,"EV_freight") - 
+    p32_load_sector(ttot,regPy32,"heatpump") - 
+    p32_load_sector(ttot,regPy32,"resistive");
 
 *** EOF ./modules/32_power/PyPSA/postsolve.gms

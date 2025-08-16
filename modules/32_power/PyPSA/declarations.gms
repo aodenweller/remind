@@ -145,6 +145,8 @@ parameters
     !! Parameters for the PyPSA coupling reporting
     p32_PeakResLoadShadowPrice(ttot,all_regi,all_te)                "PyPSA reporting: Shadow price of peak residual load constraint, used for plotting LCOEs vs. market values [T$/TWa]"
     p32_ElecBalance(ttot,all_regi,rep32)                            "PyPSA reporting: Electricity balance [TWa]"
+    p32_load(ttot,all_regi)                                         "PyPSA reporting: Electricity load [TWa]"
+    p32_load_sector(ttot,all_regi,loadPy32)                         "PyPSA reporting: Sectoral electricity loads [TWa]"
 ;
 
 *** Positive variables for the PyPSA coupling
