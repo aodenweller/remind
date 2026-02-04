@@ -1,6 +1,6 @@
 ---
 title: "REMIND-PyPSA-Eur Validation"
-author: "Adrian Odenweller, Johannes Hampp"
+author: "Adrian Odenweller"
 date: "`r format(Sys.time())`"
 output:
   pdf_document:
@@ -6001,9 +6001,9 @@ plt.close(fig);
 
 dataCapexREMIND <- readREMINDgdx(
     paths = rmFiles,
-    gdxVar = "p32_capCostwAdjCost",
-    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "p32_capCostwAdjCost"),
-    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+    gdxVar = "vm_costTeCapital",
+    columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "value"),
+    colFilter = list("region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = FALSE,
     recalcUnit = 1E-3*trUSDpTW2USDpMW) %>%
   filter(iteration %in% pyIterations)
@@ -6013,7 +6013,7 @@ dataWeightGenREMIND <- readREMINDgdx(
   paths = rmFiles,
   gdxVar = "p32_weightGen",
   columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "weight"),
-  colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+  colFilter = list("region" = regions, "technology" = names(rm2genTech)),
   restoreZeros = FALSE)
 
 # Weights for storage technologies
@@ -6021,7 +6021,7 @@ dataWeightStorREMIND <- readREMINDgdx(
   paths = rmFiles,
   gdxVar = "p32_weightStor",
   columns = c("ttot" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "weight"),
-  colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+  colFilter = list("region" = regions, "technology" = names(rm2genTech)),
   restoreZeros = FALSE)
 
 # Concatenate weights
@@ -6034,7 +6034,7 @@ dataCapexWeightedREMIND <- dataCapexREMIND %>%
   revalue.levels(technology = rm2genTech) %>%
   group_by(year, technology, iteration) %>%
   mutate(weight = if_else(is.na(weight), 1, weight)) %>%
-  summarise(capex = sum(p32_capCostwAdjCost * weight) / sum(weight)) %>%
+  summarise(capex = sum(value * weight) / sum(weight)) %>%
   order.levels(technology = names(colorsTech)) %>%
   filter(iteration %in% pyIterations)
 
@@ -6068,13 +6068,16 @@ for (y in cost_years) {
 
 dataPlotPyPSA <- dataCapexPyPSA %>%
   revalue.levels(technology = costMap) %>%
-  select(technology, year, value)
+  select(technology, year, value) %>%
+  # EUR(2020) in USD(2017)
+  mutate(value = value * 0.94 * 1.13)
 
 dataPlotREMIND <- dataCapexWeightedREMIND %>%
   filter(iteration == max(iteration),
          technology %in% costMap) %>%
   select(technology, year, capex) %>%
-  rename(value = capex)
+  rename(value = capex) %>%
+  filter(year >= 2025)
 
 pTech <- ggplot() +
   geom_line(data = dataPlotREMIND, aes(x = year, y = value, color = technology, linetype = "REMIND")) +
@@ -6084,7 +6087,7 @@ pTech <- ggplot() +
                      labels = namesTech) +
   scale_linetype_manual(name = "Model",
                      values = c("REMIND" = "solid", "PyPSA-Eur" = "dashed")) +
-  labs(x = "Year", y = "Specific capital costs (USD/kW)") +
+  labs(x = "Year", y = "Specific capital costs (2017USD/kW)") +
   ylim(0,NA) +
   ggtitle("Cost comparison") +
   facet_wrap(~ technology, scales = "free", labeller = labeller(technology = namesTech))
@@ -6126,13 +6129,16 @@ for (y in cost_years) {
 
 dataPlotPyPSA <- dataCapexPyPSA %>%
   revalue.levels(technology = costMap) %>%
-  select(technology, year, value)
+  select(technology, year, value) %>%
+  # EUR(2020) in USD(2017)
+  mutate(value = value * 0.94 * 1.13)
 
 dataPlotREMIND <- dataCapexWeightedREMIND %>%
   filter(iteration == max(iteration),
          technology %in% costMap) %>%
   select(technology, year, capex) %>%
-  rename(value = capex)
+  rename(value = capex) %>%
+  filter(year >= 2025)
 
 # For electrolysis, convert USD/kW to USD/kW_el
 # Don't bother for batteries as efficiency is almost 100%
@@ -6140,15 +6146,16 @@ dataEtaConvREMIND <- readREMINDgdx(
     paths = rmFiles,
     gdxVar = "pm_eta_conv",
     columns = c("tall" = "year", "all_regi" = "region", "all_te" = "technology", "value" = "eta"),
-    colFilter = list("year" = years, "region" = regions, "technology" = names(rm2genTech)),
+    colFilter = list("region" = regions, "technology" = names(rm2genTech)),
     restoreZeros = FALSE) %>%
   filter(iteration == max(iteration),
          technology == "elh2") %>%
-  mutate(technology = "electrolysis")
+  mutate(technology = "electrolysis") %>%
+  filter(year >= 2025)
 
 dataPlotREMIND <- dataPlotREMIND %>%
   full_join(dataEtaConvREMIND) %>%
-  mutate(value = ifelse(technology == "electrolysis", value / eta, value))
+  mutate(value = ifelse(technology == "electrolysis", value * eta, value))
 
 p <- ggplot() +
   geom_line(data = dataPlotREMIND, aes(x = year, y = value, color = technology, linetype = "REMIND")) +
@@ -6158,7 +6165,7 @@ p <- ggplot() +
                      labels = namesTech) +
   scale_linetype_manual(name = "Model",
                      values = c("REMIND" = "solid", "PyPSA-Eur" = "dashed")) +
-  labs(x = "Year", y = "Specific capital costs (USD/kW and USD/kWh)") +
+  labs(x = "Year", y = "Specific capital costs (2017USD/kW and 2017USD/kWh)") +
   ylim(0, NA) +
   ggtitle("Cost comparison") +
   facet_wrap(~ technology, scales = "free", labeller = labeller(technology = namesTech))

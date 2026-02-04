@@ -271,12 +271,14 @@ $if not "%cm_learnRate%" == "off"                 fm_dataglob("learn",te)$p_new_
 $if not "%cm_inco0RegiFactor%" == "off" parameter p_new_inco0RegiFactor(all_te) / %cm_inco0RegiFactor% /;
 $if not "%cm_inco0RegiFactor%" == "off"           p_inco0(ttot,regi,te)$(p_inco0(ttot,regi,te) and p_new_inco0RegiFactor(te)) = p_new_inco0RegiFactor(te) * p_inco0(ttot,regi,te);
 
-*AO* eternal temporary fix: pypsa battery charger initial costs at 250 $/kW
-p_inco0(ttot,all_regi,"btin")$(ttot.val ge 2015 and ttot.val le 2030) = 250;
+*AO* eternal temporary fix: pypsa battery charger initial costs at 200 $/kW
+p_inco0(ttot,all_regi,"btin")$(ttot.val ge 2015 and ttot.val le 2030) = 200;
 
-*AO* eternal temporary fix: pypsa battery storage initial costs at 200 $/kWh
-p_inco0(ttot,all_regi,"btstor")$(ttot.val ge 2015 and ttot.val le 2030) = 200;
+*AO* eternal temporary fix: pypsa battery storage initial costs at 175 $/kWh
+p_inco0(ttot,all_regi,"btstor")$(ttot.val ge 2015 and ttot.val le 2030) = 175;
 
+*AO* Increase initial PV costs by 20% for Germany
+p_inco0(ttot,"DEU","spv")$(ttot.val eq 2015 or ttot.val eq 2020) = 1.2 * p_inco0(ttot,"DEU","spv");
 
 ***---------------------------------------------------------------------------
 *** Unit uniformisation
@@ -520,6 +522,22 @@ $ifthen.REG_techcosts "%cm_techcosts%" == "REG"   !! cm_techcosts REG
       );
     );
 $endif.REG_techcosts
+
+* AO* Hard-code battery storage costs for Germany
+* Main source: BNEF total cost for BESS in 2024 are 275 $/kWh
+* Add some costs for EPC
+pm_inco0_t("2025","DEU","btstor") = 0.18;
+pm_inco0_t("2030","DEU","btstor") = 0.13;
+pm_inco0_t("2035","DEU","btstor") = 0.095;
+pm_inco0_t("2040","DEU","btstor") = 0.08;
+pm_inco0_t("2045","DEU","btstor") = 0.065;
+pm_inco0_t("2050","DEU","btstor") = 0.055;
+pm_inco0_t("2055","DEU","btstor") = 0.05;
+pm_inco0_t(ttot,"DEU","btstor")$(ttot.val ge 2060) = 0.05;
+
+*AO* Hard-code battery inverter costs for Germany
+* Assume that inverter costs per kW are the same as storage per kWh
+pm_inco0_t(ttot,"DEU","btin") = pm_inco0_t(ttot,"DEU","btstor");
 
 *------------------------------------------------------------------------------------
 ***          Technology data input read-in and manipulation    END

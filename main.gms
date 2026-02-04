@@ -1359,6 +1359,11 @@ parameter
 c32_pypsa_cfg_min_load_elh2 = 0.1;  !! def = 0.1 !! regexp = is.nonnegative
 *' PyPSA config: Minimum load of electrolysis at all times
 parameter
+    c32_pypsa_cfg_ramp_elh2         "PyPSA config: Maximum ramp rate of electrolysis per time step"
+;
+c32_pypsa_cfg_ramp_elh2 = 0;  !! def = 0 !! regexp = is.nonnegative
+*' PyPSA config: Maximum ramp rate of electrolysis per time step, if 0 no ramping constraint
+parameter
     c32_pypsa_trade_max        "Maximum share of electricity imports and exports relative to total electricity production"
 ;
 c32_pypsa_trade_max = 1;  !! def = 1 !! regexp = is.numeric

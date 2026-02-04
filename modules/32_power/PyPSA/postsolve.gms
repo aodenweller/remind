@@ -242,7 +242,8 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startI
         c32_pypsa_cfg_perturb,  !! Automatically set if c32_pypsa_anticipation=="diffQuot"
         c32_pypsa_cfg_EVs,
         c32_pypsa_cfg_heating,
-        c32_pypsa_cfg_min_load_elh2
+        c32_pypsa_cfg_min_load_elh2,
+        c32_pypsa_cfg_ramp_elh2
     ;
 
     !! Export REMIND data for PyPSA (REMIND2PyPSAEUR.gdx)
@@ -258,7 +259,7 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startI
         !! Marginal cost components
         pm_eta_conv, pm_dataeta, p32_PEPriceAvg, pe2se, p_priceCO2, pm_emifac,
         !! Weights to calculate weighted averages
-        !! TODO: Remove in favour of 1:1 technology mapping
+        !! TODO: Replace with 1:1 technology mapping
         p32_weightGen, p32_weightStor, p32_weightPEprice,
         !! Pre-installed capacities
         p32_capAvg,
@@ -528,11 +529,20 @@ p32_load_sector(ttot,regPy32,"resistive") = sum(in$(sameas(in, "feelrhb")),
     vm_cesIO.l(ttot,regPy32,in)
     + pm_cesdata(ttot,regPy32,in,"offset_quantity")
 ) / pm_eta_conv(ttot,regPy32,"tdels");
+p32_load_sector(ttot,regPy32,"electrolysis") =
+    !! The bracket contains additional hydrogen load (TWa_H2),
+    !! i.e. hydrogen production from electrolysis minus
+    !! hydrogen demand for re-electrification in hydrogen turbines
+    ( vm_prodSe.l(ttot,regPy32,"seel","seh2","elh2")
+    - vm_demSe.l(ttot,regPy32,"seh2","seel","h2turb") )
+    !! Divide by efficiency to get add. electricity load (TWa_elec)
+    / pm_eta_conv(ttot,regPy32,"elh2");
 
 p32_load_sector(ttot,regPy32,"AC") = p32_load(ttot,regPy32) - 
     p32_load_sector(ttot,regPy32,"EV_pass") - 
     p32_load_sector(ttot,regPy32,"EV_freight") - 
     p32_load_sector(ttot,regPy32,"heatpump") - 
-    p32_load_sector(ttot,regPy32,"resistive");
+    p32_load_sector(ttot,regPy32,"resistive") - 
+    p32_load_sector(ttot,regPy32,"electrolysis");
 
 *** EOF ./modules/32_power/PyPSA/postsolve.gms

@@ -342,7 +342,6 @@ q32_flexAdj(t,regi,te)$(teFlexTax(te))..
 
 *** Calculate electricity load passed to PyPSA
 *** This is based on the harmonisation of the electricity balance equation of REMIND and PyPSA-Eur.
-*** Additional electricity demand for hydrogen production is included separately.
 q32_load(t,regi,enty2)$(tPy32(t) and regPy32(regi) and sameas(enty2,"seel"))..
     v32_load(t,regi)
     =e=
@@ -357,7 +356,7 @@ q32_load(t,regi,enty2)$(tPy32(t) and regPy32(regi) and sameas(enty2,"seel"))..
     - sum(pc2te(enty,entySe(enty3),te,enty2), 
             pm_prodCouple(regi,enty,enty3,te,enty2) * vm_prodSe(t,regi,enty,enty3,te) )
     !! Subtract electricity supply due to co-production of final energy
-    !! This can also be negative, in which case it is added to the load
+    !! This can also be negative, in xwhich case it is added to the load
     - sum(pc2te(enty4,entyFe(enty5),te,enty2), 
             pm_prodCouple(regi,enty4,enty5,te,enty2) * vm_prodFe(t,regi,enty4,enty5,te) )
     !! Subtract electricity supply due to co-production of CCS (?)
@@ -368,7 +367,7 @@ q32_load(t,regi,enty2)$(tPy32(t) and regPy32(regi) and sameas(enty2,"seel"))..
 ;
 
 *** Require that at least 75% of the usable electricity output from comes from primary energy
-*** This should not be binding, but makes sure to constrain the solver to a meaningful solution
+*** This should not be binding, but helps the solver
 q32_loadMin(t,regi,enty2)$(tPy32(t) and regPy32(regi) and sameas(enty2,"seel"))..
     sum(pe2se(enty,enty2,te), vm_prodSe(t,regi,enty,enty2,te) )
     =g=
@@ -523,6 +522,45 @@ $endif.c32_pypsa_anticipation
 ;
 $endif.markup_supply
 
+$ontext
+$ifthen.markup_supply "%cm_pypsa_markup_supply%" == "on"
+q32_MarkUp(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (sm_PyPSA_eq eq 1))..
+	vm_PyPSAMarkup(t,regi,te)
+	=e=
+$ifthen.c32_pypsa_anticipation "%c32_pypsa_anticipation%" == "off"
+    ( p32_PyPSA_MarketValueSupply(t,regi,te) * sm_TWa_2_MWh / 1e12 - max(0, min(2, pm_SEPrice(t,regi,"seel"))) )
+$elseif.c32_pypsa_anticipation "%c32_pypsa_anticipation%" == "manual"
+    ( p32_PyPSA_MarketValueSupply(t,regi,te) * sm_TWa_2_MWh / 1e12 - max(0, min(2, pm_SEPrice(t,regi,"seel"))) ) * s32_anticipationFactorFadeOut * p32_anticipation_MV(regi,te) * ( v32_shPe2seel(t,regi,te) - p32_PyPSA_shPe2seel(t,regi,te) )
+* $elseif.c32_pypsa_anticipation "%c32_pypsa_anticipation%" == "diffQuot"
+*    ( p32_PyPSA_MarkupSupplyAvg(t,regi,te) + sum(tePy32_2, p32_PyPSA_DQ_MarkupSupply(t,regi,te,tePy32_2) * ( 1E6* vm_cap(t,regi,tePy32_2,"1") - p32_PyPSA_OptCap(t,regi,tePy32_2) ) ) )
+    !! Manual anticipation copy-pasted here for now
+*    ( p32_PyPSA_MarkupSupplyAvg(t,regi,te) + abs(p32_PyPSA_MarkupSupplyAvg(t,regi,te)) * s32_anticipationFactorFadeOut * p32_anticipation_MV(regi,te) * ( v32_shPe2seel(t,regi,te) - p32_PyPSA_shPe2seel(t,regi,te) ) )
+$endif.c32_pypsa_anticipation
+*  * sm_TWa_2_MWh / 1e12
+;
+$endif.markup_supply
+
+* Relative markups
+$ifthen.markup_supply "%cm_pypsa_markup_supply%" == "on"
+q32_MarkUp(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te) AND (sm_PyPSA_eq eq 1))..
+	vm_PyPSAMarkup(t,regi,te)
+	=e=
+$ifthen.c32_pypsa_anticipation "%c32_pypsa_anticipation%" == "off"
+*    ( ( p32_PyPSA_MarketValueSupply(t,regi,te) / p32_PyPSA_AverageElectricityPrice(t,regi) - 1 ) * max(0, min(2, pm_SEPrice(t,regi,"seel"))) )
+$elseif.c32_pypsa_anticipation "%c32_pypsa_anticipation%" == "manual"
+    (          ( p32_PyPSA_MarketValueSupply(t,regi,te) / p32_PyPSA_AverageElectricityPrice(t,regi) - 1 )
+        + abs( ( p32_PyPSA_MarketValueSupply(t,regi,te) / p32_PyPSA_AverageElectricityPrice(t,regi) - 1 ) ) * s32_anticipationFactorFadeOut * p32_anticipation_MV(regi,te) * ( v32_shPe2seel(t,regi,te) - p32_PyPSA_shPe2seel(t,regi,te) )
+    ) * max(0, min(2, pm_SEPrice(t,regi,"seel")))
+* $elseif.c32_pypsa_anticipation "%c32_pypsa_anticipation%" == "diffQuot"
+*    ( p32_PyPSA_MarkupSupplyAvg(t,regi,te) + sum(tePy32_2, p32_PyPSA_DQ_MarkupSupply(t,regi,te,tePy32_2) * ( 1E6* vm_cap(t,regi,tePy32_2,"1") - p32_PyPSA_OptCap(t,regi,tePy32_2) ) ) )
+    !! Manual anticipation copy-pasted here for now
+*    ( p32_PyPSA_MarkupSupplyAvg(t,regi,te) + abs(p32_PyPSA_MarkupSupplyAvg(t,regi,te)) * s32_anticipationFactorFadeOut * p32_anticipation_MV(regi,te) * ( v32_shPe2seel(t,regi,te) - p32_PyPSA_shPe2seel(t,regi,te) ) )
+$endif.c32_pypsa_anticipation
+*  * sm_TWa_2_MWh / 1e12
+;
+$endif.markup_supply
+$offtext
+
 ***------------------------------------------------------------
 ***            PyPSA-Eur to REMIND: Peak residual load
 ***------------------------------------------------------------
@@ -643,6 +681,8 @@ q32_MarkUpDemand(t,regi,loadPyMV32)$(tPy32(t) AND regPy32(regi) AND (sm_PyPSA_eq
     vm_PyPSAMarkupDemand(t,regi,loadPyMV32)
     =e=
     p32_PyPSA_MarkupDemandAvg(t,regi,loadPyMV32) * sm_TWa_2_MWh / 1e12
+    !!p32_PyPSA_SectoralElectricityPrices(t,regi,loadPyMV32) * sm_TWa_2_MWh / 1e12 - max(0, min(2, pm_SEPrice(t,regi,"seel")))
+    !!( p32_PyPSA_SectoralElectricityPrices(t,regi,loadPyMV32) / p32_PyPSA_AverageElectricityPrice(t,regi) - 1 ) * max(0, min(2, pm_SEPrice(t,regi,"seel")))
 ;
 $endif.markup_demand
 

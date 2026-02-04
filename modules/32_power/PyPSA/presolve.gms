@@ -36,6 +36,8 @@ if ((sm_PyPSA_eq eq 1),
     q32_h2turbVREcapfromTestor.m(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
     q32_h2turbVREcapfromTestorUp.l(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
     q32_h2turbVREcapfromTestorUp.m(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
+    q32_elh2VREcapfromTestor.l(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
+    q32_elh2VREcapfromTestor.m(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
     q32_limitCapTeGrid.l(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
     q32_limitCapTeGrid.m(t,regi)$(tPy32(t) and regPy32(regi)) = 0;
     q32_shStor.l(t,regi,teVRE)$(tPy32(t) and regPy32(regi)) = 0;

@@ -18,6 +18,11 @@ cp REMIND2PyPSAEUR.gdx REMIND2PyPSAEUR_${iteration}.gdx
 mkdir -p ${directory}/resources/${scenario}/i${iteration}
 cp REMIND2PyPSAEUR.gdx ${directory}/resources/${scenario}/i${iteration}/REMIND2PyPSAEUR.gdx
 cp REMIND2PyPSAEUR_config.gdx ${directory}/resources/${scenario}/i${iteration}/REMIND2PyPSAEUR_config.gdx
+# If EDGE-T fleet file exists, copy it to PyPSA resources directory
+fleet_file="EDGE-T/4_Output/fleetVehiclesPerTech.RDS"
+if [[ -f "$fleet_file" ]]; then
+    cp "$fleet_file" "${directory}/resources/${scenario}/i${iteration}/fleetVehiclesPerTech.RDS"
+fi
 # Load conda, surpressing output, and activate environment
 # TODO: This should probably happen in .profile or .bashrc or so
 module load anaconda/2024.10 > /dev/null 2>&1
