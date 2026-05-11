@@ -21,15 +21,33 @@
 *' ####### Power Sector
 
 $ifThen.tech_bounds_2025 "%cm_tech_bounds_2025%" == "on"
+*' Set bounds for renewable power capacity in 2025 based on recent and historic growth rates
 *' This limits wind and solar PV capacity additions for 2025 in light of recent slow developments as of 2023.
 *' Upper bound is double the historic maximum capacity addition in 2011-2020.
 *' In addition: Limit solar PV capacity to 120 GW in 2025 (2023-2027 average) given that we are at only 76 GW PV in 2023
 loop(regi$(sameAs(regi,"DEU")),
   vm_deltaCap.up("2025",regi,"windon","1")=2*smax(tall$(tall.val ge 2011 and tall.val le 2020), pm_delta_histCap(tall,regi,"windon"));
   vm_deltaCap.up("2025",regi,"spv","1")=2*smax(tall$(tall.val ge 2011 and tall.val le 2020), pm_delta_histCap(tall,regi,"spv"));
-  vm_cap.up("2025",regi,"spv","1")=0.12;
+
+*' 2025 lower bounds for VRE capacities based on installed capacity by 2024 and recent yearly growth rates
+  vm_cap.lo("2025",regi,"spv","1")=0.096+0.014;
+  vm_cap.lo("2025",regi,"windon","1")=0.062+0.003;
+  vm_cap.lo("2025",regi,"windoff","1")=0.009+0.001;
 );
 $endIf.tech_bounds_2025
+
+*' make assumptions on minimum renewable power and heat pump growth for Germany between 2025 and 2030 and distinguish two different scenarios ("Current Policies" and "Optimistic")
+$ifthen.cm_VREminCap_Ger "%cm_VREminCap_Ger%" == "CurrPol"
+    vm_deltaCap.lo("2030",regi,"windon","1")$(sameAs(regi,"DEU")) = 6/1000;
+    vm_deltaCap.lo("2030",regi,"windoff","1")$(sameAs(regi,"DEU")) = 2/1000;
+    vm_cap.lo("2030",regi,"geohe","1")$(sameAs(regi,"DEU")) = 7/1000;
+$endIf.cm_VREminCap_Ger
+
+$ifthen.cm_VREminCap_Ger "%cm_VREminCap_Ger%" == "Opt"
+    vm_deltaCap.lo("2030",regi,"windon","1")$(sameAs(regi,"DEU")) = 7.5/1000;
+    vm_deltaCap.lo("2030",regi,"windoff","1")$(sameAs(regi,"DEU")) = 3/1000;
+    vm_cap.lo("2030",regi,"geohe","1")$(sameAs(regi,"DEU")) = 7/1000;
+$endIf.cm_VREminCap_Ger
 
 
 *' These bounds account for historic gas power development.
@@ -181,21 +199,29 @@ vm_cap.up("2020",regi,"pc","1")$((cm_startyear le 2020) and (sameas(regi,"UKI"))
 $IFTHEN.NucRegiPol not "%cm_NucRegiPol%" == "off" 
 *' Germany Nuclear phase-out
     vm_cap.up(t,regi,"tnrs","1")$((t.val ge 2025) and (t.val ge cm_startyear) and (sameas(regi,"DEU"))) = 1E-6;
+    vm_cap.lo(t,regi,"tnrs","1")$((t.val ge 2025) and (t.val ge cm_startyear) and (sameas(regi,"DEU"))) = 0;
 *' ESC -> no new Nuclear capacity (Italy had a plebiscite for this and Greece should not have any new capacity)
     vm_deltaCap.up(t,regi,"tnrs","1")$((t.val ge 2020) and (t.val ge cm_startyear) and (sameas(regi,"ESC"))) = 0;
+*' Neither France, ENC, NEN, ECS, ESW or ECE currently plan to early-retire any of their current fleet until 2050
+    vm_capEarlyReti.up(t,regi,"tnrs") $ ( (t.val ge cm_startyear) AND (t.val le 2050) AND (sameas(regi,"FRA")) ) = 1e-3;
+    vm_capEarlyReti.up(t,regi,"tnrs") $ ( (t.val ge cm_startyear) AND (t.val le 2050) AND (sameas(regi,"ENC")) ) = 1e-3;
+    vm_capEarlyReti.up(t,regi,"tnrs") $ ( (t.val ge cm_startyear) AND (t.val le 2050) AND (sameas(regi,"NEN")) ) = 1e-3;
+    vm_capEarlyReti.up(t,regi,"tnrs") $ ( (t.val ge cm_startyear) AND (t.val le 2050) AND (sameas(regi,"ECS")) ) = 1e-3;
+    vm_capEarlyReti.up(t,regi,"tnrs") $ ( (t.val ge cm_startyear) AND (t.val le 2050) AND (sameas(regi,"ESW")) ) = 1e-3;
+    vm_capEarlyReti.up(t,regi,"tnrs") $ ( (t.val ge cm_startyear) AND (t.val le 2050) AND (sameas(regi,"ECE")) ) = 1e-3;
 $ENDIF.NucRegiPol  
 
 *' Extended nuclear policies:
 $IFTHEN.proNucRegiPol not "%cm_proNucRegiPol%" == "off" 
 *' Pro nuclear countries tend to keep nuclear production by political decision
 *' assuming France would keep at least 80% of its 2015 nuclear capacity in the future.
-vm_cap.lo(t,regi,"tnrs","1")$((t.val ge cm_startyear) and (sameas(regi,"FRA"))) = 0.8*pm_histCap("2015",regi,"tnrs");
+vm_cap.lo(t,regi,"tnrs","1")$((t.val ge cm_startyear) AND (t.val ge 2030) AND (sameas(regi,"FRA"))) = 0.8*pm_histCap("2015",regi,"tnrs");
 *' Assuming Czech Republic would keep at least its 2015 nuclear capacity in the future (CZE corresponds to 61.8% of nuclear capacity of ECE in 2015)
-vm_cap.lo(t,regi,"tnrs","1")$((t.val ge cm_startyear) and (sameas(regi,"ECE"))) = 0.618*pm_histCap("2015",regi,"tnrs");
+vm_cap.lo(t,regi,"tnrs","1")$((t.val ge cm_startyear) AND (t.val ge 2030) AND (sameas(regi,"ECE"))) = 0.618*pm_histCap("2015",regi,"tnrs");
 *' Assuming Finland would keep at least its 2015 nuclear capacity in the future (FIN corresponds to 21.6% of nuclear capacity of ENC in 2015)
-vm_cap.lo(t,regi,"tnrs","1")$((t.val ge cm_startyear) and (sameas(regi,"ENC"))) = 0.216*pm_histCap("2015",regi,"tnrs");
+vm_cap.lo(t,regi,"tnrs","1")$((t.val ge cm_startyear) AND (t.val ge 2030) AND (sameas(regi,"ENC"))) = 0.216*pm_histCap("2015",regi,"tnrs");
 *' Assuming Romania would keep at least its 2015 nuclear capacity in the future (ROU corresponds to 22.1% of nuclear capacity of ECS in 2015)
-vm_cap.lo(t,regi,"tnrs","1")$((t.val ge cm_startyear) and (sameas(regi,"ECS"))) = 0.221*pm_histCap("2015",regi,"tnrs");
+vm_cap.lo(t,regi,"tnrs","1")$((t.val ge cm_startyear) AND (t.val ge 2030) AND (sameas(regi,"ECS"))) = 0.221*pm_histCap("2015",regi,"tnrs");
 $ENDIF.proNucRegiPol 
 
 *' This accounts for different CCS policies that can be chosen for the EU subregions.

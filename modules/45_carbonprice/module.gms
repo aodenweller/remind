@@ -29,6 +29,7 @@ $Ifi "%carbonprice%" == "exogenous" $include "./modules/45_carbonprice/exogenous
 $Ifi "%carbonprice%" == "exogenousExpo" $include "./modules/45_carbonprice/exogenousExpo/realization.gms"
 $Ifi "%carbonprice%" == "expoLinear" $include "./modules/45_carbonprice/expoLinear/realization.gms"
 $Ifi "%carbonprice%" == "functionalForm" $include "./modules/45_carbonprice/functionalForm/realization.gms"
+$Ifi "%carbonprice%" == "functionalFormRegi" $include "./modules/45_carbonprice/functionalFormRegi/realization.gms"
 $Ifi "%carbonprice%" == "none" $include "./modules/45_carbonprice/none/realization.gms"
 $Ifi "%carbonprice%" == "temperatureNotToExceed" $include "./modules/45_carbonprice/temperatureNotToExceed/realization.gms"
 *###################### R SECTION END (MODULETYPES) ############################

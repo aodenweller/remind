@@ -72,7 +72,7 @@ q_costInvTeAdj(t,regi,teAdj)..
   vm_costInvTeAdj(t,regi,teAdj)
   =e=
   vm_costTeCapital(t,regi,teAdj) * (
-    (p_adj_coeff(t,regi,teAdj) * v_adjFactor(t,regi,teAdj)) + (p_adj_coeff_glob(teAdj) * v_adjFactorGlob(t,regi,teAdj))
+    p_adj_coeff(t,regi,teAdj) * v_adjFactor(t,regi,teAdj)
   )
   * (1 + 0.02/pm_ies(regi) + pm_prtp(regi) ) ** (pm_ts(t) / 2) !! This increases the investments as if the money was actually borrowed
   !! half a time step earlier, using an interest rate of pm_prtp + 2%, which is close to the model-endogenous interest rate.
@@ -117,8 +117,6 @@ q_balPe(t,regi,entyPe(enty))..
          vm_prodPe(t,regi,enty) + p_macPE(t,regi,enty)
          =e=
          sum(pe2se(enty,enty2,te), vm_demPe(t,regi,enty,enty2,te))
-*** through p_datacs one could correct for non-energetic use, e.g. bitumen for roads; set to 0 in current version, as the total oil value already contains the non-energy use part
-         + p_datacs(regi,enty) / 0.95
 ;
 
 
@@ -144,11 +142,11 @@ q_balSe(t,regi,enty2)$( entySe(enty2) AND (NOT (sameas(enty2,"seel"))) )..
     * vm_prodFe(t,regi,enty4,enty5,te)
     )
   + sum(pc2te(enty,enty3,te,enty2),
-                sum(teCCS2rlf(te,rlf),
-        pm_prodCouple(regi,enty,enty3,te,enty2)
-      * vm_co2CCS(t,regi,enty,enty3,te,rlf)
-                )
-         )
+        sum(teCCS2rlf(te,rlf),
+          pm_prodCouple(regi,enty,enty3,te,enty2)
+        * vm_co2CCS(t,regi,enty,enty3,te,rlf)
+        )
+    )
 ***   add (reused gas from waste landfills) to segas to not account for CO2
 ***   emissions - it comes from biomass
   + ( s_MtCH4_2_TWa
@@ -161,7 +159,7 @@ q_balSe(t,regi,enty2)$( entySe(enty2) AND (NOT (sameas(enty2,"seel"))) )..
   =e=
     sum(se2fe(enty2,enty3,te), vm_demSe(t,regi,enty2,enty3,te))
   + sum(se2se(enty2,enty3,te), vm_demSe(t,regi,enty2,enty3,te))
-  + sum(demSeOth2te(enty2,te), v_demSeOth(t,regi,enty2,te) ) !! *** RLDC removal
+  + sum(demSeOth2te(enty2,te), vm_demSeOth(t,regi,enty2,te) ) !! *** RLDC removal
   + vm_Xport(t,regi,enty2)
 ;
 
@@ -558,20 +556,6 @@ $endif.floorscen
 ;
 *' @stop
 
-
-***---------------------------------------------------------------------------
-*' EMF27 limits on fluctuating renewables, only turned on for special EMF27 and AWP 2 scenarios, not for SSP
-***---------------------------------------------------------------------------
-*** this is to prevent that in the long term, all solids are supplied by biomass. Residential solids can be fully supplied by biomass (-> wood pellets), so the FE residential demand is subtracted
-q_limitBiotrmod(t,regi)$(t.val > 2020)..
-    vm_prodSe(t,regi,"pebiolc","sesobio","biotrmod")
-   - sum (in$sameAs("fesob",in), vm_cesIO(t,regi,in) + pm_cesdata(t,regi,in,"offset_quantity"))
-   - sum (fe2es(entyFe,esty,teEs)$buildMoBio(esty), vm_demFeForEs(t,regi,entyFe,esty,teEs) )
-    =l=
-    (2 +  max(0,min(1,( 2100 - pm_ttot_val(t)) / ( 2100 - 2020 ))) * 3) !! 5 in 2020 and 2 in 2100
-    * vm_prodSe(t,regi,"pecoal","sesofos","coaltr")
-;
-
 ***-----------------------------------------------------------------------------
 *' Emissions result from primary to secondary energy transformation,
 *' from secondary to final energy transformation (some air pollutants), or
@@ -600,7 +584,7 @@ q_emiTe(t,regi,emiTe(enty))..
 *' transformations within the chain of CCS steps (Leakage).
 ***-----------------------------------------------------------------------------
 q_emiTeDetailMkt(t,regi,enty,enty2,te,enty3,emiMkt)$(
-                           emi2te(enty,enty2,te,enty3)
+                           emi2te(enty,enty2,te,enty3)  !! emi2te = cco2.ico2.ccsinje.co2
                         OR (pe2se(enty,enty2,te) AND sameas(enty3,"cco2")) ) ..
   vm_emiTeDetailMkt(t,regi,enty,enty2,te,enty3,emiMkt)
   =e=
@@ -609,7 +593,7 @@ q_emiTeDetailMkt(t,regi,enty,enty2,te,enty3,emiMkt)$(
         pm_emifac(t,regi,enty,enty2,te,enty3)
       * vm_demPe(t,regi,enty,enty2,te)
       )
-    + sum((ccs2Leak(enty,enty2,te,enty3),teCCS2rlf(te,rlf)),
+    + sum((ccs2Leak(enty,enty2,te,enty3),teCCS2rlf(te,rlf)), !! ccs2Leak = cco2.ico2.ccsinje.co2
         pm_emifac(t,regi,enty,enty2,te,enty3)
       * vm_co2CCS(t,regi,enty,enty2,te,rlf)
       )
@@ -701,8 +685,6 @@ q_emiAllMkt(t,regi,emi,emiMkt) ..
     )
     !! negative emissions from CDR module before re-release from CCU
   + vm_emiCdr(t,regi,emi)$( sameas(emi,"co2") AND sameas(emiMkt,"ETS") )
-    !! Exogenous emissions
-  + pm_emiExog(t,regi,emi)$( sameas(emiMkt,"other") )
     !! emissions of carbon feedstocks contained in chemicals that are not energy-related,
     !! can be positive (fossil, emitted) or negative (non-fossil, stored in products)
   + vm_emiFeedstockNoEnergy(t,regi,emi,emiMkt)
@@ -803,7 +785,7 @@ q_emiCdrAll(t,regi)..
   + ( !! pe2se-BECC 
       sum(emiBECCS2te(enty,enty2,te,enty3),vm_emiTeDetail(t,regi,enty,enty2,te,enty3)) !! positive value
         !! + gross DACC 
-      - sum(teCCS2rlf(te,rlf), vm_emiCdrTeDetail(t, regi, "dac"))) !! negative value
+      - vm_emiCdrTeDetail(t, regi, "dac")) !! negative value
       !! scaled by the fraction that gets stored geologically
      *  v_ccsShare(t,regi) 
   !! 2. gross CDR from Enhanced Weathering
@@ -817,6 +799,8 @@ q_emiCdrAll(t,regi)..
           + vm_demFeSector_afterTax(t,regi,"segasyn","fegas","cdr","ETS")) !! FE syngas
       !! multiply with ccs share 
       * v_ccsShare(t,regi) 
+  !! 5. biochar CDR 
+  -  sum(emiBiochar2te(enty,enty2,te,enty3),vm_emiTeDetail(t,regi,enty,enty2,te,enty3)) !! negative value
 
   !! ---- gross industry CDR
   !! 1. gross industry CCS-CDR  (from burning biogenic or synfuel + capturing + storing the co2)
@@ -908,15 +892,19 @@ q_budgetCO2eqGlob$(cm_emiscen=6)..
 ***---------------------------------------------------------------------------
 *' Definition of carbon capture :
 ***---------------------------------------------------------------------------
-q_balcapture(t,regi,ccs2te(ccsCo2(enty),enty2,te)) ..
-  sum(teCCS2rlf(te,rlf), v_co2capture(t,regi,enty,enty2,te,rlf))
+
+***q_balcapture(t,regi, enty,  enty2, te)
+***q_balcapture(t,regi,"cco2","ico2","ccsinjeon")
+
+q_balcapture(t,regi) ..
+  v_co2capture(t,regi)
   =e=
     !! carbon captured in energy sector
-    sum(emi2te(enty3,enty4,te2,enty),
-      vm_emiTeDetail(t,regi,enty3,enty4,te2,enty)
+    sum(emi2te(enty3,enty4,te2,"cco2"),
+      vm_emiTeDetail(t,regi,enty3,enty4,te2,"cco2")
     )
     !! carbon captured from CDR technologies in CDR module
-  + sum(teCCS2rlf(te,rlf), vm_co2capture_cdr(t,regi,enty,enty2,te,rlf))
+  + sum(teCCS2rlf(te,rlf), vm_co2capture_cdr(t,regi,"cco2","ico2",te,rlf))
     !! carbon captured from industry
   + sum(emiInd37, vm_emiIndCCS(t,regi,emiInd37))
   + sum((sefe(entySe,entyFe),emiMkt)$(
@@ -932,7 +920,7 @@ q_balcapture(t,regi,ccs2te(ccsCo2(enty),enty2,te)) ..
 *' atmosphere)
 ***---------------------------------------------------------------------------
 q_balCCUvsCCS(t,regi) ..
-  sum(teCCS2rlf(te,rlf), v_co2capture(t,regi,"cco2","ico2",te,rlf))
+  v_co2capture(t,regi)
   =e=
     sum(teCCS2rlf(te,rlf), vm_co2CCS(t,regi,"cco2","ico2",te,rlf))
   + sum(teCCU2rlf(te,rlf), vm_co2CCUshort(t,regi,"cco2","ccuco2short",te,rlf))
@@ -940,7 +928,7 @@ q_balCCUvsCCS(t,regi) ..
 ;
 
 q_ccsShare(t,regi) ..
-  sum(teCCS2rlf(te, rlf), v_co2capture(t, regi, "cco2", "ico2", "ccsinje", rlf))  * 
+  v_co2capture(t,regi)  * 
   v_ccsShare(t,regi) 
   =e=
   sum(teCCS2rlf(te, rlf), vm_co2CCS(t, regi, "cco2", "ico2", te, rlf))
@@ -949,28 +937,11 @@ q_ccsShare(t,regi) ..
 ***---------------------------------------------------------------------------
 *' Definition of the CCS transformation chain:
 ***---------------------------------------------------------------------------
-*** no effect while CCS chain is limited to just one step (ccsinje)
-q_transCCS(t,regi,ccs2te(enty,enty2,te),ccs2te2(enty2,enty3,te2),rlf)$teCCS2rlf(te2,rlf)..
-        (1-pm_emifac(t,regi,enty,enty2,te,"co2")) * vm_co2CCS(t,regi,enty,enty2,te,rlf)
-        =e=
-        vm_co2CCS(t,regi,enty2,enty3,te2,rlf);
 
-q_limitCCS(regi,ccs2te2(enty,"ico2",te),rlf)$teCCS2rlf(te,rlf)..
+q_limitCCS(regi,ccs2te(enty,"ico2",te),rlf)$teCCS2rlf(te,rlf)..
         sum(ttot $(ttot.val ge 2005), pm_ts(ttot) * vm_co2CCS(ttot,regi,enty,"ico2",te,rlf))
         =l=
-        pm_dataccs(regi,"quan",rlf);
-
-***---------------------------------------------------------------------------
-*' Emission constraint on SO2 after 2050:
-***---------------------------------------------------------------------------
-* RP: this equation is turned off as of 2025-03-11, because it has strong negative side
-*     effects on coal use - eg SSA strongly increases coal use until 2050 only because 
-*     it wants coal solids in 2070 and needs to ramp it up until 2050 due to this limit
-*     this limit 
-* q_limitSo2(ttot+1,regi) $((pm_ttot_val(ttot+1) ge max(cm_startyear,2055)) AND (cm_emiscen gt 1) AND (ord(ttot) lt card(ttot))) ..
-*         vm_emiTe(ttot+1,regi,"so2")
-*         =l=
-*         vm_emiTe(ttot,regi,"so2");
+        pm_dataccs(regi,"quan",te);
 
 
 ***---------------------------------------------------------------------------

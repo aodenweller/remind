@@ -44,23 +44,22 @@ helpText <- "
 #'                        (compareScenarios, xlsx_IIASA)
 #'
 #'   --output=            output=compareScenarios2 directly selects the specific
-#'                        script
+#'                        script (without .R extension)
 #'
-#'   --outputdir=         Can be used to specify the output directories to be
-#'                        used directly, bypassing run selection, as a
-#'                        comma-separated list
+#'   --outputdir=         Directly specify the output directories, bypassing run
+#'                        selection, as a comma-separated list
 #'                        (e.g. outputdir=./output/SSP2-Base-rem-1,./output/NDC-rem-1)
 #'
 #'   --remind_dir=        path to remind or output directories where runs can be
 #'                        found.  Defaults to ./output but can also be used to
-#'                        specify multiple  folders, comma-separated, such as
+#'                        specify multiple folders, comma-separated, such as
 #'                        remind_dir=.,../otherremind
 #'
 #'   --renv=<path>        load the renv located at <path>, incompatible with
 #'                        --update
 #'
 #'   --slurmConfig=       use slurmConfig=priority, short or standby to specify
-#'                        slurm selection.  You may also pass complicated
+#'                        slurm selection. You may also pass multiple SLURM
 #'                        arguments such as slurmConfig='--qos=priority --mem=8000'
 "
 
@@ -239,10 +238,12 @@ if (comp %in% c("comparison", "export")) {
           warning("Script ", name, " was stopped by an error and not executed properly!")
         }
       }
+    } else {
+      message("\nCould not find ", name)
     }
   }
 } else { # comp = single
-    # define slurm class or direct execution
+  # define slurm class or direct execution
   outputInteractive <- c("plotIterations", "integratedDamageCosts")
   if (! exists("source_include")) {
     if (any(output %in% outputInteractive)) {

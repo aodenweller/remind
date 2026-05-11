@@ -109,7 +109,7 @@ $endIf.taxCO2functionalForm4
     !! Use rescaled p45_taxCO2eq_anchor_until2150 as starting point for re-defining p45_taxCO2eq_anchor
     p45_taxCO2eq_anchor(ttot)$(ttot.val ge 2005) = p45_taxCO2eq_anchor_until2150(ttot);
     
-    if(cm_iterative_target_adj = 9, !! After cm_peakBudgYr, the global anchor trajectory increases linearly with fixed annual increase given by cm_taxCO2_IncAfterPeakBudgYr
+    if(cm_iterative_target_adj = 9 OR ((cm_iterative_target_adj eq 5) AND (cm_taxCO2_Shape eq 2)), !! After cm_peakBudgYr, the global anchor trajectory increases linearly with fixed annual increase given by cm_taxCO2_IncAfterPeakBudgYr
       p45_taxCO2eq_anchor(t)$(t.val gt cm_peakBudgYr) = sum(t2$(t2.val eq cm_peakBudgYr), p45_taxCO2eq_anchor_until2150(t2)) !! CO2 tax in peak budget year
                                                   + (t.val - cm_peakBudgYr) * cm_taxCO2_IncAfterPeakBudgYr * sm_DptCO2_2_TDpGtC;  !! increase by cm_taxCO2inc_after_peakBudgYr per year 
     );  
@@ -225,6 +225,18 @@ if(cm_iterative_target_adj eq 9,
     );  !! loop ttot$(ttot.val eq cm_peakBudgYr),  !! set ttot to the current peakBudgYr 
     cm_peakBudgYr = o45_peakBudgYr_Itr(iteration+1);  !! this has to happen outside the loop, otherwise the loop condition might be true twice
   ); !! if o45_delay_increase_peakBudgYear(iteration) = 1,   !! if there was a flip-floping in the previous iterations, try to solve this
+  s45_peakBudget = smax((ttot), pm_actualbudgetco2(ttot));
+  p45_peakBudgYr_check(ttot) = pm_actualbudgetco2(ttot) = s45_peakBudget; !! calculate the peak budget year as the year of maximum cumulative CO2 emissions
+  sm_peakbudget_diff = s45_actualbudgetco2 - s45_peakBudget; !! calculate difference between maximum CO2 budget and budget in peak budget year
+  loop( ttot$(p45_peakBudgYr_check(ttot) ), !! transfer peak budget year based on maximum cumulative CO2 emissions to parameter
+    sm_peakBudgYr_check = ttot.val; 
+  );
+  if (cm_peakBudgYr eq sm_peakBudgYr_check,  !! check if cm_peakBudgYr corresponds to year of maximum cumulative CO2 emissions
+    display "Peak budget year is time step of maximum cumulative emissions.";
+  else
+    display "Peak budget year is not time step of maximum cumulative emissions.";
+  );
+  display p45_peakBudgYr_check, sm_peakBudgYr_check, cm_peakBudgYr;
   display p45_taxCO2eq_anchor, p45_taxCO2eq_anchor_until2150, o45_delay_increase_peakBudgYear, o45_reached_until2150pricepath, o45_peakBudgYr_Itr, o45_pkBudgYr_flipflop, cm_peakBudgYr;
 );   !! if cm_iterative_target_adj eq 9,
 

@@ -69,8 +69,6 @@ p21_tau_CO2_tax_gdx_bau(ttot,all_regi)                              "tax path fr
 
 p21_tau_so2_tax(tall,all_regi)                                      "so2 tax path"
 p21_tau_pe2se_tax(tall,all_regi,all_te)                             "tax path for PE2SE technologies"
-p21_max_fe_sub(tall,all_regi,all_enty)                              "maximum final energy subsidy levels from REMIND version prior to rev. 5429 [$/TWa]"
-p21_prop_fe_sub(tall,all_regi,all_enty)                             "subsidy proportional cap to avoid liquids increasing dramatically"
 p21_tau_fuEx_sub(tall,all_regi,all_enty)                            "subsidy path for fuel extraction [$/TWa]"
 p21_bio_EF(ttot,all_regi)                                           "bioenergy emission factor, which is used to calculate the emission-factor-based tax level [GtC/TWa]"
 p21_tau_Import(ttot,all_regi,all_enty,tax_import_type_21)           "tax on energy imports, only works on energy carriers traded on nash markets, tax defined as share of world market price pm_pvp [Unit: share]"
@@ -128,6 +126,12 @@ s21_frac_NetNegEmi                                                  "parameter u
 ;
 
 variables
+*** tax revenues of implicit taxes used for quantity and price target implementation
+vm_taxrev(ttot,all_regi)                                            "difference between tax volume in current and previous iteration [T$]"
+vm_taxrevimplicitQttyTargetTax(ttot,all_regi)                       "tax revenue of implict tax for quantity target bound [T$]"
+vm_taxrevimplicitPriceTax(ttot,all_regi,entySe,all_enty,sector)     "tax revenue of implict tax for final energy price target [T$]"
+vm_taxrevimplicitPePriceTax(ttot,all_regi,all_enty)                 "tax revenue of implict tax forprimary energy price target [T$]"
+
 v21_taxrevReal(ttot,all_regi)                                       "difference between volume of real taxes and subsidies in current and previous iteration"
 v21_taxrevPseudo(ttot,all_regi)                                     "difference between volume of pseudo taxes and subsidies in current and previous iteration"
 v21_tau_bio(ttot)                                                   "demand-dependent bioenergy tax"

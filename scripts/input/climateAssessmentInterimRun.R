@@ -71,7 +71,7 @@ gdxFile <- normalizePath(file.path(outputDir, "fulldata_postsolve.gdx"), mustWor
 cat(date(), "climateAssessmentInterimRun.R: Using", gdxFile, "\n", file = cfg$logFile, append = TRUE)
 runTimes <- c(runTimes, "preprocessing start" = Sys.time())
 
-climateAssessmentInputData <- reportEmiForClimateAssessment(gdxFile) %>%
+climateAssessmentInputData <- reportEmiForClimateAssessment(gdxFile, extraData = cfg$reportsDir) %>%
   as.quitte() %>%
   emissionDataForClimateAssessment(cfg$scenario, mapping = "climateassessment", logFile = cfg$logFile) %>%
   write_csv(cfg$remindEmissionsFile, quote = "none")

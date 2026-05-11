@@ -96,27 +96,27 @@ p47_emiTargetMkt(ttot,regi, emiMktExt,"netGHG_noLULUCF_noBunkers") =
 *** net CO2 per Mkt with Grassi LULUCF shift
 p47_emiTargetMkt(ttot,regi, emiMktExt,"netCO2_LULUCFGrassi") =
   p47_emiTargetMkt(ttot,regi, emiMktExt,"netCO2")
-  - ( p47_LULUCFEmi_GrassiShift(ttot,regi) )$(sameas(emiMktExt,"other") or sameas(emiMktExt,"all"));
+  - ( pm_emiLULUCF_GrassiShift(ttot,regi) )$(sameas(emiMktExt,"other") or sameas(emiMktExt,"all"));
 
 *** net CO2 per Mkt without bunkers and with Grassi LULUCF shift
 p47_emiTargetMkt(ttot,regi, emiMktExt,"netCO2_LULUCFGrassi_noBunkers") =
   p47_emiTargetMkt(ttot,regi, emiMktExt,"netCO2_noBunkers")
-  - ( p47_LULUCFEmi_GrassiShift(ttot,regi) )$(sameas(emiMktExt,"other") or sameas(emiMktExt,"all"));
+  - ( pm_emiLULUCF_GrassiShift(ttot,regi) )$(sameas(emiMktExt,"other") or sameas(emiMktExt,"all"));
 
 *** net GHG per Mkt with Grassi LULUCF shift
 p47_emiTargetMkt(ttot,regi, emiMktExt,"netGHG_LULUCFGrassi") =
   p47_emiTargetMkt(ttot,regi, emiMktExt,"netGHG")
-  - ( p47_LULUCFEmi_GrassiShift(ttot,regi) )$(sameas(emiMktExt,"other") or sameas(emiMktExt,"all"));
+  - ( pm_emiLULUCF_GrassiShift(ttot,regi) )$(sameas(emiMktExt,"other") or sameas(emiMktExt,"all"));
 
 *** net GHG per Mkt without bunkers and with Grassi LULUCF shift
 p47_emiTargetMkt(ttot,regi, emiMktExt,"netGHG_LULUCFGrassi_noBunkers") =
   p47_emiTargetMkt(ttot,regi, emiMktExt,"netGHG_noBunkers")
-  - ( p47_LULUCFEmi_GrassiShift(ttot,regi) )$(sameas(emiMktExt,"other") or sameas(emiMktExt,"all"));
+  - ( pm_emiLULUCF_GrassiShift(ttot,regi) )$(sameas(emiMktExt,"other") or sameas(emiMktExt,"all"));
 
 *** net CO2 per Mkt without bunkers and with Grassi LULUCF shift
 p47_emiTargetMkt(ttot,regi, emiMktExt,"netCO2_LULUCFGrassi_intraRegBunker") =
   p47_emiTargetMkt(ttot,regi, emiMktExt,"netCO2_noBunkers")
-  - ( p47_LULUCFEmi_GrassiShift(ttot,regi) )$(sameas(emiMktExt,"other") or sameas(emiMktExt,"all"))
+  - ( pm_emiLULUCF_GrassiShift(ttot,regi) )$(sameas(emiMktExt,"other") or sameas(emiMktExt,"all"))
   + (
     sum(se2fe(enty,enty2,te),
       pm_emifac(ttot,regi,enty,enty2,te,"co2")
@@ -127,7 +127,7 @@ p47_emiTargetMkt(ttot,regi, emiMktExt,"netCO2_LULUCFGrassi_intraRegBunker") =
 *** net GHG per Mkt without bunkers and with Grassi LULUCF shift
 p47_emiTargetMkt(ttot,regi, emiMktExt,"netGHG_LULUCFGrassi_intraRegBunker") =
   p47_emiTargetMkt(ttot,regi, emiMktExt,"netGHG_noBunkers")
-  - ( p47_LULUCFEmi_GrassiShift(ttot,regi) )$(sameas(emiMktExt,"other") or sameas(emiMktExt,"all"))
+  - ( pm_emiLULUCF_GrassiShift(ttot,regi) )$(sameas(emiMktExt,"other") or sameas(emiMktExt,"all"))
   + (
     sum(se2fe(enty,enty2,te),
       pm_emifac(ttot,regi,enty,enty2,te,"co2")
@@ -938,5 +938,31 @@ loop((ttot,ext_regi)$p47_exoCo2tax(ext_regi,ttot),
 );
 display 'update of CO2 prices due to exogenously given CO2 prices in p47_exoCo2tax', pm_taxCO2eq;
 $endIf.regiExoPrice
+
+
+$ifThen.regiExoPrice_fromFile not "%cm_regiExoPrice_fromFile%" == "off"
+
+
+*** Removing the existent co2 tax parameters for regions with exogenous set prices
+  pm_taxCO2eqSum(ttot,regi)$(ttot.val ge cm_startyear) = 0;
+  pm_taxCO2eq(ttot,regi)$(ttot.val ge cm_startyear) = 0;
+  pm_taxCO2eqRegi(ttot,regi)$(ttot.val ge cm_startyear)= 0;
+  pm_taxCO2eqSCC(ttot,regi)$(ttot.val ge cm_startyear) = 0;
+
+  pm_taxrevGHG0(ttot,regi)$(ttot.val ge cm_startyear) = 0;
+  pm_taxrevCO2Sector0(ttot,regi,emi_sectors)$(ttot.val ge cm_startyear) = 0;
+  pm_taxrevCO2LUC0(ttot,regi)$(ttot.val ge cm_startyear) = 0;
+  pm_taxrevNetNegEmi0(ttot,regi)$(ttot.val ge cm_startyear) = 0;
+
+  pm_taxemiMkt(ttot,regi,emiMkt)$(ttot.val ge cm_startyear) = 0;
+
+
+*** setting exogenous CO2 prices from GDX file
+  pm_taxCO2eq(t,regi) = p47_exoCo2tax_fromFile(t,regi,"ETS");
+  pm_taxCO2eqSum(t,regi) = pm_taxCO2eq(t,regi);
+
+execute_unload "postsolve_pm_taxCO2eq_fromFile", pm_taxCO2eq;
+display pm_taxCO2eq;
+$endIf.regiExoPrice_fromFile
 
 *** EOF ./modules/47_regipol/regiCarbonPrice/postsolve.gms

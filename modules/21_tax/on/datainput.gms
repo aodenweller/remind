@@ -54,37 +54,12 @@ $offdelim
 ;
 
 
-Parameter f21_max_fe_sub(tall,all_regi,all_enty) "maximum final energy subsidy levels (in $/Gj) from REMIND version prior to rev. 5429"
-  /
-$ondelim
-$include "./modules/21_tax/on/input/f21_max_fe_sub.cs4r"
-$offdelim
-  /
-;
-Parameter f21_max_pe_sub(tall,all_regi,all_enty) "maximum primary energy subsidy levels (in $/Gj) to provide plausible upper bound: 40$/barrel ~ 8 $/GJ" 
-  /
-$ondelim
-$include "./modules/21_tax/on/input/f21_max_pe_sub.cs4r"
-$offdelim
-  /
-;
-Parameter f21_prop_fe_sub(tall,all_regi,all_enty) "subsidy proportional cap to avoid liquids increasing dramatically"
-  /
-$ondelim
-$include "./modules/21_tax/on/input/f21_prop_fe_sub.cs4r"
-$offdelim
-  /
-;
 
 *** transfer data to parameters and rescaling of FE parameters from $/GJ to trillion $ / TWa (subsidies also get adjusted in preloop.gms to avoid neg. prices)
 
   p21_tau_fe_tax(ttot,all_regi,emi_sectors,entyFe)$f21_tau_fe_tax(ttot,all_regi,emi_sectors,entyFe) = f21_tau_fe_tax(ttot,all_regi,emi_sectors,entyFe)*0.001/sm_EJ_2_TWa;
   p21_tau_fe_sub(ttot,all_regi,emi_sectors,entyFe)$f21_tau_fe_sub(ttot,all_regi,emi_sectors,entyFe) = f21_tau_fe_sub(ttot,all_regi,emi_sectors,entyFe)*0.001/sm_EJ_2_TWa;
   p21_tau_fuEx_sub(ttot,regi,entyPe)$f21_tau_fuEx_sub(ttot,regi,entyPe) = f21_tau_fuEx_sub(ttot,regi,entyPe)*0.001/sm_EJ_2_TWa;
-
-  p21_max_fe_sub(ttot,all_regi,entyFe)$f21_max_fe_sub(ttot,all_regi,entyFe) = f21_max_fe_sub(ttot,all_regi,entyFe)*0.001/sm_EJ_2_TWa;
-  p21_prop_fe_sub(ttot,all_regi,entyFe)$f21_prop_fe_sub(ttot,all_regi,entyFe) = f21_prop_fe_sub(ttot,all_regi,entyFe);
-
 
 
 *** -------------------------PE2SE Taxes--------------------------(Primary to secondary energy technology taxes, specified by technology)
@@ -175,8 +150,8 @@ Execute_Loadpoint 'input_ref' p21_ref_costInvTeAdj_RE = vm_costInvTeAdj.l;
 $endif.importtaxrc
 
 if (cm_startyear gt 2005,
-execute_load "input_ref.gdx", pm_taxrevCO2LUC0;
-execute_load "input_ref.gdx", pm_taxrevGHG0;
+Execute_Loadpoint "input_ref.gdx", pm_taxrevCO2LUC0;
+Execute_Loadpoint "input_ref.gdx", pm_taxrevGHG0;
 );
 
 ***initialize co2 market taxes

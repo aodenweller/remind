@@ -171,7 +171,7 @@ loop(regi,
     * pm_dataren(regi,"nur","1",te);
 
     loop (pe2se(entyPe,entySe,te),
-      o_INI_DirProdSeTe(regi,entySe,te) = s05_aux_tot_prod
+      o05_INI_DirProdSeTe(regi,entySe,te) = s05_aux_tot_prod
     );
     s05_aux_prod_remaining = s05_aux_tot_prod;
 
@@ -207,7 +207,7 @@ loop(regi,
   loop(opTimeYr2te(te,opTimeYr)$(NOT teReNoBio(te)),
     loop(tsu2opTime5(ttot,opTimeYr),
       loop(pe2se(entyPe,entySe,te), 
-        o_INI_DirProdSeTe(regi,entySe,te) = p05_cap0(regi,te) * pm_cf("2005",regi,te) * pm_dataren(regi,"nur","1",te)
+        o05_INI_DirProdSeTe(regi,entySe,te) = p05_cap0(regi,te) * pm_cf("2005",regi,te) * pm_dataren(regi,"nur","1",te)
       );
       sm_tmp = 1 / pm_ts(ttot) * p05_cap0(regi,te) * p05_vintage(regi,opTimeYr,te);
 
@@ -254,16 +254,16 @@ display pm_aux_capLowerLimit;
 ***---------------------------------------------------------------------------
 
 loop(regi,
-  o_INI_TotalCap(regi)            = sum(pe2se(enty,"seel",te), p05_cap0(regi,te) );
-  o_INI_TotalDirProdSe(regi,entySe) = sum(pe2se(enty,entySe,te), o_INI_DirProdSeTe(regi,entySe,te) );
-  o_INI_AvCapFac(regi)            = o_INI_TotalDirProdSe(regi,"seel") / o_INI_TotalCap(regi);
+  o05_INI_TotalCap(regi)            = sum(pe2se(enty,"seel",te), p05_cap0(regi,te) );
+  o05_INI_TotalDirProdSe(regi,entySe) = sum(pe2se(enty,entySe,te), o05_INI_DirProdSeTe(regi,entySe,te) );
+  o05_INI_AvCapFac(regi)            = o05_INI_TotalDirProdSe(regi,"seel") / o05_INI_TotalCap(regi);
 );
 
 display
-o_INI_DirProdSeTe
-o_INI_TotalCap
-o_INI_TotalDirProdSe
-o_INI_AvCapFac
+o05_INI_DirProdSeTe
+o05_INI_TotalCap
+o05_INI_TotalDirProdSe
+o05_INI_AvCapFac
 p05_cap0
 ;
 
@@ -411,6 +411,23 @@ pm_eta_conv(ttot,regi,teChp) = pm_data(regi,"eta",teChp);
 pm_eta_conv(ttot,regi,"elh2") = pm_dataeta(ttot,regi,"elh2");
 
 
+*** Replace 1st gen biomass conversion efficiencies with global values for all
+*** regions. The regionalized calibration to historical input and output values
+*** created via mrremind::calcIO does not work for these technologies, because
+*** the data that is currently being used does not give information on
+*** feedstock inputs, such that technically input and output are equal, which
+*** leads to a conversion efficiency of 1 in all regions that historically
+*** already deploy 1st gen biomass. While this is actually true for `bioeths`,
+*** because we assume that the conversion to ethanol has already happened, i.e.
+*** this technology simply passes PE to SE without any further conversion, this
+*** is not correct for `biodiesel`. Here we assume that the oil feedstock is
+*** already transformed to plant oil, but the conversion to biodiesel still has
+*** to happen. To avoid confusion, we use global values for both technologies
+*** (i.e., also for `bioeths` where it does not make a difference, but using
+*** the global value of 1 makes it explicitly clear that no conversion is
+*** happening).
+pm_eta_conv(ttot,regi,"bioeths")   = fm_dataglob("eta","bioeths");
+pm_eta_conv(ttot,regi,"biodiesel") = fm_dataglob("eta","biodiesel");
 
 
 *** Increase SE2FE efficiency for gases in DEU following AGEB data from 2020
@@ -556,7 +573,7 @@ display pm_emifac;
 *** Please do not change any of the parameters (including pm_emifac and pm_eta_conv) after this section of the code!
 if (cm_startyear gt 2005,
   Execute_Loadpoint 'input_ref' pm_eta_conv = pm_eta_conv;
-  Execute_Loadpoint 'input_ref' o_INI_DirProdSeTe = o_INI_DirProdSeTe;
+  Execute_Loadpoint 'input_ref' o05_INI_DirProdSeTe = o05_INI_DirProdSeTe;
   Execute_Loadpoint 'input_ref' pm_EN_demand_from_initialcap2 = pm_EN_demand_from_initialcap2;
   Execute_Loadpoint 'input_ref' pm_pedem_res = pm_pedem_res;
   Execute_Loadpoint 'input_ref' pm_dataeta = pm_dataeta;
