@@ -68,7 +68,8 @@ variables
 v32_flexPriceShare(ttot,all_regi,all_te)            "share of average electricity price that flexible technologies see [share: 0...1]"
 v32_flexPriceShareVRE(ttot,all_regi,all_te)         "possible minimum of share of average electricity price that flexible technologies see given the current VRE share [share: 0...1]"   
 v32_flexPriceShareMin(ttot,all_regi,all_te)         "possible minimum of share of average electricity price that flexible technologies see [share: 0...1]"
-
+vm_usableSe(ttot,all_regi,entySe)                   "Usable SE electricity defined as: generation from pe2se technologies + generation from coupled production - storage losses [TWa]"
+v32_usableSeTe(ttot,all_regi,entySe,all_te)         "Usable SE electricity per generation technology defined as: generation from pe2se technologies + generation from coupled production - storage losses [TWa]"
 ;
 
 ***------------------------------------------------------------
