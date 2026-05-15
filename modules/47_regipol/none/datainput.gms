@@ -22,7 +22,6 @@ loop(ext_regi$altFeEmiFac_regi(ext_regi),
   pm_emifac(ttot,regi,"pecoal","sesofos","coaltr","co2")$(sameas(regi,"DEU") OR sameas(regi,"UKI")) = 0.922937989;
 $endif.altFeEmiFac
 
-$ontext
 *** VRE capacity factor adjustments for Germany in line with results from detailed models in ARIADNE project
  loop(te$sameas(te,"windon"),
   loop(regi$sameas(regi,"DEU"),
@@ -46,6 +45,5 @@ loop(te$sameas(te,"spv"),
     pm_cf(t,regi,te)$(t.val gt 2045) =  pm_cf("2045",regi,te);
   );
 );
-$offtext
 
 *** EOF ./modules/47_regipol/none/datainput.gms

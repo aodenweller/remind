@@ -1410,61 +1410,6 @@ c32_iter_fullCap = 200;  !! def = 200 !! regexp = is.numeric
 *' Iteration in which not the pre-investment capacity, but the full capacity is passed to PyPSA
 *' An arbitrarily large value means that the pre-investment capacity is always used
 parameter
-    c32_pypsa_cfg_nodes              "PyPSA config: Number of spatial nodes in PyPSA-Eur"
-;
-c32_pypsa_cfg_nodes = 4;  !! def = 4 !! regexp = is.numeric
-*' PyPSA config: Number of nodes for the clustering of the PyPSA-Eur network
-parameter
-    c32_pypsa_cfg_hourly_res         "PyPSA config: Temporal resolution in PyPSA-Eur in hours"
-;
-c32_pypsa_cfg_hourly_res = 1;  !! def = 1 !! regexp = [1-6]
-*' PyPSA config: Temporal resolution in hours
-parameter
-    c32_pypsa_cfg_rcl_generators     "PyPSA config: Activate RCL generators (preinstalled capacities)"
-;
-c32_pypsa_cfg_rcl_generators = 1;  !! def = 1 !! regexp = 0|1
-*' PyPSA config: RCL generators (preinstalled capacities)
-*' 0 = off, 1 = on
-parameter
-    c32_pypsa_cfg_rcl_links          "PyPSA config: Activate RCL links (preinstalled capacities)"
-;
-c32_pypsa_cfg_rcl_links = 0;  !! def = 0 !! regexp = [0-3]
-*' PyPSA config: RCL links (preinstalled capacities)
-*' 0 = none, 1 = hydrogen (elh2 + h2turb), 2 = battery charger (btin), 3 = all
-parameter
-    c32_pypsa_cfg_rcl_stores         "PyPSA config: Activate RCL stores (preinstalled capacities)"
-;
-c32_pypsa_cfg_rcl_stores = 0;  !! def = 0 !! regexp = [0-3]
-*' PyPSA config: RCL stores (preinstalled capacities)
-*' 0 = none, 1 = hydrogen underground storage (h2stor), 2 = battery storage (btstor), 3 = all
-parameter
-    c32_pypsa_cfg_rcl_cost           "PyPSA config: Cost of RCL components (preinstalled capacities) in annualised $/MW or $/MWh"
-;
-c32_pypsa_cfg_rcl_cost = 0;  !! def = 0 !! regexp = is.numeric
-*' PyPSA config: Annualised capital cost of RCL components
-parameter
-    c32_pypsa_cfg_EVs                "PyPSA config: Activate electric vehicles"
-;
-c32_pypsa_cfg_EVs = 0;  !! def = 0 !! regexp = [0-2]
-*' PyPSA config: Electric vehicles
-*' 0 = off, 1 = on w/o flexibility, 2 = on w/ flexibility (configured in PyPSA)
-parameter
-    c32_pypsa_cfg_heating            "PyPSA config: Activate heating technologies (heat pumps, resistive)"
-;
-c32_pypsa_cfg_heating = 0;  !! def = 0 !! regexp = [0-2]
-*' PyPSA config: Heating technologies
-*' 0 = off, 1 = on w/o flexibility, 2 = on w/ flexibility (configured in PyPSA)
-parameter
-    c32_pypsa_cfg_min_load_elh2     "PyPSA config: Minimum load of electrolysis at all times"
-;
-c32_pypsa_cfg_min_load_elh2 = 0.1;  !! def = 0.1 !! regexp = is.nonnegative
-*' PyPSA config: Minimum load of electrolysis at all times
-parameter
-    c32_pypsa_cfg_ramp_elh2         "PyPSA config: Maximum ramp rate of electrolysis per time step"
-;
-c32_pypsa_cfg_ramp_elh2 = 0;  !! def = 0 !! regexp = is.nonnegative
-*' PyPSA config: Maximum ramp rate of electrolysis per time step, if 0 no ramping constraint
-parameter
     c32_pypsa_trade_max        "Maximum share of electricity imports and exports relative to total electricity production"
 ;
 c32_pypsa_trade_max = 1;  !! def = 1 !! regexp = is.numeric
@@ -2210,10 +2155,14 @@ $setglobal c_NearTermProjectCompletion  conservative  !! def = conservative  !! 
 $setglobal cm_VREminCap_Ger  CurrPol  !! def = CurrPol  
 *** c32_pypsa_dir
 *** Directory of PyPSA-Eur
-$setglobal c32_pypsa_dir /p/tmp/adrianod/pypsa-eur_v2025.07.0  !! def = /p/tmp/adrianod/pypsa-eur_v2025.07.0
-*** c32_pypsa_conda_dir
-*** Directory or name of conda environment for PyPSA-Eur
-$setglobal c32_pypsa_conda_dir /p/tmp/adrianod/software/conda_envs/pypsa-eur_v2025.07.0_20250715  !! def = /p/tmp/adrianod/software/conda_envs/pypsa-eur_v2025.07.0_20250715
+$setglobal c32_pypsa_dir /p/tmp/adrianod/pypsa-eur_v2026.02.0_remind  !! def = /p/tmp/adrianod/pypsa-eur_v2026.02.0_remind
+*** c32_pypsa_cfg_file: Path to file in config folder, this file is copied and overwrites the default settings
+$setglobal c32_pypsa_cfg_file  config/config.pypsa-eur.yaml  !! def = config/config.pypsa-eur.yaml
+*** c32_pypsa_cfg_overrides:
+*** This string overrides the settings in c32_pypsa_cfg_file, and is used to change PyPSA settings without a new config file.
+*** The format is "setting1=value1; setting2=value2", e.g.
+*** "remind_coupling.battery_storage.e_min_pu=0.2;remind_coupling.sector_coupling.electrolysis.p_min_pu=0.2"
+$setglobal c32_pypsa_cfg_overrides  ""  !! def = ""
 *** c32_pypsa_startgdx
 *** Path to a PyPSAEUR2REMIND.gdx file from a previous run
 *** If enabled, this is used before c32_startIter_PyPSA

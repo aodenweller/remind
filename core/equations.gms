@@ -346,9 +346,9 @@ q_capTotal(t,regi,entyPe,entySe)$( capTotal(entyPe,entySe))..
 *** windoffshore-todo
 ***---------------------------------------------------------------------------
 $IFTHEN.c32_windoffFree %c32_windoffFree% == "on"
-q_windoff_low(t,regi)$(t.val > 2030 AND ( ( regPy32(regi) AND ( sm_PyPSA_eq eq 0 OR ( sm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) ) )..
+q_windoff_low(t,regi)$(t.val >= 2030 AND ( ( regPy32(regi) AND ( sm_PyPSA_eq eq 0 OR ( sm_PyPSA_eq eq 1 AND NOT tPy32(t) ) ) ) OR ( NOT regPy32(regi) ) ) )..
 $ELSE.c32_windoffFree
-q_windoff_low(t,regi)$(t.val > 2030)..
+q_windoff_low(t,regi)$(t.val >= 2030)..
 $ENDIF.c32_windoffFree
    sum(rlf, vm_deltaCap(t,regi,"windoff",rlf))
    =g=

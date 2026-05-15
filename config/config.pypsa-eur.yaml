@@ -1,0 +1,67 @@
+%YAML 1.1
+---
+
+# REMIND-specific settings
+remind_coupling:
+  # Coupled years, set by import_REMIND_config.py from the tPy32 set in REMIND2PyPSAEUR.gdx
+  years: [2030, 2035, 2040, 2045, 2050, 2055, 2060, 2070, 2080, 2090, 2100, 2110, 2130, 2150]
+  # Enforce REMIND capacities via constraint in solve_network.py
+  installed_capacities:
+    generators: true
+    links: false
+    stores: false
+  # Hydrogen settings
+  hydrogen_storage:
+    hydrogen_underground_storage_locations:
+      - onshore
+      - nearshore
+  # Battery settings
+  battery_storage:
+    e_min_pu: 0.15
+  sector_coupling:
+    # Demand for electrolytic hydrogen
+    electrolysis:
+      enable: true
+      # TODO: Add key for distribution across nodes?
+      # Minimum partial load
+      p_min_pu: 0.1
+      # Ramping limit
+      ramp_limit: NaN
+    # Add electricity demand for passenger EVs
+    EV_pass:
+      enable: true
+      # Estimate fleet size if EDGE-T didn't run yet
+      annual_consumption: 4  # MWh/year
+      charge_rate: 0.011  # MW, 11 kW
+      share_charger: 0.8  # Number of chargers per EV
+      # DSM settings
+      dsm: false
+      battery_size: 0.06  # MWh, 60 kWh
+      dsm_availability: 0.5
+    # Add load for EV freight (currently not used)
+    EV_freight:
+      enable: false
+      # Estimate fleet size if EDGE-T didn't run yet
+      annual_consumption: 40  # MWh/year
+      charge_rate: 0.15  # MW, 150 kW
+      share_charger: 0.1  # Number of chargers per e-truck
+      # DSM settings
+      dsm: false
+      battery_size: 0.3  # MWh, 300 kWh
+      dsm_availability: 0.5
+    # Add load for heat pumps
+    heatpump:
+      enable: true
+      # Flexibility settings
+      dsm: false
+      ep_ratio: 3  # hours, E/P relative to peak load
+    # Add load for resistive heating
+    resistive:
+      enable: true
+      # Flexibility settings
+      dsm: false
+      ep_ratio: 2  # hours, E/P relative to peak load
+  export_to_REMIND:
+    # Cut off scarcity prices above z-score
+    z_cutoff: 3
+

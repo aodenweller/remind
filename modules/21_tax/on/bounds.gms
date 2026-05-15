@@ -8,4 +8,5 @@
 *cb no taxes in 2005, fix budget equation term to zero
 vm_taxrev.fx("2005",regi) = 0;
 
+
 *** EOF ./modules/21_tax/on/bounds.gms

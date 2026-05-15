@@ -228,24 +228,6 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startI
     !! Also export zeros for CO2 price
     p_priceCO2(t,regi)$(tPy32(t) AND regPy32(regi)) = p_priceCO2(t,regi) + EPS;
 
-    !! Export REMIND config for PyPSA (REMIND2PyPSAEUR_config.gdx)
-    !! This contains switches, which are read in in PyPSA with import_REMIND_config.py
-    !! See main.gms for the definition of the switches
-    option epsToZero=on;
-    Execute_Unload "REMIND2PyPSAEUR_config.gdx"
-        c32_pypsa_cfg_nodes,
-        c32_pypsa_cfg_hourly_res,
-        c32_pypsa_cfg_rcl_generators,
-        c32_pypsa_cfg_rcl_links,
-        c32_pypsa_cfg_rcl_stores,
-        c32_pypsa_cfg_rcl_cost,
-        c32_pypsa_cfg_perturb,  !! Automatically set if c32_pypsa_anticipation=="diffQuot"
-        c32_pypsa_cfg_EVs,
-        c32_pypsa_cfg_heating,
-        c32_pypsa_cfg_min_load_elh2,
-        c32_pypsa_cfg_ramp_elh2
-    ;
-
     !! Export REMIND data for PyPSA (REMIND2PyPSAEUR.gdx)
     !! This includes various demands, costs and parameters
     Execute_Unload "REMIND2PyPSAEUR.gdx",
