@@ -90,9 +90,6 @@ parameters
     p32_capCostwAdjCost(ttot,all_regi,all_te)                       "PyPSA export: Specific capital costs plus adjustment costs [T$/TW_out for generation/link, T$/TWh for storage]"
     p32_PEPrice_iter(iteration,ttot,all_regi,all_enty)              "PyPSA export: PE price in iterations [T$/TWa, nuclear: T$/Mt]"
     p32_PEPriceAvg(ttot,all_regi,all_enty)                          "PyPSA export: PE price averaged over iterations [T$/TWa, nuclear: T$/Mt]"
-    p32_weightGen(ttot,all_regi,all_te)                             "PyPSA export: Weights for generation technologies [TWa]"
-    p32_weightStor(ttot,all_regi,all_te)                            "PyPSA export: Weights for storage technologies, currently electrolysis and hydrogen turbines [TWa]"
-    p32_weightPEprice(ttot,all_regi,all_enty)                       "PyPSA export: Weights for primary energy prices [TWa]"
     p32_hydroCapacity(ttot,all_regi)                                "PyPSA export: Hydro capacity [TW]"
     p32_hydroGeneration(ttot,all_regi)                              "PyPSA export: Hydro generation [TWa]"
     !! Parameters for importing data from PyPSA-Eur

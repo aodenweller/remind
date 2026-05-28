@@ -219,12 +219,6 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startI
     p32_capCostwAdjCost(t,regi,te)$(tPy32(t) and regPy32(regi) and (sameas(te,"dot") or sameas(te,"tnrs") or sameas(te, "fnrs")) ) = 
         2 * p32_capCostwAdjCost(t,regi,te) + EPS;
 
-    !! Parameters to calculate weighted averages across technologies and regions in PyPSA
-    p32_weightGen(t,regi,te)$(tPy32(t) AND regPy32(regi) AND tePy32(te)) = v32_pe2seelTe.l(t,regi,te) + EPS;
-    p32_weightStor(t,regi,te)$(tPy32(t) AND regPy32(regi) AND sameas(te,"elh2")) = vm_prodSe.l(t,regi,"seel","seh2","elh2") + EPS;
-    p32_weightStor(t,regi,te)$(tPy32(t) AND regPy32(regi) AND sameas(te,"h2turb")) = vm_prodSe.l(t,regi,"seh2","seel","h2turb") + EPS;
-    p32_weightPEprice(t,regi,entyPe)$(tPy32(t) AND regPy32(regi) AND entyPePy32(entyPe)) = vm_prodPe.l(t,regi,entyPe) + EPS;
-  
     !! Also export zeros for CO2 price
     p_priceCO2(t,regi)$(tPy32(t) AND regPy32(regi)) = p_priceCO2(t,regi) + EPS;
 
@@ -240,9 +234,6 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startI
         p32_capCostwAdjCost, pm_data, p32_discountRate,
         !! Marginal cost components
         pm_eta_conv, pm_dataeta, p32_PEPriceAvg, pe2se, p_priceCO2, pm_emifac,
-        !! Weights to calculate weighted averages
-        !! TODO: Replace with 1:1 technology mapping
-        p32_weightGen, p32_weightStor, p32_weightPEprice,
         !! Pre-installed capacities
         p32_capAvg,
         !! Hydro capacities and generation (forcing PyPSA onto REMIND's capacity factors)
@@ -257,14 +248,14 @@ if (( iteration.val ge c32_startIter_PyPSA ) AND  !! Only start after c32_startI
     logfile.nd = 0;
 
     !! Run PyPSA-Eur
-    !! This executes a shell script (copied from scripts/iterative) and starts the full coupling workflow in snakemake
-    !! The PyPSA directory, conda environment, snakemake file name, and the current iteration are passed as arguments
-    !! (1) Copy REMIND2PyPSAEUR_config.gdx and REMIND2PyPSAEUR.gdx to PyPSA-Eur resources directory
-    !! (2) Create PyPSA config yaml file using REMIND2PyPSAEUR_config.gdx (first snakemake command)
-    !! (3) Run PyPSA, including all data pre- and postprocessing, using the the yaml file (second snakemake command)
-    !! (4) Copy PyPSAEUR2REMIND.gdx to REMIND scenario output folder
+    !! This executes a shell script (copied from scripts/iterative) and starts the full coupling workflow via pixi/snakemake
+    !! The PyPSA directory, config changes file, config overrides string, and the current iteration are passed as arguments
+    !! (1) Copy REMIND2PyPSAEUR.gdx to the PyPSA-Eur resources directory
+    !! (2) Create config.remind_scenario.yaml with import_REMIND_config.py
+    !! (3) Run PyPSA, including all data pre- and postprocessing, with the project Snakefile and the generated config file
+    !! (4) Copy PyPSAEUR2REMIND.gdx to the REMIND scenario output folder
     Put_utility logfile, "Exec" /
-    "./RunPyPSA-Eur.sh %c32_pypsa_dir% %c32_pypsa_conda_dir% " iteration.val:0:0;
+    "./RunPyPSA-Eur.sh %c32_pypsa_dir% %c32_pypsa_cfg_file% %c32_pypsa_cfg_overrides% " iteration.val:0:0;
 
     !! Reset round format and number of decimals
     logfile.nr = sm_tmp;
