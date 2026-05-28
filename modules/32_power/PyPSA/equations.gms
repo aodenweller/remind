@@ -395,21 +395,13 @@ q32_load_EV_freight(t,regi)$(tPy32(t) and regPy32(regi))..
 q32_load_heatpump(t,regi)$(tPy32(t) and regPy32(regi))..
     v32_load_sector(t,regi,"heatpump")
     =e=
-    sum(in$(sameas(in, "feelhpb")),
-            vm_cesIO(t,regi,in)
-            + pm_cesdata(t,regi,in,"offset_quantity")
-        )
-    / pm_eta_conv(t,regi,"tdels")
+    vm_cesIO(t,regi,"feelhpb") / pm_eta_conv(t,regi,"tdels")
 ;
 
 q32_load_resistive(t,regi)$(tPy32(t) and regPy32(regi))..
     v32_load_sector(t,regi,"resistive")
     =e=
-    sum(in$(sameas(in, "feelrhb")),
-            vm_cesIO(t,regi,in)
-            + pm_cesdata(t,regi,in,"offset_quantity")
-        )
-    / pm_eta_conv(t,regi,"tdels")
+    vm_cesIO(t,regi,"feelrhb") / pm_eta_conv(t,regi,"tdels")
 ;
 
 *** Additional electricity load (TWa_elec) for electrolytic hydrogen

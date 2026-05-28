@@ -490,18 +490,18 @@ p32_load(ttot,regPy32) =
                 pm_prodCouple(regPy32,enty,enty3,te,enty2) * vm_co2CCS.l(ttot,regPy32,enty,enty3,te,rlf) ) )
 ;
 
-p32_load_sector(ttot,regPy32,"EV_pass") = vm_demFeForEs.l(ttot,regPy32,"feelt","eselt_pass_sm","te_eselt_pass_sm")
-    / pm_eta_conv(ttot,regPy32,"tdelt");
-p32_load_sector(ttot,regPy32,"EV_freight") = vm_demFeForEs.l(ttot,regPy32,"feelt","eselt_frgt_sm","te_eselt_frgt_sm")
-    / pm_eta_conv(ttot,regPy32,"tdelt");
-p32_load_sector(ttot,regPy32,"heatpump") = sum(in$(sameas(in, "feelhpb")),
-    vm_cesIO.l(ttot,regPy32,in)
-    + pm_cesdata(ttot,regPy32,in,"offset_quantity")
-) / pm_eta_conv(ttot,regPy32,"tdels");
-p32_load_sector(ttot,regPy32,"resistive") = sum(in$(sameas(in, "feelrhb")),
-    vm_cesIO.l(ttot,regPy32,in)
-    + pm_cesdata(ttot,regPy32,in,"offset_quantity")
-) / pm_eta_conv(ttot,regPy32,"tdels");
+p32_load_sector(ttot,regPy32,"EV_pass") = 
+    vm_demFeForEs.l(ttot,regPy32,"feelt","eselt_pass_sm","te_eselt_pass_sm")
+  / pm_eta_conv(ttot,regPy32,"tdelt");
+p32_load_sector(ttot,regPy32,"EV_freight") = 
+    vm_demFeForEs.l(ttot,regPy32,"feelt","eselt_frgt_sm","te_eselt_frgt_sm")
+  / pm_eta_conv(ttot,regPy32,"tdelt");
+p32_load_sector(ttot,regPy32,"heatpump") =
+    vm_cesIO.l(ttot,regPy32,"feelhpb")
+  / pm_eta_conv(ttot,regPy32,"tdels");
+p32_load_sector(ttot,regPy32,"resistive") =
+    vm_cesIO.l(ttot,regPy32,"feelrhb")
+  / pm_eta_conv(ttot,regPy32,"tdels");
 p32_load_sector(ttot,regPy32,"electrolysis") =
     !! The bracket contains additional hydrogen load (TWa_H2),
     !! i.e. hydrogen production from electrolysis minus
